@@ -18,7 +18,7 @@ export const TOUR_STEPS = [
   { key: 'nav', route: '/dashboard', title: 'Navigation', body: 'Your menu adapts to your role. Warehouse handles movement & storage; Procurement sees replenishment; Site requests materials; Management approves.' },
   { key: 'topbar-tools', route: '/dashboard', title: 'Tools & Theme', body: 'Switch roles to preview access levels, toggle light/dark mode, and check notifications for low stock and pending approvals.' },
   { key: 'qty-dropdown', route: '/inventory', title: 'Quantity Status View', body: 'On the inventory master list, switch the prioritized quantity column — Total, Available, Reserved, Incoming, Outgoing or Damaged — plus filters and search.' },
-  { key: 'floor', route: '/storage', title: 'Warehouse Floor Plan', body: 'Pick a zone, rack, shelf or bin — like choosing a seat — to see exactly what’s stored there. High-value items sit in a dedicated secure cage.' },
+  { key: 'floor', route: '/storage', title: 'Warehouse Floor Plan', body: 'Three levels, drawn from the CW Taytay warehouse plan. Site shows the shed and the outdoor rebar, tiles and recovery areas; the warehouse shows the five material areas and eleven rack runs; racking opens one rack bay by bay. Click anything to see what is stored there.' },
   { key: 'done', route: '/dashboard', title: 'You’re all set', body: 'That’s the Phase 1 walkthrough. Phase 2 will add QR-code tagging for scan-based movement and location updates. Explore freely — you can restart this tour anytime.' },
 ]
 

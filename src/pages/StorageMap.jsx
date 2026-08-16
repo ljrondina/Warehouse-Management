@@ -1,190 +1,348 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useMemo, useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { items } from '../data/insights'
-import { Card, Badge } from '../components/ui'
-import { num, peso } from '../lib/format'
+import {
+  SITE_AREAS, WH_AREAS, AREA_BY_ID, RACKS, CANTILEVER, FLOOR_AREA, HV_SHELVING,
+  areaCapacity, rackOccupancy, areaItems, siteItems, slotItems, placement,
+} from '../data/warehouseMap'
+import SitePlan, { SiteLegend } from '../components/floorplan/SitePlan'
+import WarehousePlan, { WarehouseLegend } from '../components/floorplan/WarehousePlan'
+import RackElevation, { RackSpec } from '../components/floorplan/RackElevation'
+import LocationPanel from '../components/floorplan/LocationPanel'
+import { Card } from '../components/ui'
+import { num } from '../lib/format'
 import Icon from '../lib/icons'
 
-const ZONES = ['A', 'B', 'C', 'D', 'E']
+// ============================================================================
+// Warehouse Floor Plan — three levels, from the CW Taytay Warehouse Plan deck.
+//
+//   site       Site development plan: the shed plus the outdoor material areas.
+//   warehouse  Warehouse top view: the five material areas and eleven rack runs.
+//   rack       One rack, drawn as a front elevation, bay by bay and level by level.
+//
+// The level, the selected area and the open rack all live in the query string, so
+// every view is linkable and the browser Back button walks back up the levels.
+// ============================================================================
 
-// Floor-plan geometry (Taytay Central Warehouse — single ground floor).
-const ZONE_RECT = {
-  A: { x: 70, y: 150, w: 150, h: 120 },
-  B: { x: 240, y: 150, w: 150, h: 120 },
-  C: { x: 410, y: 150, w: 150, h: 120 },
-  D: { x: 70, y: 300, w: 150, h: 120 },
-  E: { x: 240, y: 300, w: 150, h: 120 },
-}
-const HV_RECT = { x: 410, y: 300, w: 150, h: 120 }
+const LEVELS = [
+  { id: 'site', label: 'Site', icon: 'map' },
+  { id: 'warehouse', label: 'Warehouse', icon: 'warehouse' },
+  { id: 'rack', label: 'Racking', icon: 'layers' },
+]
 
-function occColor(ratio) {
-  if (ratio > 0.75) return '#ee3124'
-  if (ratio > 0.45) return '#a8770f'
-  if (ratio > 0.15) return '#7d7c7c'
-  return '#2f7d5a'
-}
+const rackLabel = (id) =>
+  id === 'CANT' ? CANTILEVER.name : id === 'FLOOR' ? FLOOR_AREA.name : id === 'HV' ? HV_SHELVING.name : `Rack ${id.slice(1)}`
 
 export default function StorageMap() {
-  const nav = useNavigate()
-  const [zone, setZone] = useState(null)
-  const [rack, setRack] = useState(null)
-  const [bin, setBin] = useState(null)
+  const [params, setParams] = useSearchParams()
+  const level = params.get('level') || 'site'
+  const area = params.get('area') || null
+  const rack = params.get('rack') || null
+  const [hovered, setHovered] = useState(null)
+  const [cell, setCell] = useState(null)
 
-  const zoneItems = useMemo(() => {
-    const m = {}
-    for (const z of [...ZONES, 'HV']) m[z] = items.filter((i) => i.zone === z)
-    return m
-  }, [])
-  const maxCount = Math.max(...Object.values(zoneItems).map((a) => a.length), 1)
+  // Rebuilt when hydration swaps the rows in — the same trigger the dashboard's
+  // insight lists use. Without it the map would stay frozen at the empty pre-login
+  // dataset, which is the bug the Inventory tab had.
+  const plan = useMemo(() => placement(), [items.length])
 
-  const racks = useMemo(() => {
-    if (!zone) return []
-    const m = {}
-    for (const it of zoneItems[zone]) (m[it.rack] ??= []).push(it)
-    return Object.entries(m).sort()
-  }, [zone, zoneItems])
+  useEffect(() => { setCell(null) }, [rack])
 
-  const bins = useMemo(() => {
-    if (!zone || !rack) return []
-    const list = zoneItems[zone].filter((i) => i.rack === rack)
-    const m = {}
-    for (const it of list) {
-      const key = `${it.shelf}·${it.bin}`
-      ;(m[key] ??= []).push(it)
+  const go = (next) => {
+    const p = new URLSearchParams(params)
+    for (const [k, v] of Object.entries(next)) v == null ? p.delete(k) : p.set(k, v)
+    setParams(p)
+  }
+
+  // Rack-level derivations live up here with the other hooks: the level branches
+  // below return early, and a hook called after one of those returns would change the
+  // hook order between renders.
+  const rid = rack || 'R1'
+  const rk = RACKS.find((r) => r.id === rid)
+  const areaId = rk?.area || (rid === 'HV' ? 'highvalue' : 'safekeeping')
+
+  const allInRack = useMemo(() => {
+    if (rid === 'FLOOR') return slotItems('FLOOR', '', '')
+    const out = []
+    for (const [key, list] of Object.entries(plan.slots)) {
+      if (rid === 'HV' ? key.startsWith('HV') : key.startsWith(`${rid}|`)) out.push(...list)
     }
-    return Object.entries(m).sort()
-  }, [zone, rack, zoneItems])
+    return out
+  }, [rid, plan])
 
-  const selectZone = (z) => { setZone(z); setRack(null); setbinReset() }
-  const setbinReset = () => setBin(null)
-  const binItems = bin ? (bins.find(([k]) => k === bin)?.[1] || []) : []
+  const cellItems = useMemo(() => {
+    if (!cell) return null
+    if (rid === 'HV') {
+      const [run, rest] = cell.split(':')
+      const [bay, lvl] = rest.split('|')
+      return { list: slotItems(run, +bay, +lvl), label: `Run ${run.slice(2)} · Bay ${bay} · Level ${lvl}` }
+    }
+    const [bay, lvl] = cell.split('|')
+    return {
+      list: slotItems(rid, +bay, +lvl),
+      label: rid === 'CANT' ? `Bay ${bay} · Arm ${lvl}` : `Bay ${bay} · Level ${lvl}`,
+    }
+  }, [cell, rid, plan])
 
-  const Facility = ({ x, y, w, h, label, muted }) => (
-    <g>
-      <rect x={x} y={y} width={w} height={h} rx="6" fill={muted ? 'var(--surface-2)' : 'var(--surface)'} stroke="var(--border-strong)" strokeDasharray="4 3" />
-      <text x={x + w / 2} y={y + h / 2} textAnchor="middle" dominantBaseline="middle" fontSize="11" fill="var(--text-faint)" fontWeight="600">{label}</text>
-    </g>
-  )
+  /* ------------------------------------------------------------- site level */
 
-  const ZoneRect = ({ z, r }) => {
-    const its = zoneItems[z]
-    const ratio = its.length / maxCount
-    const active = zone === z
+  if (level === 'site') {
+    const sel = area && SITE_AREAS.find((a) => a.id === area)
+    const pool = sel ? (sel.id === 'warehouse' ? items.filter((i) => !plan.byLine.get(i.id) || plan.byLine.get(i.id).level !== 'site') : siteItems(sel.id)) : []
+    const mrf = siteItems('mrf')
+
     return (
-      <g style={{ cursor: 'pointer' }} onClick={() => selectZone(z)}>
-        <rect x={r.x} y={r.y} width={r.w} height={r.h} rx="8"
-          fill={active ? occColor(ratio) : 'var(--surface)'}
-          stroke={active ? occColor(ratio) : 'var(--border-strong)'} strokeWidth={active ? 3 : 1.5} />
-        <rect x={r.x} y={r.y} width={r.w} height={r.h} rx="8" fill={active ? 'rgba(255,255,255,0.12)' : occColor(ratio)} opacity={active ? 1 : 0.12} />
-        {/* rack stripes */}
-        {[0, 1, 2].map((i) => (
-          <rect key={i} x={r.x + 12} y={r.y + 16 + i * 30} width={r.w - 24} height="16" rx="3" fill={active ? 'rgba(255,255,255,0.35)' : 'var(--border-strong)'} opacity="0.5" />
-        ))}
-        <text x={r.x + 14} y={r.y + r.h - 30} fontSize="26" fontWeight="800" fill={active ? '#fff' : 'var(--text)'}>{z}</text>
-        <text x={r.x + 14} y={r.y + r.h - 12} fontSize="11" fontWeight="600" fill={active ? '#fff' : 'var(--text-muted)'}>{its.length} SKUs</text>
-      </g>
+      <Shell level={level} area={area} rack={rack} go={go}>
+        <Card title="Site Development Plan" icon="map" right={<span className="fp-scale">Central Warehouse Taytay · scale MTS</span>}>
+          <div className="fp-stage">
+            <SitePlan
+              selected={area}
+              hovered={hovered}
+              onHover={setHovered}
+              onSelect={(id) => go({ area: area === id ? null : id })}
+              onDrill={() => go({ level: 'warehouse', area: null })}
+            />
+          </div>
+          <SiteLegend />
+          <div className="card-note">
+            Traced from the reference deck’s site development plan. Areas are clickable; the shed opens the warehouse plan.
+          </div>
+        </Card>
+
+        {sel ? (
+          <LocationPanel
+            title={sel.name}
+            sub={sel.id === 'warehouse' ? 'Everything held inside the shed' : 'Outdoor material area'}
+            role={sel.role}
+            note={sel.note}
+            pool={pool}
+            emptyText="Nothing on the current stock sheet is held in this area."
+            actions={sel.drill && (
+              <button className="btn btn-sm btn-primary" onClick={() => go({ level: 'warehouse', area: null })}>
+                Enter warehouse <Icon name="chevronRight" size={14} />
+              </button>
+            )}
+          />
+        ) : (
+          <Card title="Site Overview" icon="layers">
+            <div className="fp-pick">Pick an area on the plan to see what is stored there.</div>
+            <div className="fp-tiles">
+              {SITE_AREAS.map((a) => {
+                const p = a.id === 'warehouse'
+                  ? items.filter((i) => plan.byLine.get(i.id)?.level !== 'site')
+                  : siteItems(a.id)
+                return (
+                  <button key={a.id} className={`fp-tile fp-t-${a.role}`} onClick={() => (a.drill ? go({ level: 'warehouse' }) : go({ area: a.id }))}>
+                    <i className={`fp-swatch fp-sw-${a.role}`} />
+                    <span className="n">{a.name}</span>
+                    <span className="v tabular">{num(p.length)}</span>
+                    <span className="u">lines</span>
+                  </button>
+                )
+              })}
+            </div>
+            <div className="fp-mrf">
+              The Material Recovery Facility count is a view, not a fourth bucket: damaged stock is flagged where it
+              lies rather than moved, so it lists the {num(mrf.length)} lines carrying a damaged quantity —{' '}
+              {num(mrf.reduce((a, b) => a + (b.damagedQty || 0), 0))} units awaiting disposition.
+            </div>
+          </Card>
+        )}
+      </Shell>
     )
   }
 
+  /* -------------------------------------------------------- warehouse level */
+
+  if (level === 'warehouse') {
+    const sel = area && AREA_BY_ID[area]
+    const pool = sel ? areaItems(sel.id) : []
+    const cap = sel ? areaCapacity(sel.id) : null
+    const racksIn = sel ? RACKS.filter((r) => r.area === sel.id) : []
+
+    return (
+      <Shell level={level} area={area} rack={rack} go={go}>
+        <Card title="Warehouse Plan — Top View" icon="warehouse" right={<span className="fp-scale">2,520 m² · 11 racks · single storey</span>}>
+          <div className="fp-stage">
+            <WarehousePlan
+              selected={area}
+              hovered={hovered}
+              onHover={setHovered}
+              onSelect={(id) => go({ area: area === id ? null : id })}
+              onOpenRack={(id) => go({ level: 'rack', rack: id, area: id === 'CANT' || id === 'FLOOR' ? 'safekeeping' : RACKS.find((r) => r.id === id)?.area || area })}
+            />
+          </div>
+          <WarehouseLegend />
+          <div className="card-note">
+            Traced from the reference deck’s warehouse top view. Click an area for its materials, or a numbered rack run to open its elevation.
+          </div>
+        </Card>
+
+        {sel ? (
+          <LocationPanel
+            title={sel.name}
+            sub={`${racksIn.length ? `Racks ${racksIn.map((r) => r.n).join(', ')}` : 'Shelving room'}`}
+            role={sel.role}
+            note={sel.note}
+            pool={pool}
+            capacity={cap}
+            actions={
+              <div className="fp-rack-jump">
+                {sel.id === 'highvalue' ? (
+                  <button className="btn btn-sm" onClick={() => go({ level: 'rack', rack: 'HV' })}>Open shelving</button>
+                ) : (
+                  <>
+                    {racksIn.map((r) => (
+                      <button key={r.id} className="btn btn-sm" onClick={() => go({ level: 'rack', rack: r.id })}>{r.n}</button>
+                    ))}
+                    {sel.id === 'safekeeping' && (
+                      <>
+                        <button className="btn btn-sm" onClick={() => go({ level: 'rack', rack: 'CANT' })}>Cant.</button>
+                        <button className="btn btn-sm" onClick={() => go({ level: 'rack', rack: 'FLOOR' })}>Floor</button>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            }
+          />
+        ) : (
+          <Card title="Material Areas" icon="layers">
+            <div className="fp-pick">Pick an area on the plan, or a row below.</div>
+            <div className="fp-arealist">
+              {WH_AREAS.map((a) => {
+                const c = areaCapacity(a.id)
+                const p = areaItems(a.id)
+                const pct = c.positions ? Math.round((c.used / c.positions) * 100) : 0
+                return (
+                  <button key={a.id} className="fp-arearow" onClick={() => go({ area: a.id })}
+                    onMouseEnter={() => setHovered(a.id)} onMouseLeave={() => setHovered(null)}>
+                    <i className={`fp-swatch fp-sw-${a.role}`} />
+                    <div className="fp-arearow-main">
+                      <div className="n">{a.name}</div>
+                      <div className="s">{num(p.length)} lines · {num(c.positions)} {c.unit}</div>
+                    </div>
+                    <div className="fp-arearow-bar" title={`${pct}% of positions in use`}>
+                      <span className={`fp-sw-${a.role}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                    </div>
+                    <span className="tabular fp-arearow-pct">{pct}%</span>
+                  </button>
+                )
+              })}
+            </div>
+          </Card>
+        )}
+      </Shell>
+    )
+  }
+
+  /* ------------------------------------------------------------- rack level */
+
+  const areaDef = AREA_BY_ID[areaId]
+  const occ = rk ? rackOccupancy(rid) : null
+
+  return (
+    <Shell level={level} area={areaId} rack={rid} go={go}>
+      <Card
+        title={`${rackLabel(rid)} — ${rid === 'FLOOR' ? 'Block Stacking' : 'Front Elevation'}`}
+        icon="layers"
+        right={
+          <div className="fp-rack-jump">
+            {RACKS.filter((r) => r.area === areaId).map((r) => (
+              <button key={r.id} className={`btn btn-sm${r.id === rid ? ' btn-primary' : ''}`} onClick={() => go({ rack: r.id })}>{r.n}</button>
+            ))}
+            {areaId === 'safekeeping' && (
+              <>
+                <button className={`btn btn-sm${rid === 'CANT' ? ' btn-primary' : ''}`} onClick={() => go({ rack: 'CANT' })}>Cant.</button>
+                <button className={`btn btn-sm${rid === 'FLOOR' ? ' btn-primary' : ''}`} onClick={() => go({ rack: 'FLOOR' })}>Floor</button>
+              </>
+            )}
+          </div>
+        }
+      >
+        <div className="fp-stage fp-stage-elev">
+          <RackElevation rackId={rid} selectedCell={cell} onSelectCell={setCell} floorCount={allInRack.length} />
+        </div>
+        <RackSpec rackId={rid} />
+        <div className="fp-legend fp-legend-cells">
+          <span className="fp-legend-i"><i className="fp-cellsw is-empty" />Empty position</span>
+          <span className="fp-legend-i"><i className="fp-cellsw is-full" />Occupied</span>
+          <span className="fp-legend-i"><i className="fp-cellsw is-low" />Holds low stock</span>
+          <span className="fp-legend-i"><i className="fp-cellsw is-out" />Holds an out-of-stock line</span>
+        </div>
+        <div className="card-note">
+          Bay counts, level heights and load ratings are off the reference racking drawing. Which material line sits in
+          which bay is modelled, not recorded — see the placement note on the panel.
+        </div>
+      </Card>
+
+      <LocationPanel
+        title={cellItems ? cellItems.label : rackLabel(rid)}
+        sub={cellItems ? rackLabel(rid) : areaDef?.name}
+        role={areaDef?.role}
+        pool={cellItems ? cellItems.list : allInRack}
+        capacity={!cellItems && occ ? { ...occ, unit: 'pallet positions' } : null}
+        note={
+          cellItems
+            ? null
+            : 'Lines are ordered by issue frequency and laid into the positions from ground level up, so fast-moving stock sits at pick height. The stock sheet does not record a physical bay.'
+        }
+        emptyText={cellItems ? 'This position is empty.' : 'Nothing is held here.'}
+        actions={cellItems && <button className="btn btn-sm btn-ghost" onClick={() => setCell(null)}>Show whole rack</button>}
+      />
+    </Shell>
+  )
+}
+
+/* -------------------------------------------------------------------- shell */
+
+function Shell({ level, area, rack, go, children }) {
+  const areaName = area ? (AREA_BY_ID[area]?.name || SITE_AREAS.find((a) => a.id === area)?.name) : null
+
   return (
     <>
-      {/* The page heading moved to the topbar; the tour's anchor moves onto the note
-          that replaced it, so the floor-plan step still has something to point at. */}
-      <div className="section-note" data-tour="floor">Taytay Central Warehouse — pick a zone, rack, then a shelf·bin to see what’s stored there</div>
-
-      <div className="grid mt fp-grid">
-        {/* Floor plan SVG */}
-        <Card title="Ground Floor Layout" icon="warehouse">
-          <div className="table-wrap">
-            <svg viewBox="0 0 640 480" style={{ width: '100%', minWidth: 480, background: 'var(--surface-2)', borderRadius: 10 }}>
-              {/* building outline */}
-              <rect x="20" y="20" width="600" height="440" rx="12" fill="none" stroke="var(--border-strong)" strokeWidth="2" />
-              {/* facilities */}
-              <Facility x={70} y={50} w={230} h={70} label="OFFICE AREA" muted />
-              <Facility x={320} y={50} w={110} h={70} label="SECURITY" muted />
-              <Facility x={450} y={50} w={110} h={70} label="EE ROOM" muted />
-              {/* receiving dock */}
-              <rect x="20" y="360" width="40" height="100" rx="4" fill="var(--accent-weak)" />
-              <text x="40" y="415" textAnchor="middle" fontSize="10" fontWeight="700" fill="var(--brand-red)" transform="rotate(-90 40 410)">RECEIVING</text>
-              {/* storage zones */}
-              {ZONES.map((z) => <ZoneRect key={z} z={z} r={ZONE_RECT[z]} />)}
-              {/* HV cage */}
-              <g style={{ cursor: 'pointer' }} onClick={() => selectZone('HV')}>
-                <rect x={HV_RECT.x} y={HV_RECT.y} width={HV_RECT.w} height={HV_RECT.h} rx="8"
-                  fill={zone === 'HV' ? '#2b2c2b' : 'var(--surface)'} stroke="#2b2c2b" strokeWidth={zone === 'HV' ? 3 : 1.5} strokeDasharray="6 3" />
-                <rect x={HV_RECT.x} y={HV_RECT.y} width={HV_RECT.w} height={HV_RECT.h} rx="8" fill="#2b2c2b" opacity={zone === 'HV' ? 0 : 0.1} />
-                <text x={HV_RECT.x + 14} y={HV_RECT.y + 34} fontSize="13" fontWeight="800" fill={zone === 'HV' ? '#fff' : '#2b2c2b'}>🔒 HIGH-VALUE</text>
-                <text x={HV_RECT.x + 14} y={HV_RECT.y + 52} fontSize="11" fill={zone === 'HV' ? '#fff' : 'var(--text-muted)'}>SECURE CAGE</text>
-                <text x={HV_RECT.x + 14} y={HV_RECT.y + HV_RECT.h - 14} fontSize="11" fontWeight="700" fill={zone === 'HV' ? '#fff' : 'var(--text-muted)'}>{zoneItems.HV.length} SKUs</text>
-              </g>
-            </svg>
-          </div>
-          <div className="wrap-gap mt-sm">
-            <span className="chip"><span className="dot" style={{ color: '#2f7d5a' }} /> Low occupancy</span>
-            <span className="chip"><span className="dot" style={{ color: '#7d7c7c' }} /> Moderate</span>
-            <span className="chip"><span className="dot" style={{ color: '#a8770f' }} /> High</span>
-            <span className="chip"><span className="dot" style={{ color: '#ee3124' }} /> Full</span>
-            <span className="chip" style={{ color: '#2b2c2b' }}>🔒 High-value cage</span>
-          </div>
-        </Card>
-
-        {/* Drilldown panel */}
-        <Card title={zone ? `Zone ${zone}` : 'Select a Zone'} icon="box"
-          right={zone && <button className="btn btn-sm btn-ghost" onClick={() => { setZone(null); setRack(null); setBin(null) }}>Reset</button>}>
-          {!zone && <div className="empty">Click a zone or the high-value cage on the floor plan to drill in.</div>}
-
-          {zone && !rack && (
+      <div className="fp-topbar" data-tour="floor">
+        <div className="fp-levels">
+          {LEVELS.map((l, i) => {
+            const reachable = l.id === 'site' || (l.id === 'warehouse') || (l.id === 'rack' && !!rack)
+            const active = level === l.id
+            return (
+              <button
+                key={l.id}
+                className={`fp-level${active ? ' active' : ''}`}
+                disabled={!reachable}
+                onClick={() => go(l.id === 'site' ? { level: null, area: null, rack: null } : l.id === 'warehouse' ? { level: 'warehouse', rack: null } : { level: 'rack' })}
+              >
+                <span className="fp-level-n">{i + 1}</span>
+                <Icon name={l.icon} size={15} />
+                {l.label}
+              </button>
+            )
+          })}
+        </div>
+        <div className="fp-crumb">
+          <button onClick={() => go({ level: null, area: null, rack: null })}>Site</button>
+          {(level === 'warehouse' || level === 'rack') && (
             <>
-              <div className="muted" style={{ fontSize: 12, marginBottom: 10 }}>{racks.length} racks · {zoneItems[zone].length} SKUs · {peso(zoneItems[zone].reduce((a, b) => a + b.inventoryValue, 0))}</div>
-              <div className="wrap-gap">
-                {racks.map(([rk, its]) => (
-                  <button key={rk} className="chip" style={{ padding: '10px 12px' }} onClick={() => { setRack(rk); setBin(null) }}>
-                    <Icon name="warehouse" size={14} /> <b>{rk}</b> <span className="faint">{its.length}</span>
-                  </button>
-                ))}
-              </div>
+              <Icon name="chevronRight" size={13} />
+              <button onClick={() => go({ level: 'warehouse', rack: null })}>Central Warehouse</button>
             </>
           )}
-
-          {zone && rack && (
+          {areaName && level !== 'site' && (
             <>
-              <div className="location-crumb" style={{ marginBottom: 12 }}>
-                <button className="btn btn-sm" onClick={() => { setRack(null); setBin(null) }}>← Racks</button>
-                <span className="chip">Zone {zone}</span><Icon name="chevronDown" size={14} style={{ transform: 'rotate(-90deg)' }} className="arrow" />
-                <span className="chip">Rack {rack}</span>
-              </div>
-              <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>Shelf·Bin cells — click to view contents</div>
-              <div className="bin-grid">
-                {bins.map(([key, its]) => {
-                  const status = its.some((i) => i.stockStatus === 'Low') ? '#a8770f' : its.some((i) => i.stockStatus === 'Overstocked') ? '#ee3124' : '#2f7d5a'
-                  return (
-                    <button key={key} className={`bin-cell ${bin === key ? 'active' : ''}`} onClick={() => setBin(key)} title={`${key} — ${its.length} item(s)`} style={{ '--bc': status }}>
-                      <span className="bc-code">{key}</span>
-                      <span className="bc-n">{its.length}</span>
-                    </button>
-                  )
-                })}
-              </div>
-
-              {bin && (
-                <div className="mt">
-                  <div className="spread" style={{ marginBottom: 6 }}><b>Bin {bin}</b><Badge>{binItems.length} materials</Badge></div>
-                  {binItems.map((it) => (
-                    <div className="insight-row" key={it.id} onClick={() => nav(`/inventory/${it.id}`)} style={{ cursor: 'pointer' }}>
-                      <span className="badge badge-neutral" style={{ padding: 6 }}><Icon name="box" size={14} /></span>
-                      <div className="insight-main">
-                        <div className="t">{it.description}</div>
-                        <div className="s mono">{it.itemCode} · {it.tradeL1}</div>
-                      </div>
-                      <div className="right"><div style={{ fontWeight: 700 }}>{num(it.availableQty)}</div><div className="faint" style={{ fontSize: 11 }}>{it.uom}</div></div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <Icon name="chevronRight" size={13} />
+              <button onClick={() => go({ level: 'warehouse', area, rack: null })}>{areaName}</button>
             </>
           )}
-        </Card>
+          {level === 'rack' && rack && (
+            <>
+              <Icon name="chevronRight" size={13} />
+              <span>{rackLabel(rack)}</span>
+            </>
+          )}
+        </div>
       </div>
+      <div className="fp-layout">{children}</div>
     </>
   )
 }

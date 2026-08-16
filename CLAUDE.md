@@ -655,3 +655,101 @@ overlaps); sidebar closed x=-240 → open x=0 with content width unchanged at 14
 account menu opens in-viewport with name, department, role and both options; zero
 `.card-sub` and zero `.fs-count` anywhere; eight routes checked for the correct topbar
 title and no duplicated heading. `npm run build` passes.
+
+### 2026-08-16 — Session: Floor Plan module rebuilt from the CW Taytay warehouse plan
+
+The floor plan was a fiction: five invented zones A–E, racks R01–R30, shelves S1–S6 and
+bins B01–B35, none of which describe the building. It is now drawn from
+`sample/EPC. FIN. WM. CW Taytay Warehouse Plan.pptx` and has three levels.
+
+**How the reference was read.** The deck was unpacked and its slides rendered through
+PowerPoint COM (`$app.Presentations.Open(...).Export(...)`); LibreOffice and Python are
+not on this machine. The zone overlays are native PowerPoint shapes over CAD rasters, so
+the geometry was pulled straight out of the slide XML — including group transforms and
+the 90° rotation slide 9 applies to its base image — rather than eyeballed. The rack runs
+were located by scanning the CAD raster for its magenta wall lines and grey rack frames.
+
+**What the drawing actually says, once decoded.** The plan has SIX rack runs, but the deck
+names ELEVEN racks. Run 1 stands alone against the west wall (13 bays, `1159 R-W`); runs
+2–6 are back-to-back pairs (10 bays a side, `3950 R-R`). 1 + 5×2 = 11. That reading was
+then confirmed against the highlight geometry: mapping slide 9's Structural strip back
+into raster pixels lands on ix 208.6–225.3, exactly the left half of run 3, and
+Architectural on 224.2–241.7, exactly its right half. So **Rack 4 and Rack 5 are the two
+faces of one run**, and MEPFS = runs 1–2, Safekeeping = runs 4–6. Bay pitch cross-checks:
+Rack 1 is 449 units for 13 bays, the others 345 for 10 — 34.5 either way.
+
+**`src/data/warehouseMap.js` (new).** Geometry and placement in one place, holding the RAW
+drawing coordinates (slide inches for the site, CAD raster pixels for the warehouse) with
+the conversion applied by `sr()` / `pl()`, so any shape can be checked against its source.
+1 raster px ≈ 76 mm, derived from the drawing's own 3950 mm clear aisle measuring 52 px.
+
+- **Site** — property boundary (the slide's own freeform path), the shed as three rects
+  (main shed plus two wings either side of the loading recess — one box would swallow the
+  recess), Deformed Rebar, Tiles Area, MRF (the one area drawn at an angle), stock yard,
+  parking, canopies, gate, guard posts, vehicle routes.
+- **Warehouse** — building envelope, 11 racks, the cantilever run along the east wall, the
+  open floor area, LS600 shelving in the high-value room, eight rooms, and the two open
+  flat areas with the drawing's stated 628.63 / 262.84 / 90.45 m².
+- **Racking** — Interlock 600 selective, beam elevations 1095 / 2295 / 3545 / 4795, frame
+  5000, Type A 2300 CE / 1200 kg and Type B 3300 CE / 1500 kg; cantilever 3000 upright,
+  900 bay centre, 1000 arm, 300 kg; LS600 4 levels at 167 / 717 / 1267 / 1817.
+
+**Placement — the honest part.** The stock sheet records no physical location, so the map
+places every line by the rule the plan itself implies: item group first where the plan
+puts that group outdoors (rebar → Deformed Rebar, tiles → Tiles Area), then value (the
+existing `isHighValue` top-36 → the locked room), then trade (the four areas inside the
+shed ARE trade areas). Steps 1–3 are a real reading of the plan. Step 4 — which bay a line
+sits in — is a MODEL: lines are ordered by issue frequency and laid in from ground level
+up, so fast movers sit at pick height. Every screen showing a bay says so, and the
+capacity read-out distinguishes the two ("capacity is counted off the racking drawing;
+which line sits in which bay is modelled").
+
+Audited in the browser against a temporary anonymised fixture: 779 lines = 730 inside +
+49 outdoors, zero unplaced, zero double-placed. Note 36 lines are flagged high value but
+32 reach the cage — four are tiles, and the outdoor assignment deliberately wins over
+value, because a tile pallet is outside whatever it is worth.
+
+**Colour.** The deck legends its areas in teal / magenta / amber / yellow / purple, none of
+which are in this design system. Each maps to the nearest sanctioned hue, fixed once at
+the top of the floor-plan CSS block. Safekeeping keeps yellow — the deck's own colour, and
+the warehouse's largest area — which is the one use of yellow outside its warning role;
+no low-stock warning is ever drawn as an area fill, so the two cannot be confused.
+
+**Other files.** `MaterialProfile` now reads `locationOf(item)` and shows Building → Area →
+Rack → Bay → Level instead of the dead Zone/Rack/Shelf/Bin columns. The guided tour's
+floor step was rewritten for the three levels; its anchor moved to `.fp-topbar`.
+`Movement.jsx` still defaults to `Zone A / R01` — left alone, flagged below.
+
+**Bugs found and fixed while verifying** (browser pane hidden again, so measured through
+the DOM rather than screenshots):
+- `getBBox()` reports coordinates in the element's LOCAL space, so every label inside a
+  rotated or translated group read as out-of-bounds. All checks were redone through
+  `getBoundingClientRect()` mapped back to viewBox units.
+- "DELIVERY TRUCK PARKING" ran 11 units past the drawing's right edge, and the Open Stock
+  Yard label sat on top of the Tiles Area name. Added `planText.jsx`, which wraps a label
+  to its box; the yard's own label is pinned to the top of its box because the rebar and
+  tiles areas sit inside it.
+- The rack number was centred on the run, which put it exactly under the area label for
+  Structural and Architectural — the two areas that are one rack deep. Numbers moved to
+  the run's head.
+- **Page scrolled sideways by 207–307 px at 375 px.** A grid item defaults to
+  `min-width: auto`, so `.fp-layout`'s column grew to the plan's `min-width` instead of
+  letting `.fp-stage` scroll. Fixed with `minmax(0, 1fr)` plus `min-width: 0` on the items.
+- The level switcher overran a phone by 7 px; its icons are hidden below 560 px.
+- The cantilever run and two rooms floated a few pixels outside the shed wall — raster
+  measurement drift, snapped back to the wall line. The loading bay still projects past
+  it, correctly: it does that in the plan, under the canopy.
+
+**Verified**: site / warehouse / rack / cantilever / shelving / floor views at 1440×900 and
+375×812, light and dark — zero labels clipped, zero label overlaps, zero page-level
+horizontal scroll, no console errors on a clean dev server. Drill-down, breadcrumbs, the
+back button and bay selection all exercised. Geometry audit: all racks, rooms, hulls and
+open areas inside the envelope; back-to-back pairs touch exactly; run pitch 86 px on all
+four gaps between double runs. `npm run build` passes.
+
+**Known, deliberately not fixed here:** the shared topbar overflows 375 px on every page
+(3 px on /dashboard, 9 px on /inventory, 18 px here) — the page title pushes the avatar
+past the edge. It is in `Layout.jsx`, pre-dates this work, and is spun off separately.
+`Movement.jsx`'s location fields still use the old vocabulary; it is a read-only Phase 3
+form. Real recorded locations remain the eventual fix — add a `location` column and
+`placement()` becomes a lookup instead of a rule.

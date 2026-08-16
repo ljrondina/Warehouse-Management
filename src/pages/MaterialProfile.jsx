@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { findById } from '../data/insights'
+import { locationOf } from '../data/warehouseMap'
 import { movements, reservations } from '../data/transactions'
 import { Card, Badge, KpiCard, DataTable } from '../components/ui'
 import { num, peso, fmtDate } from '../lib/format'
@@ -45,13 +46,22 @@ export default function MaterialProfile() {
     { label: 'Damaged', value: item.damagedQty, color: S.damaged },
   ]
 
-  const loc = [
-    { l: 'Warehouse', v: 'CW Taytay' },
-    { l: 'Zone', v: item.zone },
-    { l: 'Rack', v: item.rack },
-    { l: 'Shelf', v: item.shelf },
-    { l: 'Bin', v: item.bin },
-  ]
+  // Location now follows the real facility from the CW Taytay Warehouse Plan — site
+  // area, then material area, then rack / bay / level — instead of the old synthetic
+  // Zone-Rack-Shelf-Bin columns, which described no building that exists.
+  const place = locationOf(item)
+  const loc = place
+    ? place.level === 'site'
+      ? [{ l: 'Site', v: 'CW Taytay' }, { l: 'Area', v: place.area }, { l: 'Storage', v: 'Outdoor yard' }]
+      : [
+          { l: 'Building', v: 'Central Warehouse' },
+          { l: 'Area', v: place.area },
+          ...place.detail.split(' · ').map((seg) => {
+            const [l, ...rest] = seg.split(' ')
+            return rest.length ? { l, v: rest.join(' ') } : { l: 'Storage', v: seg }
+          }),
+        ]
+    : [{ l: 'Site', v: 'CW Taytay' }, { l: 'Location', v: 'Not assigned' }]
 
   const docs = [
     { name: `PO-2026-${item.id}.pdf`, type: 'Purchase Order', icon: 'doc' },

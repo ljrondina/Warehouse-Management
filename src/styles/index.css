@@ -1415,18 +1415,285 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .tour-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong); }
 .tour-dots span.on { background: var(--brand-red); width: 18px; border-radius: 3px; }
 
-/* Floor plan */
-.fp-grid { grid-template-columns: 1.4fr 1fr; gap: 16px; }
-.bin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 8px; }
-.bin-cell {
-  border: 1px solid var(--border); border-top: 3px solid var(--bc, var(--border-strong)); border-radius: 8px;
-  background: var(--surface-2); padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+/* ============================================================
+   Floor plan — three-level facility map (site / warehouse / racking)
+
+   AREA COLOURS. The reference deck legends its five material areas in teal,
+   magenta, amber, yellow and purple. Those hues are not in this design system, so
+   each maps to the nearest sanctioned one and the mapping is fixed here, once:
+
+     MEPFS         green        (deck teal)
+     Structural    brand red    (deck magenta)
+     Architectural orange       (deck amber)
+     Safekeeping   yellow       (deck yellow — a literal match)
+     High Value    dark gray    (deck purple; keeps the app's existing secure-cage
+                                 treatment, plus a diagonal hatch and a padlock)
+
+   Safekeeping is the one place yellow is used outside its warning role. It is the
+   warehouse's largest area and the deck's own colour for it, so recognition is worth
+   more than the rule here — and no low-stock warning is ever drawn as an area fill in
+   the same view, so the two cannot be confused.
+   ============================================================ */
+:root {
+  --fp-mepfs: #2f7d5a;
+  --fp-structural: #ee3124;
+  --fp-architectural: #b85f13;
+  --fp-safekeeping: #a8770f;
+  --fp-highvalue: #2b2c2b;
+  --fp-building: #ee3124;
+  --fp-rebar: #b85f13;
+  --fp-tiles: #a8770f;
+  --fp-mrf: #2f7d5a;
+  --fp-ink: rgba(35, 31, 32, 0.55);
+  --fp-paper: #fbfafa;
 }
-.bin-cell:hover { border-color: var(--bc); background: var(--surface); }
-.bin-cell.active { background: var(--bc); border-color: var(--bc); color: #fff; box-shadow: var(--shadow); }
-.bin-cell .bc-code { font-size: 11px; font-weight: 700; font-family: 'Consolas', monospace; }
-.bin-cell .bc-n { font-size: 10px; opacity: 0.8; }
-@media (max-width: 900px) { .fp-grid { grid-template-columns: 1fr; } }
+:root[data-theme='dark'] {
+  --fp-mepfs: #4a9e78;
+  --fp-structural: #f4695d;
+  --fp-architectural: #dd9950;
+  --fp-safekeeping: #c9962a;
+  --fp-highvalue: #a8a7a7;
+  --fp-building: #f4695d;
+  --fp-rebar: #dd9950;
+  --fp-tiles: #c9962a;
+  --fp-mrf: #4a9e78;
+  --fp-ink: rgba(242, 241, 241, 0.5);
+  --fp-paper: #1f1c1d;
+}
+
+/* --- level switcher + breadcrumb --- */
+.fp-topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.fp-levels { display: flex; gap: 6px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px; }
+.fp-level {
+  display: flex; align-items: center; gap: 7px; padding: 7px 13px; border: 0; border-radius: var(--radius-xs);
+  background: transparent; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.fp-level:hover:not(:disabled) { background: var(--surface); color: var(--text); }
+.fp-level.active { background: var(--brand-red); color: #fff; }
+.fp-level:disabled { opacity: 0.4; cursor: not-allowed; }
+.fp-level-n {
+  width: 17px; height: 17px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 10px; font-weight: 800; background: var(--border-strong); color: var(--text);
+}
+.fp-level.active .fp-level-n { background: rgba(255, 255, 255, 0.25); color: #fff; }
+.fp-crumb { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-muted); flex-wrap: wrap; }
+.fp-crumb button { border: 0; background: none; font: inherit; color: var(--text-muted); cursor: pointer; padding: 0; }
+.fp-crumb button:hover { color: var(--brand-red); text-decoration: underline; }
+.fp-crumb span { color: var(--text); font-weight: 700; }
+.fp-crumb svg { color: var(--text-faint); flex: none; }
+
+.fp-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(340px, 1fr); gap: 16px; align-items: start; }
+/* A grid item defaults to min-width:auto, so it grows to its content's minimum —
+   which here is the plan's own min-width. That let the drawing push the whole PAGE
+   sideways instead of scrolling inside .fp-stage. Both the track and the item have to
+   be pinned to zero for the scroller to do its job. */
+.fp-layout > * { min-width: 0; }
+.fp-scale { font-size: 11px; color: var(--text-faint); letter-spacing: 0.4px; }
+
+/* --- the drawing surface --- */
+.fp-stage { background: var(--fp-paper); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; overflow-x: auto; }
+.fp-svg { display: block; width: 100%; min-width: 520px; height: auto; }
+.fp-stage-elev { padding: 14px 10px; }
+.fp-elev { display: block; width: 100%; min-width: 620px; height: auto; }
+
+/* --- site plan --- */
+.fp-property { fill: var(--surface-2); stroke: var(--brand-red); stroke-width: 2; stroke-dasharray: 9 5; opacity: 0.95; }
+.fp-facility rect { fill: var(--surface); stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 4 3; }
+.fp-kind-park rect { fill: var(--ok-weak); stroke: var(--ok); stroke-dasharray: none; opacity: 0.85; }
+.fp-kind-canopy rect { fill: var(--info-weak); stroke: var(--brand-gray-soft); stroke-dasharray: none; }
+.fp-kind-gate rect { fill: var(--warn-weak); stroke: var(--warn); stroke-dasharray: none; }
+.fp-facility-t { font-size: 11px; font-weight: 700; fill: var(--text-faint); letter-spacing: 0.4px; }
+.fp-facility-s { font-size: 10px; fill: var(--text-faint); font-weight: 500; }
+.fp-route-in { stroke: var(--ok); fill: var(--ok); stroke-width: 2.5; }
+.fp-route-out { stroke: var(--brand-red); fill: var(--brand-red); stroke-width: 2.5; }
+.fp-marker circle { fill: var(--brand-red); }
+.fp-marker-t { font-size: 11px; font-weight: 800; fill: #fff; }
+.fp-north circle { fill: var(--surface); stroke: var(--border-strong); }
+.fp-north path { fill: var(--brand-red); }
+.fp-north-t { font-size: 11px; font-weight: 800; fill: var(--text-muted); }
+
+/* --- clickable material areas, both plans --- */
+.fp-area, .fp-hull, .fp-rack, .fp-floorarea { cursor: pointer; outline: none; }
+.fp-area rect, .fp-hull rect { transition: fill-opacity 0.15s, stroke-width 0.15s; }
+.fp-area > rect, .fp-area > g > rect { fill: var(--c); fill-opacity: 0.2; stroke: var(--c); stroke-width: 1.6; }
+.fp-hull rect { fill: var(--c); fill-opacity: 0.13; stroke: var(--c); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.fp-area.is-hover > rect, .fp-area.is-hover > g > rect,
+.fp-hull.is-hover rect { fill-opacity: 0.3; }
+.fp-area.is-active > rect, .fp-area.is-active > g > rect { fill-opacity: 0.42; stroke-width: 3; }
+.fp-hull.is-active rect { fill-opacity: 0.26; stroke-width: 2.2; stroke-dasharray: none; }
+.fp-area:focus-visible > rect, .fp-hull:focus-visible rect, .fp-rack:focus-visible > rect { stroke: var(--brand-red); stroke-width: 3; }
+.fp-secure-fill { color: var(--c); stroke: none; fill-opacity: 1; }
+
+.fp-mepfs { --c: var(--fp-mepfs); }
+.fp-structural { --c: var(--fp-structural); }
+.fp-architectural { --c: var(--fp-architectural); }
+.fp-safekeeping { --c: var(--fp-safekeeping); }
+.fp-highvalue { --c: var(--fp-highvalue); }
+.fp-building { --c: var(--fp-building); }
+.fp-rebar { --c: var(--fp-rebar); }
+.fp-tiles { --c: var(--fp-tiles); }
+.fp-mrf { --c: var(--fp-mrf); }
+
+.fp-area-t { font-size: 15px; font-weight: 800; letter-spacing: 0.6px; fill: var(--text); }
+.fp-t-mepfs { fill: var(--fp-mepfs); }
+.fp-t-structural { fill: var(--fp-structural); }
+.fp-t-architectural { fill: var(--fp-architectural); }
+.fp-t-safekeeping { fill: var(--fp-safekeeping); }
+.fp-t-highvalue { fill: var(--fp-highvalue); }
+.fp-t-building { fill: var(--fp-building); }
+.fp-t-rebar { fill: var(--fp-rebar); }
+.fp-t-tiles { fill: var(--fp-tiles); }
+.fp-t-mrf { fill: var(--fp-mrf); }
+.fp-area-hint { font-size: 10.5px; font-weight: 600; letter-spacing: 0.3px; fill: var(--text-faint); }
+
+/* --- warehouse plan --- */
+.fp-shell { fill: var(--surface); stroke: var(--text); stroke-width: 2.4; }
+.fp-canopy { fill: none; stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 6 4; }
+.fp-open rect { fill: var(--surface-2); stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 3; }
+.fp-open-t { font-size: 11px; font-weight: 700; fill: var(--text-faint); letter-spacing: 0.5px; }
+.fp-open-s { font-size: 10px; fill: var(--text-faint); }
+.fp-rack > rect { fill: var(--c); fill-opacity: 0.6; stroke: var(--c); stroke-width: 1.2; transition: fill-opacity 0.15s; }
+.fp-rack:hover > rect { fill-opacity: 0.9; }
+.fp-rack.is-active > rect { fill-opacity: 0.95; }
+.fp-rack.is-dim > rect { fill-opacity: 0.22; }
+.fp-bay-div { stroke: var(--fp-paper); stroke-width: 0.9; opacity: 0.7; }
+.fp-rack-t { font-size: 11px; font-weight: 800; fill: #fff; paint-order: stroke; stroke: rgba(0, 0, 0, 0.35); stroke-width: 2.5; }
+.fp-cant > rect { fill-opacity: 0.45; }
+.fp-floorarea rect { fill: var(--fp-safekeeping); fill-opacity: 0.16; stroke: var(--fp-safekeeping); stroke-width: 1; stroke-dasharray: 4 3; }
+.fp-floorarea:hover rect { fill-opacity: 0.3; }
+.fp-floor-t { font-size: 11px; font-weight: 700; letter-spacing: 1px; fill: var(--fp-safekeeping); }
+.fp-hv-shelves rect { fill: var(--fp-highvalue); opacity: 0.55; }
+.fp-room rect { fill: var(--surface); stroke: var(--border-strong); stroke-width: 1.1; }
+.fp-room.is-accent rect { fill: var(--info-weak); stroke: var(--brand-gray-soft); }
+.fp-room-t { font-size: 10px; font-weight: 700; fill: var(--text-muted); }
+.fp-room-s { font-size: 9.5px; font-weight: 500; fill: var(--text-faint); }
+
+/* --- rack elevation --- */
+.fp-axis line { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 3; }
+.fp-axis text { font-size: 9.5px; fill: var(--text-faint); font-family: 'Consolas', monospace; }
+.fp-axis-cap { font-size: 9px; fill: var(--text-faint); letter-spacing: 0.5px; }
+.fp-upright { fill: var(--brand-gray-soft); }
+.fp-floorline { stroke: var(--text); stroke-width: 2.5; }
+.fp-bay-n { font-size: 10.5px; font-weight: 700; fill: var(--text-muted); }
+.fp-bay-cap { font-size: 9px; font-weight: 700; fill: var(--text-faint); letter-spacing: 1.2px; }
+.fp-cell { cursor: pointer; outline: none; }
+.fp-cell rect { stroke-width: 1.2; transition: fill 0.12s, stroke 0.12s; }
+.fp-cell text { font-size: 10.5px; font-weight: 700; fill: var(--text); }
+.fp-cell.is-empty rect { fill: var(--surface-2); stroke: var(--border); }
+.fp-cell.is-full rect { fill: color-mix(in srgb, var(--ok) 28%, transparent); stroke: var(--ok); }
+.fp-cell.is-low rect { fill: color-mix(in srgb, var(--warn) 32%, transparent); stroke: var(--warn); }
+.fp-cell.is-out rect { fill: color-mix(in srgb, var(--danger) 30%, transparent); stroke: var(--danger); }
+.fp-cell:hover rect { stroke-width: 2.4; }
+.fp-cell.is-sel rect { stroke: var(--brand-red); stroke-width: 3; }
+.fp-cell:focus-visible rect { stroke: var(--brand-red); stroke-width: 3; }
+.fp-stack { fill: var(--fp-safekeeping); fill-opacity: 0.45; stroke: var(--fp-safekeeping); stroke-width: 1; }
+
+.fp-spec { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; font-size: 12px; color: var(--text-muted); }
+.fp-spec b { color: var(--text-faint); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; margin-right: 5px; }
+
+/* --- legends --- */
+.fp-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; font-size: 11.5px; color: var(--text-muted); }
+.fp-legend-i { display: inline-flex; align-items: center; gap: 6px; }
+.fp-legend-i.muted { color: var(--text-faint); }
+.fp-swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; display: inline-block; background: var(--brand-gray-mid); }
+.fp-sw-mepfs { background: var(--fp-mepfs); }
+.fp-sw-structural { background: var(--fp-structural); }
+.fp-sw-architectural { background: var(--fp-architectural); }
+.fp-sw-safekeeping { background: var(--fp-safekeeping); }
+.fp-sw-highvalue { background: var(--fp-highvalue); }
+.fp-sw-building { background: var(--fp-building); }
+.fp-sw-rebar { background: var(--fp-rebar); }
+.fp-sw-tiles { background: var(--fp-tiles); }
+.fp-sw-mrf { background: var(--fp-mrf); }
+.fp-sw-park { background: var(--ok-weak); border: 1px solid var(--ok); }
+.fp-sw-room { background: var(--surface); border: 1px solid var(--border-strong); }
+.fp-cellsw { width: 12px; height: 12px; border-radius: 3px; flex: none; display: inline-block; border: 1px solid var(--border); background: var(--surface-2); }
+.fp-cellsw.is-full { background: color-mix(in srgb, var(--ok) 28%, transparent); border-color: var(--ok); }
+.fp-cellsw.is-low { background: color-mix(in srgb, var(--warn) 32%, transparent); border-color: var(--warn); }
+.fp-cellsw.is-out { background: color-mix(in srgb, var(--danger) 30%, transparent); border-color: var(--danger); }
+
+/* --- side panel --- */
+.fp-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; max-height: calc(100vh - 150px); }
+.fp-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.fp-panel-title { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.fp-panel-title .fp-swatch { width: 14px; height: 14px; margin-top: 3px; }
+.fp-panel-title .t { font-size: 15px; font-weight: 800; line-height: 1.25; }
+.fp-panel-title .s { font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
+.fp-note { font-size: 11.5px; color: var(--text-muted); background: var(--surface-2); padding: 9px 16px; border-bottom: 1px solid var(--border); line-height: 1.5; }
+.fp-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+.fp-stat { background: var(--surface); padding: 9px 12px; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.fp-stat .l { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-faint); }
+.fp-stat .v { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-cap { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.fp-cap-l { font-size: 11.5px; color: var(--text-muted); }
+.fp-cap-v { font-size: 13px; font-weight: 800; }
+.fp-cap-bar { height: 7px; border-radius: 4px; background: var(--surface-2); overflow: hidden; margin-top: 7px; }
+.fp-cap-bar span { display: block; height: 100%; background: var(--brand-red); border-radius: 4px; }
+.fp-cap-hint { font-size: 10.5px; color: var(--text-faint); margin-top: 6px; line-height: 1.45; }
+.fp-list { overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.fp-row {
+  display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); border-left: 3px solid var(--border-strong); background: var(--surface-2); cursor: pointer;
+}
+.fp-row:hover { background: var(--surface); border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.fp-row-main { min-width: 0; flex: 1; }
+.fp-row-top { display: flex; align-items: center; gap: 8px; }
+.fp-row-top .mono { font-family: 'Consolas', monospace; font-size: 11px; font-weight: 700; color: var(--text-muted); }
+.fp-row-status { font-size: 9.5px; font-weight: 700; padding: 1px 6px; border-radius: 20px; }
+.fp-row-desc { font-size: 12.5px; font-weight: 600; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-row-meta { font-size: 10.5px; color: var(--text-faint); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-row-qty { text-align: right; flex: none; }
+.fp-row-qty .v { font-size: 14px; font-weight: 700; }
+.fp-row-qty .u { font-size: 9.5px; color: var(--text-faint); }
+.fp-row-go { color: var(--text-faint); flex: none; }
+.fp-more { align-self: center; margin: 4px 0 8px; }
+
+/* --- overview lists shown when nothing is selected --- */
+.fp-pick { font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px; }
+.fp-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.fp-tile {
+  display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; gap: 2px 8px; text-align: left;
+  padding: 11px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); cursor: pointer;
+}
+.fp-tile:hover { background: var(--surface); border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.fp-tile .fp-swatch { grid-row: 1 / 3; align-self: center; }
+.fp-tile .n { font-size: 11.5px; font-weight: 700; line-height: 1.25; }
+.fp-tile .v { font-size: 17px; font-weight: 800; grid-column: 2; }
+.fp-tile .u { display: none; }
+.fp-mrf {
+  margin-top: 12px; padding: 11px 12px; border: 1px dashed var(--border-strong); border-radius: var(--radius-sm);
+  font-size: 11px; color: var(--text-faint); line-height: 1.55;
+}
+.fp-arealist { display: flex; flex-direction: column; gap: 6px; }
+.fp-arearow {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--surface-2); cursor: pointer; text-align: left; width: 100%;
+}
+.fp-arearow:hover { background: var(--surface); border-color: var(--border-strong); }
+.fp-arearow-main { flex: 1; min-width: 0; }
+.fp-arearow-main .n { font-size: 12.5px; font-weight: 700; }
+.fp-arearow-main .s { font-size: 10.5px; color: var(--text-faint); }
+.fp-arearow-bar { width: 90px; height: 7px; border-radius: 4px; background: var(--border); overflow: hidden; flex: none; }
+.fp-arearow-bar span { display: block; height: 100%; border-radius: 4px; }
+.fp-arearow-pct { font-size: 12px; font-weight: 700; width: 36px; text-align: right; flex: none; }
+.fp-rack-jump { display: flex; gap: 4px; flex-wrap: wrap; }
+.fp-rack-jump .btn { min-width: 30px; padding: 5px 8px; }
+
+@media (max-width: 1100px) {
+  .fp-layout { grid-template-columns: minmax(0, 1fr); }
+  .fp-panel { max-height: none; }
+  .fp-list { max-height: 460px; }
+}
+@media (max-width: 560px) {
+  .fp-topbar { flex-direction: column; align-items: stretch; }
+  /* Three labelled steps plus their icons overrun a phone by a few pixels, and a
+     switcher that scrolls by 7px is worse than one without icons. The numeral and the
+     label already say which level you are on. */
+  .fp-levels { justify-content: space-between; gap: 3px; padding: 3px; }
+  .fp-level { padding: 6px 8px; gap: 5px; font-size: 11.5px; }
+  .fp-level svg { display: none; }
+  .fp-stats { grid-template-columns: repeat(2, 1fr); }
+}
 
 /* The open sidebar is a layer over the page at EVERY width now, so it gets a scrim at
    every width too: it dims what is behind, says the layer is dismissible, and gives
