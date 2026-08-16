@@ -228,3 +228,39 @@ re-run the workflow.
   parts are ordered, so a full in-order run stays idempotent.
 - `supabase/seed/` is gitignored — verified with `git check-ignore`. **Nothing in that
   folder may ever be committed: it is the dataset.**
+
+### 2026-08-16 — Session: Inventory module — blank insight cards, mock-data audit
+
+**Symptom:** on the live site the Inventory dashboard showed real KPIs, real charts and
+a real trade distribution, but *High Stock*, *High Value*, *Low Stock*, *Fast Moving*
+and *Dead Stock* were all empty. The data was not "reset" — it was never read.
+
+**Cause:** `src/pages/dashboard/InventoryTab.jsx` built `INSIGHT_ROWS` at **module
+scope**. `App.jsx` imports `Dashboard` eagerly and `Dashboard` imports `InventoryTab`
+eagerly, so that top-level code ran during the import graph — i.e. while `items` was
+still the empty shell, *before* `hydrate()` resolved and again ahead of the post-sign-in
+re-hydration. The five lists were therefore frozen at zero rows for the life of the tab.
+Everything else on the tab (`KPIS(pool)`, `movementCombinedSeries`, `byTradeL1`) is
+called **during render**, which is why only these five cards were blank. Pages that call
+the same helpers inside a component (`LowStock`, `Reports`, `Analytics`) were unaffected
+— they are also lazy-loaded, so they mount well after hydration.
+
+**Fix:** `INSIGHT_ROWS` is now `useMemo(buildInsightRows, [items.length])` inside the
+component. Same memoisation (the lists still ignore the filter bar), but it recomputes
+after every hydration pass. `items` is now imported from `../../data/insights`.
+
+**Mock-data audit requested this session.** Confirmed genuinely from Postgres: all six
+quantity KPIs, the three value KPIs, the composition battery, the trade/item-group
+donut, the five insight lists, Low Stock, Reports and the Inventory table. Confirmed
+**not** real, and left in place for now:
+- `Analytics.jsx` — `Stock Turnover 2.4x` and `Warehouse Utilization 78%` are hard-coded
+  literals, and all four trend arrows (`3.2`, `5.1`, `1.4`, `-2.3`) are invented.
+- `insights.js` `TRENDS` — hard-coded percentages. Currently unused by the dashboard.
+- Movement History: incoming/outgoing bars are the real ledger, and the stock curve is
+  back-cast from it, but the **available/reserved split** is modelled (the sheets carry
+  no reservation history) and buckets older than the ledger window are **projected** at
+  the recorded daily average, not measured.
+- The high-value "secure cage" (Zone HV / rack CAGE, top 36 by line value) is assigned
+  in code, not a real warehouse location.
+
+Verified `npm run build` passes.

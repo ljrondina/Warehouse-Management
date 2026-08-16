@@ -2,7 +2,7 @@ import { lazy, memo, Suspense, useLayoutEffect, useMemo, useRef, useState } from
 import { useNavigate } from 'react-router-dom'
 import {
   KPIS, byTradeL1, byTradeL2, movementCombinedSeries, PERIODS,
-  topQuantity, fastMoving, lowStock, highValue, nonMoving,
+  topQuantity, fastMoving, lowStock, highValue, nonMoving, items,
 } from '../../data/insights'
 import { Card, KpiCard, Segmented } from '../../components/ui'
 import StockBattery from '../../components/StockBattery'
@@ -153,13 +153,19 @@ const getAvailable = (r) => r.availableQty
 const getIssueFreq = (r) => r.issueFrequency
 const getLastMoved = (r) => fmtDate(r.lastMovement)
 
-const INSIGHT_ROWS = {
+// NOT built at module scope. This module is imported eagerly from Dashboard, which
+// App imports eagerly, so its top level runs while `items` is still empty —
+// src/lib/hydrate.js only fills it later, and AuthContext re-runs the load again
+// after sign-in. A module-scope snapshot froze all five lists at zero rows forever,
+// which is why the dashboard showed live KPIs and charts beside five blank cards.
+// Recomputing on items.length keeps the memo but survives every hydration.
+const buildInsightRows = () => ({
   high: topQuantity(ALL),
   value: highValue(ALL),
   low: lowStock(ALL),
   fast: fastMoving(ALL),
   dead: nonMoving(ALL),
-}
+})
 
 // `pool` and `qtyUnit` come from the dashboard shell, which owns the filter bar that
 // is shared across all three dashboard tabs.
@@ -175,6 +181,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
   const [chartsWide, setChartsWide] = useState(false)
   const [kpiModal, setKpiModal] = useState(null)
 
+  const INSIGHT_ROWS = useMemo(buildInsightRows, [items.length])
   const k = useMemo(() => KPIS(pool), [pool])
   const movementData = useMemo(() => movementCombinedSeries(pool, period), [pool, period])
   const periodOpts = PERIODS.map((p) => ({ value: p.key, label: p.label }))
