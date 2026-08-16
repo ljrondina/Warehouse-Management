@@ -204,6 +204,8 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
    descriptive text drops so the icons keep fitting instead of pushing the page
    sideways — the title is the last thing to go, because it is the only part that
    tells you where you are. */
+.topbar-title-wrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.topbar-title-icon { color: var(--brand-red); flex-shrink: 0; }
 .topbar-title {
   font-family: var(--font-head); font-size: 16px; font-weight: 700; color: var(--text);
   letter-spacing: -0.2px; margin: 0; min-width: 0;
@@ -217,6 +219,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
   .topbar-tools { gap: 6px !important; }
   .topbar-site { display: none; }
   .topbar-title { font-size: 14.5px; }
+  .topbar-title-icon { width: 15px; height: 15px; }
 }
 @media (max-width: 720px) { .topbar-hide-sm { display: none; } }
 
@@ -315,7 +318,11 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
 .btn-sm { padding: 6px 12px; font-size: 12px; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.icon-btn { width: 38px; height: 38px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); display: inline-flex; align-items: center; justify-content: center; color: var(--text-muted); }
+/* position: relative is load-bearing, not decorative — the notification unread dot
+   is an absolutely-positioned child of this button. Without it the dot positions
+   against the nearest positioned ancestor further up the tree instead (the header),
+   so it rendered as a stray red dot elsewhere in the topbar rather than on the bell. */
+.icon-btn { position: relative; width: 38px; height: 38px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); display: inline-flex; align-items: center; justify-content: center; color: var(--text-muted); }
 .icon-btn:hover { background: var(--surface-2); color: var(--text); }
 
 /* ---------- Cards ---------- */
@@ -1278,8 +1285,17 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    toolbar and filter bar above them. The active tab is joined to the content below by
    an inset bottom border rather than a floating pill, so the strip reads as the top
    edge of the panel it controls. */
-.dash-tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--border); padding: 0 2px; overflow-x: auto; scrollbar-width: none; }
+/* The tab strip and the + New Transaction trigger share this row, the button
+   pinned to the right-most end and sitting on top of the strip's own border —
+   there is no separate toolbar row above the tabs any more. */
+.dash-tabs-row { display: flex; align-items: flex-end; gap: 12px; }
+.dash-tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--border); padding: 0 2px; overflow-x: auto; scrollbar-width: none; flex: 1 1 auto; min-width: 0; }
 .dash-tabs::-webkit-scrollbar { display: none; }
+.dash-tabs-row > .txn-wrap { flex-shrink: 0; margin-bottom: 8px; }
+@media (max-width: 760px) {
+  .dash-tabs-row { flex-wrap: wrap; justify-content: flex-end; }
+  .dash-tabs-row > .txn-wrap { margin-bottom: 0; order: -1; }
+}
 .dash-tab {
   display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
   padding: 10px 16px 11px; margin-bottom: -1.5px;
@@ -2136,12 +2152,6 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    Page head, icon-only actions, mobile control alignment, Overview compression.
    ========================================================================== */
 
-/* The page title moved to the topbar, so this row is just the greeting and the two
-   actions — baseline-aligned rather than the old block-vs-block `spread`. */
-.page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.page-greeting { font-size: 13px; font-weight: 600; color: var(--text-muted); min-width: 0; }
-.page-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-
 /* Buttons that keep their glyph and drop their label when the row gets tight.
    Square at that point, so a row of them reads as a row of icons rather than as
    labels that happen to have gone missing. */
@@ -2149,10 +2159,7 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   .btn-icon-sm .btn-text { display: none; }
   .btn-icon-sm { padding: 0; width: 36px; height: 36px; justify-content: center; gap: 0; }
   .btn-icon-sm .txn-caret { display: none; }
-  .page-head { flex-wrap: nowrap; }
-  .page-greeting { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
-@media (max-width: 520px) { .greeting-role { display: none; } }
 
 /* ---------- Card head controls ----------
    The head is a two-part row: identity on the left, controls on the right. Below the

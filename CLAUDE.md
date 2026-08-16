@@ -753,3 +753,53 @@ past the edge. It is in `Layout.jsx`, pre-dates this work, and is spun off separ
 `Movement.jsx`'s location fields still use the old vocabulary; it is a read-only Phase 3
 form. Real recorded locations remain the eventual fix — add a `location` column and
 `placement()` becomes a lookup instead of a rule.
+
+### 2026-08-17 — Session: topbar icons, tour button, notification-dot bug, greeting removed
+
+Five small UI requests, all in `Layout.jsx`, `Dashboard.jsx` and `index.css`.
+
+**1. Every page title in the topbar now carries an icon.** `Layout.jsx` gained
+`ROUTE_ICONS`/`DASH_ICONS` maps (same keys as the existing `ROUTE_TITLES`/`DASH_TITLES`)
+and a `pageIcon()` alongside `pageTitle()`. Each icon name matches the one the sidebar
+already uses for that destination — the topbar title and the nav item that led there
+carry the same glyph. `.topbar-title-wrap` lays the icon beside the `<h1>`.
+
+**2. "Take a Tour" moved into the topbar, next to Notifications, as a question-mark
+icon button.** It used to be a labelled button on the Dashboard page itself
+(`.page-actions`, removed — see #4), which meant the tour trigger only existed on one
+page even though `<Tour />` runs globally from `Layout.jsx`. `useTour()` is now called
+in `Layout.jsx`, and the icon button sits between the theme toggle and the bell,
+`data-tour="tour-btn"` moved with it. `Icon` gained a `help` glyph (circle with a
+question mark) since none of the existing 40-odd icons fit.
+
+**3. Fixed the notification unread dot — it was never actually on the bell.** `.icon-btn`
+had no `position: relative`, so the dot's `position: absolute` (set inline in
+`Layout.jsx`) resolved against the nearest positioned ancestor up the tree instead of
+the button — it rendered as a stray red dot elsewhere in the topbar rather than on the
+bell icon. This is what "the notification colors are wrong" was pointing at: not a
+wrong hue, a wrong position that then reads as a color problem because the dot shows up
+somewhere it isn't supposed to be. One line (`position: relative` on `.icon-btn`) fixes
+every icon-button badge, not just this one.
+
+**4. The dashboard greeting ("Good day, {name} · {role}") is gone entirely** —
+`.page-head` / `.page-greeting` / `.page-actions` / `.greeting-role` deleted from both
+`Dashboard.jsx` and the stylesheet. Nothing replaced it; the topbar title already says
+what page this is, and the account menu already carries the name and role.
+
+**5. New Transaction now shares a row with the Inventory/Safekeeping/Excess tabs**,
+pinned to the row's right-most end, sitting on top of the tab strip's own border
+instead of in a separate toolbar row above it. New `.dash-tabs-row` wraps `.dash-tabs`
+(now `flex: 1 1 auto`) and `NewTransactionMenu`'s `.txn-wrap`; below 760px the row wraps
+and the button (icon-only at that width) stays pinned to the right edge above the tabs
+via `order: -1` plus `justify-content: flex-end` on the wrapped row.
+
+**Verified** against the other session's already-running dev server (this machine has a
+live Supabase session cached from an earlier login, so the dashboard rendered against
+real auth without a temporary fixture): topbar heading shows a 17×17 icon beside
+"Inventory Insights"; Take a Tour sits between the theme toggle and the bell; the
+notification dot's bounding box (1184–1192, 17.5–25.5) now sits inside the bell
+button's box (1162–1200, 10.5–48.5), confirming the fix; no "Good day" text anywhere in
+the rendered page; at 1280px the New Transaction control's right edge (1242) matches the
+tab row's right edge exactly, vertically centered against it; at 375px the button sits
+top-right (327–363, matching the row width) with the tabs wrapped beneath it and zero
+horizontal page overflow. No console errors. `npm run build` passes.

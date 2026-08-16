@@ -63,6 +63,7 @@ const paths = {
   excess: <><path d="M4 20h4V10H4v10zM10 20h4V4h-4v16zM16 20h4v-6h-4v6z" /></>,
   borrow: <><path d="M14 4h6v6" /><path d="M20 4l-8 8" /><path d="M10 6H4v14h14v-6" /></>,
   reorganize: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><path d="M14 6.5h5.5V12" /><path d="M17.5 9.5L19.5 12l2-2.5" /><path d="M10 17.5H4.5V12" /><path d="M6.5 14.5L4.5 12l-2 2.5" /></>,
+  help: <><circle cx="12" cy="12" r="9" /><path d="M9.2 9.3a2.8 2.8 0 015.4.9c0 1.9-2.6 2-2.6 3.8" /><path d="M12 17.2v.01" /></>,
 }
 
 export default function Icon({ name, size = 20, className = '', style }) {

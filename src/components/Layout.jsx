@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
+import { useTour } from '../context/TourContext'
 import { ROLES, ROLE_LIST, NAV, isLocked } from '../data/roles'
 import { counts } from '../data/transactions'
 import Icon from '../lib/icons'
@@ -54,15 +55,42 @@ const ROUTE_TITLES = {
 }
 const DASH_TITLES = { safekeeping: 'Safekeeping Insights', excess: 'Excess Materials' }
 
+// One icon per route/tab, reusing the same names the sidebar nav already uses for
+// that destination — so the topbar title and the nav item that led here match.
+const ROUTE_ICONS = {
+  '/inventory': 'inventory',
+  '/movement': 'incoming',
+  '/reservations': 'reserve',
+  '/approvals': 'approve',
+  '/users': 'users',
+  '/audit': 'audit',
+  '/reports': 'reports',
+  '/analytics': 'trend',
+  '/storage': 'map',
+  '/settings': 'settings',
+  '/low-stock': 'alert',
+  '/purchase-requests': 'request',
+  '/request-materials': 'request',
+  '/delivery': 'truck',
+}
+const DASH_ICONS = { safekeeping: 'vault', excess: 'excess' }
+
 function pageTitle(pathname, tabParam) {
   if (pathname === '/dashboard') return DASH_TITLES[tabParam] || 'Inventory Insights'
   if (pathname.startsWith('/inventory/')) return 'Material Profile'
   return ROUTE_TITLES[pathname] || 'Megawide WMS'
 }
 
+function pageIcon(pathname, tabParam) {
+  if (pathname === '/dashboard') return DASH_ICONS[tabParam] || 'inventory'
+  if (pathname.startsWith('/inventory/')) return 'box'
+  return ROUTE_ICONS[pathname] || 'dashboard'
+}
+
 export default function Layout({ children }) {
   const { user, signOut, switchRole, canSwitchRole } = useAuth()
   const { theme, toggle } = useTheme()
+  const { startTour } = useTour()
   // ONE piece of state for the sidebar, and it starts closed. There is no icon-rail
   // middle state any more: the burger either shows the full labelled panel or hides
   // it completely, at every width. Open, it overlays the page — `.main` reserves no
@@ -78,6 +106,7 @@ export default function Layout({ children }) {
   const acctRef = useRef(null)
   const role = ROLES[user.role]
   const title = pageTitle(location.pathname, params.get('tab'))
+  const titleIcon = pageIcon(location.pathname, params.get('tab'))
 
   // Escape closes whichever overlay is showing — both are dismissible layers.
   useEffect(() => {
@@ -139,7 +168,10 @@ export default function Layout({ children }) {
           {/* The page title sits here, where the warehouse name used to. It is the
               thing that changes as you move around, so it takes the primary slot; the
               warehouse is fixed context and moves to the right. */}
-          <h1 className="topbar-title">{title}</h1>
+          <div className="topbar-title-wrap">
+            <Icon name={titleIcon} size={17} className="topbar-title-icon" />
+            <h1 className="topbar-title">{title}</h1>
+          </div>
 
           <div style={{ flex: 1 }} />
 
@@ -179,6 +211,10 @@ export default function Layout({ children }) {
 
           <button className="icon-btn" onClick={toggle} title="Toggle theme">
             <Icon name={theme === 'light' ? 'moon' : 'sun'} size={18} />
+          </button>
+
+          <button className="icon-btn" onClick={startTour} data-tour="tour-btn" title="Take a Tour" aria-label="Take a Tour">
+            <Icon name="help" size={18} />
           </button>
 
           <div style={{ position: 'relative' }}>

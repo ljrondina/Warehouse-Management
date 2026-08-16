@@ -1,8 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { useTour } from '../context/TourContext'
-import { ROLES, can } from '../data/roles'
+import { can } from '../data/roles'
 import { items, uomsOf } from '../data/insights'
 import FilterSearch, { applyFilters } from '../components/FilterSearch'
 import NewTransactionMenu from '../components/NewTransactionMenu'
@@ -47,7 +46,6 @@ function useSafekeepingSoh(enabled) {
 
 export default function Dashboard() {
   const { user } = useAuth()
-  const { startTour } = useTour()
   // The tab lives in the URL so /dashboard?tab=safekeeping is linkable — the old
   // /safekeeping route redirects there, and the browser Back button works across tabs.
   const [params, setParams] = useSearchParams()
@@ -91,47 +89,32 @@ export default function Dashboard() {
 
   return (
     <>
-      {/* The page title moved to the topbar, so this row carries only the greeting
-          and the two actions. On a phone the actions collapse to their icons — see
-          .page-actions in the stylesheet — because the labels alone took more width
-          than the greeting they sit beside. */}
-      <div className="page-head" data-tour="header">
-        <div className="page-greeting">
-          Good day, {user.name.split(' ')[0]}
-          {/* The role is dropped on a phone rather than left to ellipsise — it is one
-              tap away in the account menu, and a half-cut job title reads worse than
-              no job title. */}
-          <span className="greeting-role faint"> · {ROLES[user.role].label}</span>
+      {/* Tab strip and the + New Transaction trigger share one row now — the button
+          sits at the row's right-most end, on top of the tab strip's own border
+          rather than in a separate toolbar row above it. */}
+      <div className="dash-tabs-row" data-tour="header">
+        <div className="dash-tabs" role="tablist" data-tour="dash-tabs">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={t.key === active}
+              className={`dash-tab ${t.key === active ? 'active' : ''} ${t.locked ? 'locked' : ''}`}
+              disabled={t.locked}
+              title={t.locked ? `${t.label} — coming in Phase 2` : `${t.label} dashboard`}
+              onClick={() => selectTab(t.key)}
+            >
+              <Icon name={t.icon} size={17} />
+              <span>{t.label}</span>
+              {t.locked && <span className="dash-tab-lock">🔒</span>}
+            </button>
+          ))}
         </div>
-        <div className="page-actions">
-          <button className="btn btn-icon-sm" onClick={startTour} data-tour="tour-btn" title="Take a Tour" aria-label="Take a Tour">
-            <Icon name="approve" size={15} /> <span className="btn-text">Take a Tour</span>
-          </button>
-          <NewTransactionMenu
-            canCreate={allowedForms.length > 0}
-            allowed={allowedForms}
-            onPick={(item) => setModal(item.form)}
-          />
-        </div>
-      </div>
-
-      {/* Tab strip — one dashboard per module, sharing the toolbar above it. */}
-      <div className="dash-tabs mt" role="tablist" data-tour="dash-tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            role="tab"
-            aria-selected={t.key === active}
-            className={`dash-tab ${t.key === active ? 'active' : ''} ${t.locked ? 'locked' : ''}`}
-            disabled={t.locked}
-            title={t.locked ? `${t.label} — coming in Phase 2` : `${t.label} dashboard`}
-            onClick={() => selectTab(t.key)}
-          >
-            <Icon name={t.icon} size={17} />
-            <span>{t.label}</span>
-            {t.locked && <span className="dash-tab-lock">🔒</span>}
-          </button>
-        ))}
+        <NewTransactionMenu
+          canCreate={allowedForms.length > 0}
+          allowed={allowedForms}
+          onPick={(item) => setModal(item.form)}
+        />
       </div>
 
       <div className="mt-sm">
