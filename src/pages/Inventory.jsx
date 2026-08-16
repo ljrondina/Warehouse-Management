@@ -181,7 +181,6 @@ export default function Inventory() {
     <div className="page-fit">
       <div className="spread inv-head">
         <div>
-          <div className="section-title"><Icon name="inventory" size={20} /> Inventory Master List</div>
           <div className="section-note">{num(rows.length)} of {num(items.length)} materials · Central Warehouse Taytay</div>
         </div>
         <button className="btn btn-primary" onClick={() => canAdd && setShowAdd(true)} disabled={!canAdd}

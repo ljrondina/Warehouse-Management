@@ -185,47 +185,62 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
   position: fixed; top: 0; bottom: 0; left: 0; z-index: 40;
   transition: width 0.2s ease, transform 0.2s ease;
 }
-/* The page ONLY ever reserves the collapsed rail's width. Opening the sidebar widens
-   the sidebar itself and lets it overlay the page — it never changes this margin, so
-   the dashboard beneath does not reflow and every chart on it keeps its measured
-   size instead of re-drawing. */
-.main { flex: 1; margin-left: var(--sidebar-w-collapsed); display: flex; flex-direction: column; min-width: 0; }
+/* The page reserves NO width for the sidebar at any breakpoint. There is no icon-rail
+   middle state: the burger either shows the full labelled panel, laid over the page,
+   or hides it completely. Content therefore keeps the same width in both states and
+   never reflows when the nav opens. */
+.main { flex: 1; margin-left: 0; display: flex; flex-direction: column; min-width: 0; }
 .content { padding: 24px 28px 48px; flex: 1; }
 
-/* Closed is the icon rail; open is the labelled panel laid over the page. */
-.sidebar { width: var(--sidebar-w-collapsed); }
-.sidebar.open { width: var(--sidebar-w); box-shadow: var(--shadow-lg); }
-.sidebar { will-change: width; contain: layout paint; }
+.sidebar { width: var(--sidebar-w); transform: translateX(-100%); box-shadow: none; }
+.sidebar.open { transform: translateX(0); box-shadow: var(--shadow-lg); }
+.sidebar { will-change: transform; contain: layout paint; }
 .nav-toggle { flex-shrink: 0; }
-
-/* ICON ALIGNMENT — the whole point of the two states being the same object.
-   The nav's horizontal padding and the item's are IDENTICAL in both states, and the
-   icon is the first child in both, so its centre sits at the same x whether the
-   labels are showing or not: 10px nav + 10px item + half of a 20px icon = 30px,
-   which is also the centre of the 60px rail. Opening the sidebar therefore reveals
-   the labels without the icons moving at all. Nothing here may set a different
-   padding, a different icon size, or `justify-content: center` for the closed state —
-   each of those would shift the icons and break the effect. */
-.app-shell.nav-collapsed .sidebar-head { padding: 20px 6px; }
-/* Only the text-bearing parts hide. The icon keeps its position, size and colour. */
-.app-shell.nav-collapsed .nav-item .nav-label,
-.app-shell.nav-collapsed .nav-item .lock-ico,
-.app-shell.nav-collapsed .nav-item .badge-count { display: none; }
-/* The labels would otherwise wrap and shove the icon up as the panel animates open. */
+/* The labels must not wrap while the panel slides, or the icons jump mid-animation. */
 .nav-item .nav-label { white-space: nowrap; overflow: hidden; }
 
-/* Topbar has a fixed row of controls; on narrow screens the descriptive text is
-   dropped so the icons keep fitting instead of pushing the page sideways. */
-.topbar-site { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.topbar-site-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Topbar: page title on the left where the warehouse name used to be, the warehouse
+   as fixed context on the right, then the tool icons. On narrow screens the
+   descriptive text drops so the icons keep fitting instead of pushing the page
+   sideways — the title is the last thing to go, because it is the only part that
+   tells you where you are. */
+.topbar-title {
+  font-family: var(--font-head); font-size: 16px; font-weight: 700; color: var(--text);
+  letter-spacing: -0.2px; margin: 0; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.topbar-site { display: flex; align-items: center; gap: 7px; min-width: 0; flex-shrink: 0; }
+.topbar-site-name { font-weight: 600; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topbar-tools { min-width: 0; }
+@media (max-width: 1100px) { .topbar-site-name { display: none; } }
 @media (max-width: 900px) {
-  .topbar-tools { gap: 8px !important; }
-  .topbar-site-name { display: none; }
+  .topbar-tools { gap: 6px !important; }
+  .topbar-site { display: none; }
+  .topbar-title { font-size: 14.5px; }
 }
-@media (max-width: 720px) {
-  .topbar-user-meta, .topbar-hide-sm { display: none; }
+@media (max-width: 720px) { .topbar-hide-sm { display: none; } }
+
+/* ---------- Account menu ----------
+   The user's name, department and the sign-out button used to sit uncollapsed in the
+   topbar and were the widest thing in it. They live in here now; the avatar is the
+   only width the topbar spends on the account. */
+.avatar-btn { border: none; cursor: pointer; padding: 0; }
+.avatar-btn:hover { box-shadow: 0 0 0 2px var(--accent-weak); }
+.avatar-lg { width: 40px; height: 40px; font-size: 14px; flex-shrink: 0; }
+.acct-menu { position: absolute; right: 0; top: 46px; width: 250px; z-index: 50; padding: 6px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-lg); }
+.acct-head { display: flex; align-items: center; gap: 11px; padding: 10px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+.acct-name { font-weight: 700; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-meta { font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-role { font-size: 10.5px; color: var(--text-faint); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+.acct-opt {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px;
+  border: none; background: transparent; border-radius: var(--radius-sm);
+  color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer; text-align: left;
 }
+.acct-opt:hover { background: var(--surface-2); }
+.acct-opt svg { color: var(--text-faint); flex-shrink: 0; }
+.acct-opt.danger:hover { background: var(--accent-weak); color: var(--brand-red); }
+.acct-opt.danger:hover svg { color: var(--brand-red); }
 
 .topbar {
   height: var(--topbar-h);
@@ -1556,12 +1571,7 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .sk-dist-card > .card-pad { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } .grid-3 { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 900px) {
-  /* No rail on a phone — 60px of permanent chrome is too much of a narrow screen —
-     so closed means fully off-canvas and the content takes the whole width. */
-  .sidebar { width: var(--sidebar-w); transform: translateX(-100%); }
-  .sidebar.open { transform: translateX(0); }
   .sidebar-scrim { background: rgba(35, 31, 32, 0.5); }
-  .main { margin-left: 0; }
   .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr); }
   .kpi-grid, .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .login-wrap { grid-template-columns: 1fr; }
@@ -1744,7 +1754,10 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   .overview-grid .comp-wrap { flex-direction: column; align-items: stretch; gap: 18px; flex-wrap: nowrap; }
   .overview-grid .comp-gauge { flex-direction: row; align-items: center; gap: 22px; }
   .overview-grid .comp-gauge .battery-tube { width: 84px; height: 168px; }
-  .overview-grid .comp-headline { margin-top: 0; text-align: left; max-width: none; }
+  /* flex:1 so the headline takes the width left beside the tube. Left content-sized
+     it stopped at 230px and the band ended with ~150px of dead space, which is what
+     made this card read as left-heavy next to the donut. */
+  .overview-grid .comp-headline { margin-top: 0; text-align: left; max-width: none; flex: 1 1 auto; min-width: 0; }
   .overview-grid .comp-headline .ch-figure,
   .overview-grid .comp-headline .ch-split { justify-content: flex-start; }
   /* auto-fit rather than a fixed three: the composition column is ~490px at 1440 and
@@ -1850,4 +1863,68 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   .comp-stat:hover .comp-tip, .comp-stat:focus-visible .comp-tip { transform: translate(0, 0); }
   .sub-tab { padding: 6px 12px; font-size: 12px; }
   .nodata { flex-direction: column; gap: 8px; padding: 14px; }
+}
+
+/* ==========================================================================
+   Page head, icon-only actions, mobile control alignment, Overview compression.
+   ========================================================================== */
+
+/* The page title moved to the topbar, so this row is just the greeting and the two
+   actions — baseline-aligned rather than the old block-vs-block `spread`. */
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.page-greeting { font-size: 13px; font-weight: 600; color: var(--text-muted); min-width: 0; }
+.page-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* Buttons that keep their glyph and drop their label when the row gets tight.
+   Square at that point, so a row of them reads as a row of icons rather than as
+   labels that happen to have gone missing. */
+@media (max-width: 760px) {
+  .btn-icon-sm .btn-text { display: none; }
+  .btn-icon-sm { padding: 0; width: 36px; height: 36px; justify-content: center; gap: 0; }
+  .btn-icon-sm .txn-caret { display: none; }
+  .page-head { flex-wrap: nowrap; }
+  .page-greeting { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+@media (max-width: 520px) { .greeting-role { display: none; } }
+
+/* ---------- Card head controls ----------
+   The head is a two-part row: identity on the left, controls on the right. Below the
+   tablet breakpoint the controls take their own full-width line UNDER the title
+   rather than being squeezed beside it — and they align left there, so every card's
+   controls start on the same edge as its title instead of each row ending in a
+   different place. */
+.card-head { row-gap: 8px; }
+@media (max-width: 900px) {
+  /* nowrap is essential, not tidiness. .card-head inherits `flex-wrap: wrap` from its
+     base rule, and in a COLUMN container wrapping happens along the column axis — the
+     controls did not drop under the title, they wrapped into a second column beside
+     it and ran clear off the right edge of the card. That was the "mess". */
+  .card-head { flex-direction: column; align-items: stretch; flex-wrap: nowrap; }
+  /* `flex: 1 1 100%` here means 100% of the HEIGHT once the direction is column,
+     which is what forced the overflow in the first place. */
+  .card-head > :first-child { margin-right: 0; flex: 0 0 auto; }
+  .card-head .chart-controls,
+  .card-head > .segmented { width: 100%; justify-content: flex-start; align-items: center; gap: 8px; }
+  /* Each segmented group stays a single unbroken row and scrolls if it must; a
+     wrapped group put "Value" on a line of its own under "Quantity", which read as
+     two separate controls. */
+  .card-head .segmented { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .card-head .segmented::-webkit-scrollbar { display: none; }
+  .card-head .segmented button { flex: 0 0 auto; }
+  .card-head > .chip { align-self: flex-start; }
+}
+
+/* ---------- Overview: uniform cards, no vertical scroll ----------
+   Both cards stretch to the same height and centre their contents, so the row reads
+   as one band rather than two cards of different sizes. */
+.overview-grid { align-items: stretch; }
+.overview-grid > .card { display: flex; flex-direction: column; }
+.overview-grid > .card > .card-pad { flex: 1; display: flex; align-items: center; }
+
+@media (min-width: 1200px) {
+  /* Tightened so the whole Overview clears a 768px-tall laptop without scrolling:
+     the two cards plus the tab strip, filter bar and sub-tabs above them have to fit
+     inside the viewport, and the donut's height is the biggest lever. */
+  .overview-grid > .card > .card-pad { padding-top: 10px; padding-bottom: 10px; }
+  .overview-grid .comp-wrap { gap: 14px; }
 }

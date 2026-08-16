@@ -586,3 +586,72 @@ clipped; at 1280/1440 nothing truncates in either Quantity or Value mode (Value 
 run ₱482.4M / ₱408.9M / ₱73.4M / ₱70.7M / ₱51.7M / ₱6.8M); card-head height is a uniform
 59px across every card on Insights and Activity; no horizontal scroll at 375px and the
 mobile stacking is unchanged. `npm run build` passes.
+
+### 2026-08-16 — Session: topbar restructure, sidebar simplification, mobile leader lines
+
+**Sidebar — the icon rail is gone.** One state, two positions: the burger either shows
+the 240px labelled panel over the page or hides it off-canvas, at every width. `.main`
+reserves no width for it at all, so content keeps the same width in both states and the
+dashboard never reflows when the nav opens. All the `.app-shell.nav-collapsed` rules and
+the `collapsedRail` logic were deleted along with the alignment machinery that existed
+only to keep the two states' icons in the same place.
+
+**Topbar — page title left, warehouse right, account behind the avatar.** `pageTitle()`
+in `Layout.jsx` derives the title from the route (the dashboard's three tabs are the one
+path that carries two names). The warehouse name moved to the right as fixed context and
+drops below 1100px. The user's name, department and the separate sign-out button — the
+widest thing in the bar — are now inside an avatar dropdown holding the name, department,
+role, Account settings and Sign out.
+
+**Consequence, handled: every page carried its own heading that now duplicated the
+topbar.** Removed from thirteen pages. Two kept theirs for cause: MaterialProfile's is
+the material's description, not a page title, and StorageMap's carried the guided tour's
+`floor` anchor, which moved onto the note beneath it. Three pages lost their last `<Icon>`
+with the heading, so those imports went too.
+
+**Filter bar** — placeholder copy and the "779 materials" count both removed. The
+`resultCount`/`noun` props stay so no caller needed editing.
+
+**Insights — ABC analysis removed**, and Aging takes the slot beside Dead Stock: six
+cards in three uniform two-across rows, all 681px wide and within 31px of the same
+height. Both cards answer "what is not moving", so they belong together. `abcAnalysis()`
+and the `ParetoCurve` chart were deleted rather than left as dead exports. Aging is the
+only card on the view that follows the filter bar, so it carries a "current filter" chip
+— the lists beside it read the whole warehouse.
+
+**Overview desktop — uniform and scroll-free.** Both cards stretch to the same height
+and centre their contents; measured identical at 1440×900 and 1366×768, with no vertical
+scrolling at either. Inside the composition card the headline now takes `flex: 1` beside
+the tube, which closed a ~150px dead gap at the band's right edge — the gauge band's
+edges now line up exactly with the tile row beneath it.
+
+**Donut — leader lines everywhere, full names.** The fixed geometry constants were
+replaced by `LEDGER_TIERS`, four width tiers that trade ring size against the room the
+two text columns need. Phones get leader lines now (they fell back to the legend before):
+at a 324px chart the ring drops to 62px and all six trade names render in full with their
+quantities, or all nine item groups with four ellipsised. `maxName` went from a flat 16
+to 28 at desktop, so nothing ellipsises there at all. Each tier's `gap` is the label's
+own two-line height rather than an arbitrary number — at 25px the bottom two labels in a
+column still touched.
+
+**Mobile card heads — the real bug.** `.card-head` inherits `flex-wrap: wrap`, and last
+session's mobile rule switched it to `flex-direction: column`. Wrapping in a column
+container happens along the COLUMN axis, so the segmented toggles did not drop under the
+title: they wrapped into a second column beside it and ran clear off the right edge of
+the card (measured right edge 575px against a card ending at 362px). That is what "the
+option buttons are a mess" was. `flex-wrap: nowrap` plus `flex: 0 0 auto` on the first
+child fixes it; controls now stack under the title, left-aligned to the same edge, inside
+the card.
+
+**Mobile page head** — the title moved to the topbar, so this row is just the greeting
+and two actions. Both buttons collapse to 36×36 icons below 760px, and the role drops off
+the greeting below 520px rather than ellipsising mid-word.
+
+**Verified** against the temporary fixture (deleted afterwards with its `main.jsx` hook):
+no vertical scroll at 1440×900 or 1366×768; composition and distribution identical height
+and top edge; donut leader labels present at 1440 (6 trades, 9 item groups, none clipped,
+none overlapping, none ellipsised) and at a 324px chart (same counts, no clipping, no
+overlaps); sidebar closed x=-240 → open x=0 with content width unchanged at 1440 in both;
+account menu opens in-viewport with name, department, role and both options; zero
+`.card-sub` and zero `.fs-count` anywhere; eight routes checked for the correct topbar
+title and no duplicated heading. `npm run build` passes.

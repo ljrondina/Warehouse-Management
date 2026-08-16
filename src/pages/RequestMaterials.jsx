@@ -32,7 +32,6 @@ export default function RequestMaterials() {
     <>
       <div className="spread">
         <div>
-          <div className="section-title"><Icon name="request" size={22} /> Request Materials</div>
           <div className="section-note">Submit material requests for your project site</div>
         </div>
         <button className="btn btn-primary" onClick={() => setShow(true)}><Icon name="plus" size={16} /> New Material Request</button>

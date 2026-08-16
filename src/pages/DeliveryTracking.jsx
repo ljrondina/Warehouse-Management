@@ -29,7 +29,6 @@ export default function DeliveryTracking() {
 
   return (
     <>
-      <div className="section-title"><Icon name="truck" size={22} /> Delivery Tracking</div>
       <div className="section-note">Track requested materials from approval to site delivery</div>
 
       <div className="kpi-grid mt" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>

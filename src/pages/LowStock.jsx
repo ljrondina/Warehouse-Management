@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom'
 import { lowStock } from '../data/insights'
 import { Card, DataTable, Badge, KpiCard } from '../components/ui'
 import { num, peso } from '../lib/format'
-import Icon from '../lib/icons'
 
 export default function LowStock() {
   const nav = useNavigate()
@@ -11,7 +10,6 @@ export default function LowStock() {
 
   return (
     <>
-      <div className="section-title"><Icon name="alert" size={22} /> Low Stock Alerts</div>
       <div className="section-note">Materials at or below minimum stock level — replenishment required</div>
 
       <div className="kpi-grid mt" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>

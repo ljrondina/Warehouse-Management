@@ -21,7 +21,6 @@ export default function Settings() {
 
   return (
     <>
-      <div className="section-title"><Icon name="settings" size={22} /> System Settings</div>
       <div className="section-note">Configuration & master data management</div>
 
       {/* Where the numbers on every other page actually came from this session. */}

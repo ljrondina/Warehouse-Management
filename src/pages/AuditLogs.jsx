@@ -12,7 +12,6 @@ export default function AuditLogs() {
 
   return (
     <>
-      <div className="section-title"><Icon name="audit" size={22} /> Audit Trail</div>
       <div className="section-note">Login history, data modifications, inventory adjustments & approvals</div>
 
       <Card className="mt" pad={false} title="Activity Log" right={

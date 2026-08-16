@@ -97,7 +97,7 @@ export default function NewTransactionMenu({ onPick, canCreate = true, allowed }
   return (
     <div className="txn-wrap" ref={ref}>
       <button
-        className={`btn btn-primary txn-trigger ${open ? 'open' : ''}`}
+        className={`btn btn-primary txn-trigger btn-icon-sm ${open ? 'open' : ''}`}
         onClick={() => (open ? close() : setOpen(true))}
         disabled={!canCreate}
         title={canCreate ? 'Create a warehouse transaction' : 'Restricted for your role'}
@@ -106,7 +106,9 @@ export default function NewTransactionMenu({ onPick, canCreate = true, allowed }
         data-tour="add-btn"
       >
         <Icon name={canCreate ? 'plus' : 'settings'} size={16} />
-        New Transaction {!canCreate && '🔒'}
+        {/* .btn-text is hidden on a phone, leaving the plus glyph alone — the label
+            and its caret were wider than everything else in the row put together. */}
+        <span className="btn-text">New Transaction {!canCreate && '🔒'}</span>
         <Icon name="chevronDown" size={14} className="txn-caret" />
       </button>
 

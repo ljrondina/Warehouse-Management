@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { ROLES, ROLE_LIST, NAV, isLocked } from '../data/roles'
@@ -33,47 +33,72 @@ function NavItem({ item, role, onNavigate }) {
   )
 }
 
+// The page title now lives in the topbar rather than being repeated at the top of
+// every page body. Derived from the route so no page has to register anything; the
+// dashboard's three tabs are the one case where the same path carries two names.
+const ROUTE_TITLES = {
+  '/inventory': 'Inventory Masterlist',
+  '/movement': 'Movement History',
+  '/reservations': 'Reservations',
+  '/approvals': 'Approvals',
+  '/users': 'Users',
+  '/audit': 'Audit Logs',
+  '/reports': 'Reports',
+  '/analytics': 'Analytics',
+  '/storage': 'Warehouse Floor Plan',
+  '/settings': 'Settings',
+  '/low-stock': 'Low Stock Alerts',
+  '/purchase-requests': 'Purchase Requests',
+  '/request-materials': 'Request Materials',
+  '/delivery': 'Delivery Tracking',
+}
+const DASH_TITLES = { safekeeping: 'Safekeeping Insights', excess: 'Excess Materials' }
+
+function pageTitle(pathname, tabParam) {
+  if (pathname === '/dashboard') return DASH_TITLES[tabParam] || 'Inventory Insights'
+  if (pathname.startsWith('/inventory/')) return 'Material Profile'
+  return ROUTE_TITLES[pathname] || 'Megawide WMS'
+}
+
 export default function Layout({ children }) {
   const { user, signOut, switchRole, canSwitchRole } = useAuth()
   const { theme, toggle } = useTheme()
-  // ONE piece of state for the sidebar, and it starts closed.
-  //
-  // Closed on desktop is the icon rail; closed on mobile is fully off-canvas. Open is
-  // the labelled panel, and on BOTH breakpoints it now overlays the page rather than
-  // pushing it: the rail's width is the only space the layout ever reserves, so
-  // opening the nav never reflows the dashboard underneath it. That reflow was the
-  // old behaviour and it made every chart on the page re-measure and redraw.
+  // ONE piece of state for the sidebar, and it starts closed. There is no icon-rail
+  // middle state any more: the burger either shows the full labelled panel or hides
+  // it completely, at every width. Open, it overlays the page — `.main` reserves no
+  // width for it — so opening the nav never reflows the dashboard underneath or makes
+  // its charts re-measure.
   const [open, setOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [roleOpen, setRoleOpen] = useState(false)
+  const [acctOpen, setAcctOpen] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
+  const [params] = useSearchParams()
+  const acctRef = useRef(null)
   const role = ROLES[user.role]
+  const title = pageTitle(location.pathname, params.get('tab'))
 
-  // Which closed state applies is a pure question of viewport width, so it is tracked
-  // rather than inferred: the head swaps between the icon mark and the full wordmark
-  // in JS, and that decision has to agree with what the stylesheet is doing.
-  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 900px)').matches)
+  // Escape closes whichever overlay is showing — both are dismissible layers.
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 900px)')
-    const check = () => setIsMobile(mq.matches)
-    // Both listeners target the same outcome; `change` is the precise signal, but
-    // some embedding contexts resize the viewport without firing it, so a plain
-    // `resize` listener re-checks matchMedia as a fallback.
-    mq.addEventListener('change', check)
-    window.addEventListener('resize', check)
-    return () => {
-      mq.removeEventListener('change', check)
-      window.removeEventListener('resize', check)
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return
+      setOpen(false)
+      setAcctOpen(false)
+      setNotifOpen(false)
     }
-  }, [])
-  // Escape closes the overlay — it is a dismissible layer over the page now.
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e) => e.key === 'Escape' && setOpen(false)
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open])
-  const collapsedRail = !open && !isMobile
+  }, [])
+
+  // The account menu is a plain popover rather than a scrimmed layer, so it needs its
+  // own outside-click handler to close.
+  useEffect(() => {
+    if (!acctOpen) return
+    const onDown = (e) => { if (acctRef.current && !acctRef.current.contains(e.target)) setAcctOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [acctOpen])
 
   const notifications = [
     { icon: 'alert', tone: 'warn', text: `${counts.lowStock} materials below minimum stock`, to: '/low-stock' },
@@ -83,27 +108,21 @@ export default function Layout({ children }) {
   ]
 
   return (
-    <div className={`app-shell ${collapsedRail ? 'nav-collapsed' : ''} ${open ? 'nav-open' : ''}`}>
+    <div className={`app-shell ${open ? 'nav-open' : ''}`}>
       <aside className={`sidebar ${open ? 'open' : ''}`}>
         <div className="sidebar-head">
-          {/* Collapsed rail shows the icon mark only — the full wordmark + sub-label
-              lockup doesn't fit a 72px-wide rail and would just get clipped. */}
-          {collapsedRail
-            ? <Logo variant="mark" height={22} />
-            : <Logo variant="darkbg" height={30} sub={['Procurement', '×', 'Warehouse Management']} />}
+          <Logo variant="darkbg" height={30} sub={['Procurement', '×', 'Warehouse Management']} />
         </div>
         <nav className="nav" data-tour="nav">
           {NAV.map((item) => (
             <NavItem key={item.to} item={item} role={user.role} onNavigate={() => setOpen(false)} />
           ))}
         </nav>
-        {!collapsedRail && (
-          <div className="sidebar-foot">
-            <div className="role-pill">
-              Signed in as <b>{role.label}</b>
-            </div>
+        <div className="sidebar-foot">
+          <div className="role-pill">
+            Signed in as <b>{role.label}</b>
           </div>
-        )}
+        </div>
       </aside>
 
       <div className="main">
@@ -117,12 +136,17 @@ export default function Layout({ children }) {
           >
             <Icon name="menu" size={18} />
           </button>
-          <div className="topbar-site">
-            <Icon name="warehouse" size={18} className="muted" />
-            <span className="muted topbar-site-name">Central Warehouse Taytay</span>
-          </div>
+          {/* The page title sits here, where the warehouse name used to. It is the
+              thing that changes as you move around, so it takes the primary slot; the
+              warehouse is fixed context and moves to the right. */}
+          <h1 className="topbar-title">{title}</h1>
 
           <div style={{ flex: 1 }} />
+
+          <div className="topbar-site">
+            <Icon name="warehouse" size={16} className="muted" />
+            <span className="muted topbar-site-name">Central Warehouse Taytay</span>
+          </div>
 
           <div className="topbar-tools" data-tour="topbar-tools" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {/* Role switcher (prototype, dev builds only) */}
@@ -177,17 +201,33 @@ export default function Layout({ children }) {
             )}
           </div>
 
-          <div style={{ position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div className="avatar">{initials(user.name)}</div>
-              <div className="topbar-user-meta" style={{ lineHeight: 1.2 }}>
-                <div style={{ fontWeight: 700, fontSize: 13 }}>{user.name}</div>
-                <div className="faint" style={{ fontSize: 11 }}>{user.department}</div>
+          {/* The name, department and a separate sign-out button used to sit out here
+              and were the widest thing in the bar. They are all inside this menu now;
+              the avatar is the only control the topbar spends width on. */}
+          <div style={{ position: 'relative' }} ref={acctRef}>
+            <button className="avatar avatar-btn" onClick={() => setAcctOpen((o) => !o)}
+              title={user.name} aria-haspopup="menu" aria-expanded={acctOpen}>
+              {initials(user.name)}
+            </button>
+            {acctOpen && (
+              <div className="card acct-menu" role="menu">
+                <div className="acct-head">
+                  <div className="avatar avatar-lg">{initials(user.name)}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="acct-name">{user.name}</div>
+                    <div className="acct-meta">{user.department}</div>
+                    <div className="acct-role">{role.label}</div>
+                  </div>
+                </div>
+                <button className="acct-opt" role="menuitem"
+                  onClick={() => { setAcctOpen(false); navigate('/settings') }}>
+                  <Icon name="settings" size={16} /> <span>Account settings</span>
+                </button>
+                <button className="acct-opt danger" role="menuitem" onClick={signOut}>
+                  <Icon name="logout" size={16} /> <span>Sign out</span>
+                </button>
               </div>
-              <button className="icon-btn" onClick={signOut} title="Sign out">
-                <Icon name="logout" size={17} />
-              </button>
-            </div>
+            )}
           </div>
           </div>
         </header>

@@ -28,7 +28,6 @@ export default function Users() {
     <>
       <div className="spread">
         <div>
-          <div className="section-title"><Icon name="users" size={22} /> User Management</div>
           <div className="section-note">Create, edit and assign roles across the warehouse ecosystem</div>
         </div>
         <button className="btn btn-primary" onClick={() => setShowAdd(true)}><Icon name="plus" size={16} /> Add User</button>

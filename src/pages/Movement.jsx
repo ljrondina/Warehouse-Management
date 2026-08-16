@@ -122,7 +122,6 @@ export default function Movement() {
     <>
       <div className="spread">
         <div>
-          <div className="section-title"><Icon name={type === 'incoming' ? 'incoming' : 'outgoing'} size={22} /> Material Movement</div>
           <div className="section-note">{type === 'incoming' ? 'Incoming materials & project returns' : 'Outgoing material releases to projects'}</div>
         </div>
         <button className="btn btn-primary" onClick={() => setShowForm(true)}>

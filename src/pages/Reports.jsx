@@ -13,7 +13,6 @@ export default function Reports() {
     <>
       <div className="spread">
         <div>
-          <div className="section-title"><Icon name="reports" size={22} /> Inventory Reports</div>
           <div className="section-note">Summary reporting across the Central Warehouse</div>
         </div>
         <button className="btn"><Icon name="doc" size={15} /> Export CSV</button>

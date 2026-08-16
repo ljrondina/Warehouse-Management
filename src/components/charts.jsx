@@ -156,46 +156,59 @@ function useElementWidth(ref, enabled) {
 // padding angle recharts redistributes the sweep and these mid-angles would drift off
 // their slices. Slice separation comes from the stroke instead.
 const RAD = Math.PI / 180
-const LABEL_GAP = 30        // minimum vertical distance between two two-line labels
-const ELBOW = 14            // radial distance from the ring to the leader's elbow
-const STUB = 26             // horizontal run from the elbow to the text
+
+// Leader labels have to work on a 320px phone as well as a 780px card, so every
+// dimension is picked from the measured chart width rather than fixed. Each tier
+// trades ring size against the room the two text columns need: shrink the ring and
+// the labels get their width back. `maxName` is generous at every tier because a
+// truncated category name is the thing the reader most needs — it is only tightened
+// where the alternative is text running off the card.
+const LEADER_TIERS = [
+  { minWidth: 620, ring: 126, elbow: 14, stub: 26, name: 10.5, figMin: 10, figMax: 22, gap: 32, maxName: 28 },
+  { minWidth: 470, ring: 100, elbow: 12, stub: 20, name: 10, figMin: 10, figMax: 18, gap: 30, maxName: 20 },
+  { minWidth: 380, ring: 78, elbow: 10, stub: 14, name: 9.5, figMin: 9.5, figMax: 15, gap: 29, maxName: 17 },
+  // Phones. Below this a ring plus two readable text columns genuinely does not fit,
+  // and the donut falls back to the legend rather than clipping its own labels.
+  // The gap has to clear a two-line label (name + figure) or the columns collide —
+  // it is the label's own height, not an arbitrary spacing.
+  { minWidth: 296, ring: 62, elbow: 8, stub: 10, name: 9, figMin: 9, figMax: 13, gap: 28, maxName: 14 },
+]
+const tierFor = (width) => LEADER_TIERS.find((t) => width >= t.minWidth) || null
 
 // Each label's figure is sized by how much of the ring its slice takes, so the chart
 // can be read at a glance without comparing wedge angles: the biggest share carries
 // the biggest number. Scaled against the LARGEST share present rather than against
 // 100%, otherwise a well-balanced nine-slice donut would render every label at the
 // minimum size and the emphasis would say nothing.
-const FIGURE_MIN = 10
-const FIGURE_MAX = 22
-const figureSize = (frac, maxFrac) => {
-  if (!(maxFrac > 0)) return FIGURE_MIN
+const figureSize = (frac, maxFrac, tier) => {
+  if (!(maxFrac > 0)) return tier.figMin
   const t = Math.min(1, frac / maxFrac)
   // Eased slightly off linear (^0.75). Pure square root compressed the range so hard
   // that a 26% slice and an 8% one differed by three pixels and the emphasis said
   // nothing; pure linear drops the small slices below comfortable reading size.
-  return Math.round(FIGURE_MIN + (FIGURE_MAX - FIGURE_MIN) * Math.pow(t, 0.75))
+  return Math.round(tier.figMin + (tier.figMax - tier.figMin) * Math.pow(t, 0.75))
 }
 
 // Push a column of labels apart in place: spread downwards, then, if the column
 // overruns the bottom of the box, pin the last one and spread back upwards.
-function spreadColumn(list, top, bottom) {
+function spreadColumn(list, top, bottom, gap) {
   list.sort((a, b) => a.y - b.y)
-  for (let i = 1; i < list.length; i++) list[i].y = Math.max(list[i].y, list[i - 1].y + LABEL_GAP)
+  for (let i = 1; i < list.length; i++) list[i].y = Math.max(list[i].y, list[i - 1].y + gap)
   const last = list[list.length - 1]
   if (last && last.y > bottom) {
     last.y = bottom
-    for (let i = list.length - 2; i >= 0; i--) list[i].y = Math.min(list[i].y, list[i + 1].y - LABEL_GAP)
+    for (let i = list.length - 2; i >= 0; i--) list[i].y = Math.min(list[i].y, list[i + 1].y - gap)
   }
   if (list[0] && list[0].y < top) {
     list[0].y = top
-    for (let i = 1; i < list.length; i++) list[i].y = Math.max(list[i].y, list[i - 1].y + LABEL_GAP)
+    for (let i = 1; i < list.length; i++) list[i].y = Math.max(list[i].y, list[i - 1].y + gap)
   }
   return list
 }
 
 // Builds the renderer recharts calls per slice. The full layout is computed once for
 // a given cx/cy/radius and cached, so the per-slice callback is a lookup.
-function makeLeaderLabel({ data, key, palette, height, minPct, metric }) {
+function makeLeaderLabel({ data, key, palette, height, minPct, metric, tier }) {
   const total = data.reduce((a, b) => a + (b[key] || 0), 0)
   const maxFrac = total > 0 ? Math.max(...data.map((d) => (d[key] || 0) / total)) : 0
   const cache = new Map()
@@ -219,8 +232,8 @@ function makeLeaderLabel({ data, key, palette, height, minPct, metric }) {
     for (const side of ['r', 'l']) {
       const col = shown
         .filter((p) => (side === 'r' ? p.cos >= 0 : p.cos < 0))
-        .map((p) => ({ ...p, side, y: cy + (r + ELBOW) * p.sin }))
-      for (const p of spreadColumn(col, 10, height - 10)) placed.set(p.i, p)
+        .map((p) => ({ ...p, side, y: cy + (r + tier.elbow) * p.sin }))
+      for (const p of spreadColumn(col, 10, height - 10, tier.gap)) placed.set(p.i, p)
     }
     const res = { placed, hidden: all.length - shown.length }
     cache.set(ck, res)
@@ -236,12 +249,12 @@ function makeLeaderLabel({ data, key, palette, height, minPct, metric }) {
     const dir = p.side === 'r' ? 1 : -1
     const x0 = cx + outerRadius * p.cos
     const y0 = cy + outerRadius * p.sin
-    const x1 = cx + (outerRadius + ELBOW) * dir * Math.abs(p.cos || 0.2)
-    const x2 = cx + dir * (outerRadius + ELBOW + STUB)
-    const name = d.name.length > 16 ? `${d.name.slice(0, 15)}…` : d.name
+    const x1 = cx + (outerRadius + tier.elbow) * dir * Math.abs(p.cos || 0.2)
+    const x2 = cx + dir * (outerRadius + tier.elbow + tier.stub)
+    const name = d.name.length > tier.maxName ? `${d.name.slice(0, tier.maxName - 1)}…` : d.name
     const anchor = p.side === 'r' ? 'start' : 'end'
     const tx = x2 + dir * 5
-    const size = figureSize(p.frac, maxFrac)
+    const size = figureSize(p.frac, maxFrac, tier)
     // Two lines: the name in a constant small size on top, the quantity (or value)
     // beneath it sized by share. Keeping the NAME constant is deliberate — scaling it
     // too would make small categories hard to read for no extra information, since
@@ -253,8 +266,8 @@ function makeLeaderLabel({ data, key, palette, height, minPct, metric }) {
           fill="none" stroke={color} strokeWidth={1.2} strokeOpacity={0.75}
         />
         <circle cx={x0} cy={y0} r={2.5} fill={color} />
-        <text x={tx} y={p.y - 7} textAnchor={anchor} dominantBaseline="middle"
-          fontSize={10.5} fontWeight={600} fill="var(--text-muted)">
+        <text x={tx} y={p.y - size / 2 - 2} textAnchor={anchor} dominantBaseline="middle"
+          fontSize={tier.name} fontWeight={600} fill="var(--text-muted)">
           {name}
         </text>
         <text x={tx} y={p.y + size / 2 - 1} textAnchor={anchor} dominantBaseline="middle"
@@ -296,33 +309,23 @@ export function DistributionDonut({
   const PALETTE = categoricalFor(theme)
   const key = metric === 'value' ? 'value' : 'qty'
   const total = data.reduce((a, b) => a + b[key], 0)
-  const h = height ?? (leaderLines ? (wide ? 360 : 330) : wide ? 300 : 250)
   const boxRef = useRef(null)
-  const boxWidth = useElementWidth(boxRef, leaderLines)
-  // Leader labels need horizontal room on both flanks, so the ring is sized from the
-  // container rather than fixed: a 126px radius that fits a desktop card would push
-  // its own labels off the edge of a phone. LABEL_COLS is the room both columns need
-  // (elbow + stub + roughly ten characters of text).
-  // Two columns of "Name / 12.3K  26%". Wider than the name-only labels it replaced.
-  const LABEL_COLS = 300
-  // Below this there is no arrangement that fits a readable ring between two columns
-  // of text, so the donut falls back to the legend rather than clipping its own
-  // labels at the card edge. boxWidth is 0 only on the very first layout pass, before
-  // paint (see useElementWidth), so this never flashes between the two modes.
-  const LEADER_MIN_WIDTH = 460
   // Measured on the OUTER wrapper, never on .donut-chart: the `leader` class changes
   // .donut-chart's own max-width, so deciding the mode from that element's width
   // would latch — once it fell back to the legend the narrower box would keep the
   // condition false even on a wide screen, and it could never return.
-  const useLeaders = leaderLines && (boxWidth === 0 || boxWidth >= LEADER_MIN_WIDTH)
+  const boxWidth = useElementWidth(boxRef, leaderLines)
   // Mirrors the .donut-wrap.leader .donut-chart cap in the stylesheet.
   const chartWidth = Math.min(boxWidth, 780)
-  const rOuter = useLeaders
-    ? Math.max(60, Math.min(wide ? 126 : 88, Math.round((chartWidth - LABEL_COLS) / 2)))
-    : outerRadius
-  const rInner = useLeaders ? Math.max(28, rOuter - 42) : innerRadius
+  // boxWidth is 0 only on the very first layout pass, before paint (see
+  // useElementWidth), so defaulting to the widest tier never flashes between modes.
+  const tier = leaderLines ? tierFor(boxWidth === 0 ? 780 : chartWidth) : null
+  const useLeaders = Boolean(tier)
+  const h = height ?? (useLeaders ? (chartWidth < 420 ? 300 : wide ? 360 : 330) : wide ? 300 : 250)
+  const rOuter = useLeaders ? tier.ring : outerRadius
+  const rInner = useLeaders ? Math.max(24, rOuter - Math.min(42, rOuter * 0.36)) : innerRadius
   const label = useLeaders
-    ? makeLeaderLabel({ data, key, palette: PALETTE, height: h, minPct: minLabelPct, metric })
+    ? makeLeaderLabel({ data, key, palette: PALETTE, height: h, minPct: minLabelPct, metric, tier })
     : null
   return (
     <div className={`${wide ? 'donut-wrap wide' : 'donut-wrap'}${useLeaders ? ' leader' : ''}`} ref={boxRef}>
@@ -558,62 +561,6 @@ export function HBar({ data, color = BRAND.graySoft, money }) {
     </ResponsiveContainer>
   )
 }
-
-// ---------------------------------------------------------------------------
-// ABC (Pareto) curve. x = share of stocked lines, ranked most valuable first;
-// y = the share of total value those lines account for. The classic "does 20% of
-// our lines really carry 80% of the money" picture, drawn from the actual rows
-// rather than assumed. The shaded columns are the A/B/C class boundaries and the
-// dashed rules are the 80% / 95% value cut-offs those classes are defined by.
-export function ParetoCurve({ curve, bands, height = 300 }) {
-  const { theme } = useTheme()
-  const S = seriesFor(theme)
-  const BAND_FILL = { A: S.total, B: S.damaged, C: S.neutral }
-  // Class boundaries expressed on the x scale (cumulative share of lines).
-  let acc = 0
-  const spans = bands.map((b) => {
-    const from = acc
-    acc += b.countShare
-    return { cls: b.cls, from, to: acc }
-  })
-
-  return (
-    <ResponsiveContainer width="100%" height={height}>
-      <ComposedChart data={curve} margin={{ top: 12, right: 16, bottom: 24, left: 8 }}>
-        <defs>
-          <linearGradient id="gradPareto" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={S.total} stopOpacity={0.42} />
-            <stop offset="100%" stopColor={S.total} stopOpacity={0.04} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid vertical={false} stroke={gridColor} strokeDasharray="3 3" />
-        {spans.map((s) => (
-          <ReferenceArea key={s.cls} x1={s.from} x2={s.to} fill={BAND_FILL[s.cls]} fillOpacity={0.07} stroke="none"
-            label={{ value: s.cls, position: 'insideTop', fontSize: 12, fontWeight: 800, fill: BAND_FILL[s.cls] }} />
-        ))}
-        <XAxis type="number" dataKey="x" domain={[0, 100]} tick={axis} tickLine={false} axisLine={{ stroke: gridColor }}
-          tickFormatter={(v) => `${Math.round(v)}%`}
-          label={{ value: 'Share of stocked lines', position: 'insideBottom', offset: -14, fontSize: 11, fontWeight: 600, fill: 'var(--text-faint)' }} />
-        <YAxis domain={[0, 100]} tick={axis} tickLine={false} axisLine={false} width={44} tickFormatter={(v) => `${v}%`} />
-        <ReferenceLine y={80} stroke={S.total} strokeDasharray="5 4" strokeWidth={1.4} />
-        <ReferenceLine y={95} stroke={S.damaged} strokeDasharray="5 4" strokeWidth={1.4} />
-        <Tooltip
-          content={({ active, payload }) =>
-            active && payload?.length ? (
-              <Box>
-                <div style={{ fontWeight: 700 }}>Class {payload[0].payload.cls}</div>
-                <div>Top {payload[0].payload.x.toFixed(1)}% of lines</div>
-                <div className="muted">carry {payload[0].payload.y.toFixed(1)}% of value</div>
-              </Box>
-            ) : null
-          }
-        />
-        <Area type="monotone" dataKey="y" stroke={S.total} strokeWidth={2.4} fill="url(#gradPareto)" dot={false} isAnimationActive={false} />
-      </ComposedChart>
-    </ResponsiveContainer>
-  )
-}
-
 // ---------------------------------------------------------------------------
 // Aging bars — value (or line count) held in each days-since-last-movement band.
 // The ramp runs deliberately from the "available" green through the warning yellow

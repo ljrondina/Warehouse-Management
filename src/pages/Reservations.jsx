@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { reservations as seed } from '../data/transactions'
 import { Card, Badge, DataTable, KpiCard } from '../components/ui'
 import { num, fmtDate } from '../lib/format'
-import Icon from '../lib/icons'
 
 export default function Reservations() {
   const nav = useNavigate()
@@ -17,7 +16,6 @@ export default function Reservations() {
 
   return (
     <>
-      <div className="section-title"><Icon name="reserve" size={22} /> Reservations</div>
       <div className="section-note">Material reservations across projects</div>
 
       <div className="kpi-grid mt" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>

@@ -88,8 +88,9 @@ export default function StorageMap() {
 
   return (
     <>
-      <div className="section-title" data-tour="floor"><Icon name="map" size={22} /> Warehouse Floor Plan</div>
-      <div className="section-note">Taytay Central Warehouse — pick a zone, rack, then a shelf·bin to see what’s stored there</div>
+      {/* The page heading moved to the topbar; the tour's anchor moves onto the note
+          that replaced it, so the floor-plan step still has something to point at. */}
+      <div className="section-note" data-tour="floor">Taytay Central Warehouse — pick a zone, rack, then a shelf·bin to see what’s stored there</div>
 
       <div className="grid mt fp-grid">
         {/* Floor plan SVG */}

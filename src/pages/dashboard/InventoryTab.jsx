@@ -3,11 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   KPIS, byTradeL1, byTradeL2, movementCombinedSeries, PERIODS,
   topQuantity, fastMoving, lowStock, highValue, nonMoving, items,
-  abcAnalysis, agingAnalysis, ledgerActivity,
+  agingAnalysis, ledgerActivity,
 } from '../../data/insights'
 import { Card, Segmented } from '../../components/ui'
 import InventoryComposition from '../../components/InventoryComposition'
-import { AgingBars, DistributionDonut, MovementComposed, NetChangeChart, ParetoCurve } from '../../components/charts'
+import { AgingBars, DistributionDonut, MovementComposed, NetChangeChart } from '../../components/charts'
 import { num, peso, fmtDate } from '../../lib/format'
 import { seriesFor } from '../../lib/colors'
 import { useTheme } from '../../context/ThemeContext'
@@ -226,7 +226,6 @@ export default function InventoryTab({ pool, qtyUnit }) {
   const INSIGHT_ROWS = useMemo(buildInsightRows, [items.length])
   const k = useMemo(() => KPIS(pool), [pool])
   const movementData = useMemo(() => movementCombinedSeries(pool, period), [pool, period])
-  const abc = useMemo(() => abcAnalysis(pool), [pool])
   const aging = useMemo(() => agingAnalysis(pool), [pool])
   const activity = useMemo(() => ledgerActivity(pool, period), [pool, period])
   const periodOpts = PERIODS.map((p) => ({ value: p.key, label: p.label }))
@@ -282,73 +281,13 @@ export default function InventoryTab({ pool, qtyUnit }) {
         </div>
       )}
 
-      {/* ---------------------------------------------------------------- Insights */}
+      {/* ---------------------------------------------------------------- Insights
+          Six cards in three uniform two-across rows. ABC analysis was removed; Aging
+          takes the slot beside Dead Stock, which is also where it belongs by subject
+          — both answer "what is not moving". */}
       {view === 'insights' && (
         <div className="mt" data-tour="insights">
-          <div className="grid grid-2">
-            <Card title="ABC Analysis" icon="analytics">
-              {!abc
-                ? <NoData what="No valued inventory" why="Every line in the current selection has a zero or missing unit price, so value cannot be ranked." />
-                : (
-                  <>
-                    <ParetoCurve curve={abc.curve} bands={abc.bands} />
-                    <div className="band-rows">
-                      {abc.bands.map((b) => (
-                        <div key={b.cls} className="band-row" style={{ '--band': b.cls === 'A' ? S.total : b.cls === 'B' ? S.damaged : S.neutral }}>
-                          <span className="band-tag">{b.cls}</span>
-                          <div className="band-main">
-                            <div className="band-t">{num(b.count)} lines · {b.countShare.toFixed(1)}% of the catalogue</div>
-                            <div className="band-s">{b.note}</div>
-                          </div>
-                          <div className="right">
-                            <div className="band-v tabular">{peso(b.value)}</div>
-                            <div className="band-u faint">{b.valueShare.toFixed(1)}% of value</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {abc.unpriced > 0 && (
-                      <div className="card-note faint">{num(abc.unpriced)} line{abc.unpriced === 1 ? '' : 's'} excluded — no unit price recorded, which is missing data rather than zero value.</div>
-                    )}
-                  </>
-                )}
-            </Card>
-
-            <Card title="Aging Analysis" icon="clock"
-              right={<Segmented size="sm" options={metricOpts} value={agingMetric} onChange={setAgingMetric} />}>
-              {!aging
-                ? <NoData what="No movement dates" why="No line in the current selection carries a last-movement date, so age cannot be computed." />
-                : (
-                  <>
-                    <AgingBars bands={aging.bands} metric={agingMetric} />
-                    <div className="band-rows">
-                      <div className="band-row" style={{ '--band': S.total }}>
-                        <span className="band-tag">90+</span>
-                        <div className="band-main">
-                          <div className="band-t">Idle over 90 days</div>
-                          <div className="band-s">The figure a cycle-count or write-down review acts on</div>
-                        </div>
-                        <div className="right">
-                          <div className="band-v tabular">{peso(aging.staleValue)}</div>
-                          <div className="band-u faint">{aging.staleShare.toFixed(1)}% of value</div>
-                        </div>
-                      </div>
-                    </div>
-                    {aging.missing > 0 && (
-                      <div className="card-note faint">{num(aging.missing)} line{aging.missing === 1 ? '' : 's'} excluded — no last-movement date recorded.</div>
-                    )}
-                  </>
-                )}
-            </Card>
-          </div>
-
-          {/* Ranked lists read the FULL warehouse, not the filtered pool, so they stay
-              a stable reference while the filter bar drives the analyses above. */}
-          {/* Kept because it states a real behavioural difference — the lists below
-              ignore the filter bar while the two analyses above follow it. */}
-          <div className="section-sub mt">Ranked materials · whole warehouse, unfiltered</div>
-
-          <div className="grid grid-2 insight-grid mt-sm">
+          <div className="grid grid-2 insight-grid">
             <Card title="High Stock Items" icon="box" iconColor={S.total}
               right={<Segmented size="sm" options={metricOpts} value={highStockMetric} onChange={setHighStockMetric} />}>
               {/* The toggle swaps ONLY the headline figure. The ranking stays by quantity
@@ -376,11 +315,46 @@ export default function InventoryTab({ pool, qtyUnit }) {
             </Card>
           </div>
 
-          <div className="grid grid-1 insight-grid mt-sm">
+          <div className="grid grid-2 insight-grid mt-sm">
             <Card title="Dead Stock Items" icon="clock" iconColor={S.reserved}>
               {/* Headline is the last-moved date, so the bars size by quantity instead. */}
               <InsightList rows={INSIGHT_ROWS.dead} raw main={getLastMoved} barValue={getTotalQty}
                 unit={qtyWithUom} secondary={tradeSub} tone={S.reserved} />
+            </Card>
+
+            {/* The only card on this view that follows the filter bar — every list
+                beside it reads the whole warehouse. The chip says so, since silently
+                mixing the two behaviours is what made the old layout confusing. */}
+            <Card title="Aging Analysis" icon="clock" iconColor={S.damaged}
+              right={
+                <div className="chart-controls">
+                  <span className="chip">current filter</span>
+                  <Segmented size="sm" options={metricOpts} value={agingMetric} onChange={setAgingMetric} />
+                </div>
+              }>
+              {!aging
+                ? <NoData what="No movement dates" why="No line in the current selection carries a last-movement date, so age cannot be computed." />
+                : (
+                  <>
+                    <AgingBars bands={aging.bands} metric={agingMetric} />
+                    <div className="band-rows">
+                      <div className="band-row" style={{ '--band': S.total }}>
+                        <span className="band-tag">90+</span>
+                        <div className="band-main">
+                          <div className="band-t">Idle over 90 days</div>
+                          <div className="band-s">The figure a cycle-count or write-down review acts on</div>
+                        </div>
+                        <div className="right">
+                          <div className="band-v tabular">{peso(aging.staleValue)}</div>
+                          <div className="band-u faint">{aging.staleShare.toFixed(1)}% of value</div>
+                        </div>
+                      </div>
+                    </div>
+                    {aging.missing > 0 && (
+                      <div className="card-note faint">{num(aging.missing)} line{aging.missing === 1 ? '' : 's'} excluded — no last-movement date recorded.</div>
+                    )}
+                  </>
+                )}
             </Card>
           </div>
         </div>

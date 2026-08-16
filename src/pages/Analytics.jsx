@@ -3,7 +3,6 @@ import { analytics, byTradeL1, fastMoving, items, movementCombinedSeries } from 
 import { Card, KpiCard } from '../components/ui'
 import { DistributionDonut, TrendArea, HBar } from '../components/charts'
 import { num, peso } from '../lib/format'
-import Icon from '../lib/icons'
 
 // Every figure on this page is computed from the Postgres rows. Where the data
 // cannot support one — no ledger loaded, no valuation to divide by — the tile
@@ -27,7 +26,6 @@ export default function Analytics() {
 
   return (
     <>
-      <div className="section-title"><Icon name="trend" size={22} /> Analytics</div>
       <div className="section-note">
         Inventory trends & movement analytics — derived from the stock ledger
         {a.windowDays

@@ -389,60 +389,6 @@ export const movementCombinedSeries = (pool = items, granularity = 'month') => {
 }
 
 // ---------------------------------------------------------------------------
-// ABC analysis — Pareto classification by inventory value.
-//
-// Lines are ranked by line value, then walked down accumulating share of the
-// warehouse's total valuation. Class boundaries use the cumulative share BEFORE the
-// line is added, so the line that straddles 80% lands in A: class A is then
-// guaranteed to cover at least 80% of value, which is the property the technique is
-// used for. B runs to 95%, C is the tail.
-//
-// The unit of analysis is the inventory LINE, not the item code — the same code can
-// be stocked as several lines with different conditions and prices, and they are
-// controlled separately on the floor. Lines with no recorded value are excluded
-// rather than dumped into C: a zero there means "no price recorded", not "cheap".
-const ABC_BANDS = [
-  { cls: 'A', upTo: 0.8, label: 'Class A', note: 'Top 80% of value — tight control, cycle-count often' },
-  { cls: 'B', upTo: 0.95, label: 'Class B', note: 'Next 15% of value — routine control' },
-  { cls: 'C', upTo: Infinity, label: 'Class C', note: 'Final 5% of value — bulk control, count rarely' },
-]
-
-export const abcAnalysis = (pool = items) => {
-  const ranked = [...pool].filter((i) => i.inventoryValue > 0).sort((a, b) => b.inventoryValue - a.inventoryValue)
-  const totalValue = sum(ranked, 'inventoryValue')
-  const unpriced = pool.length - ranked.length
-  if (!ranked.length || totalValue <= 0) return null
-
-  const bands = ABC_BANDS.map((b) => ({ ...b, count: 0, value: 0, qty: 0, rows: [] }))
-  let cum = 0
-  // Pareto curve for the chart: one point per line, x = share of lines, y = share of
-  // value. Drawn as a curve rather than 779 rows, so it stays readable at any size.
-  const curve = []
-  ranked.forEach((it, i) => {
-    const shareBefore = cum / totalValue
-    const band = bands.find((b) => shareBefore < b.upTo) || bands[bands.length - 1]
-    band.count += 1
-    band.value += it.inventoryValue
-    band.qty += it.totalQty
-    band.rows.push(it)
-    cum += it.inventoryValue
-    curve.push({ x: ((i + 1) / ranked.length) * 100, y: (cum / totalValue) * 100, cls: band.cls })
-  })
-
-  return {
-    totalValue,
-    totalLines: ranked.length,
-    unpriced,
-    curve,
-    bands: bands.map((b) => ({
-      ...b,
-      valueShare: (b.value / totalValue) * 100,
-      countShare: (b.count / ranked.length) * 100,
-    })),
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Aging analysis — how long stock has sat without moving.
 //
 // Reads `lastMovementOffset`, the recorded days-since-last-movement carried on each

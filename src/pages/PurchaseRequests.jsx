@@ -12,7 +12,6 @@ export default function PurchaseRequests() {
     <>
       <div className="spread">
         <div>
-          <div className="section-title"><Icon name="request" size={22} /> Purchase Requirements</div>
           <div className="section-note">Replenishment & procurement requests</div>
         </div>
         <button className="btn btn-primary"><Icon name="plus" size={16} /> New Purchase Request</button>

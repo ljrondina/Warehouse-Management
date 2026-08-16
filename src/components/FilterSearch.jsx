@@ -109,9 +109,14 @@ export default function FilterSearch({ tokens, onChange, resultCount, uoms, noun
     <div className="filter-search" ref={wrapRef} data-tour="filter-search">
       <div className="fs-bar">
         <Icon name="search" size={17} className="fs-ico" />
+        {/* No placeholder copy and no result count: the magnifier already says what
+            the field is for, and the count duplicated a number every page below
+            already reports for itself. `resultCount` and `noun` stay in the props so
+            callers do not all need editing, and so the count can come back if it is
+            ever wanted somewhere it is not redundant. */}
         <input
           className="fs-input"
-          placeholder={tokens.length ? 'Add another filter…' : 'Filter by material, trade or brand…'}
+          aria-label={`Filter ${noun}s`}
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
@@ -122,7 +127,6 @@ export default function FilterSearch({ tokens, onChange, resultCount, uoms, noun
             <Icon name="close" size={13} /> Clear all
           </button>
         )}
-        <span className="fs-count tabular">{resultCount} {noun}{resultCount === 1 ? '' : 's'}</span>
       </div>
 
       {open && suggestions.length > 0 && (

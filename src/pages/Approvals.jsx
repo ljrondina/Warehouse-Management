@@ -14,7 +14,6 @@ export default function Approvals() {
 
   return (
     <>
-      <div className="section-title"><Icon name="approve" size={22} /> Approvals</div>
       <div className="section-note">Incoming acceptance & disposal requests awaiting your decision</div>
 
       <div className="kpi-grid mt" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
