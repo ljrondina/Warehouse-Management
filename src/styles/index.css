@@ -1462,6 +1462,8 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   --fp-mrf: #2f7d5a;
   --fp-ink: rgba(35, 31, 32, 0.55);
   --fp-paper: #fbfafa;
+  --fp-shell-a: #ffffff;
+  --fp-shell-b: #efeeee;
 }
 :root[data-theme='dark'] {
   --fp-mepfs: #4a9e78;
@@ -1475,6 +1477,8 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   --fp-mrf: #4a9e78;
   --fp-ink: rgba(242, 241, 241, 0.5);
   --fp-paper: #1f1c1d;
+  --fp-shell-a: #2b2c2b;
+  --fp-shell-b: #232021;
 }
 
 /* --- level switcher + breadcrumb --- */
@@ -1511,44 +1515,51 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .fp-svg { display: block; width: 100%; min-width: 520px; height: auto; }
 .fp-stage-elev { padding: 14px 10px; }
 .fp-elev { display: block; width: 100%; min-width: 620px; height: auto; }
+/* The warehouse plan is portrait, so sizing it by width would run it far past the
+   fold. Height leads instead and the width follows the intrinsic ratio. */
+.fp-stage-portrait { display: flex; justify-content: center; }
+.fp-stage-portrait .fp-svg { width: auto; max-width: 100%; height: auto; max-height: 78vh; min-width: 0; }
+@media (max-width: 900px) { .fp-stage-portrait .fp-svg { width: 100%; max-height: none; min-width: 380px; } }
 
 /* --- site plan --- */
 .fp-property { fill: var(--surface-2); stroke: var(--brand-red); stroke-width: 2; stroke-dasharray: 9 5; opacity: 0.95; }
-.fp-facility rect { fill: var(--surface); stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 4 3; }
-.fp-kind-park rect { fill: var(--ok-weak); stroke: var(--ok); stroke-dasharray: none; opacity: 0.85; }
-.fp-kind-canopy rect { fill: var(--info-weak); stroke: var(--brand-gray-soft); stroke-dasharray: none; }
-.fp-kind-gate rect { fill: var(--warn-weak); stroke: var(--warn); stroke-dasharray: none; }
-.fp-facility-t { font-size: 11px; font-weight: 700; fill: var(--text-faint); letter-spacing: 0.4px; }
-.fp-facility-s { font-size: 10px; fill: var(--text-faint); font-weight: 500; }
-.fp-route-in { stroke: var(--ok); fill: var(--ok); stroke-width: 2.5; }
-.fp-route-out { stroke: var(--brand-red); fill: var(--brand-red); stroke-width: 2.5; }
-.fp-marker circle { fill: var(--brand-red); }
-.fp-marker-t { font-size: 11px; font-weight: 800; fill: #fff; }
-.fp-north circle { fill: var(--surface); stroke: var(--border-strong); }
-.fp-north path { fill: var(--brand-red); }
-.fp-north-t { font-size: 11px; font-weight: 800; fill: var(--text-muted); }
+.fp-yard rect { fill: url(#fpg-yard); stroke: var(--border-strong); stroke-width: 1.2; stroke-dasharray: 6 4; }
+.fp-yard-t { font-size: 11px; font-weight: 700; fill: var(--text-faint); letter-spacing: 0.7px; }
 
-/* --- clickable material areas, both plans --- */
+/* --- clickable material areas, both plans ---
+   Fills are diagonal gradients (see planDefs.jsx) so an area reads as a surface with
+   depth rather than a flat swatch. `fill-opacity` stays free to carry hover and
+   selection on top of the gradient's own stops. */
 .fp-area, .fp-hull, .fp-rack, .fp-floorarea { cursor: pointer; outline: none; }
-.fp-area rect, .fp-hull rect { transition: fill-opacity 0.15s, stroke-width 0.15s; }
-.fp-area > rect, .fp-area > g > rect { fill: var(--c); fill-opacity: 0.2; stroke: var(--c); stroke-width: 1.6; }
-.fp-hull rect { fill: var(--c); fill-opacity: 0.13; stroke: var(--c); stroke-width: 1.2; stroke-dasharray: 5 4; }
-.fp-area.is-hover > rect, .fp-area.is-hover > g > rect,
-.fp-hull.is-hover rect { fill-opacity: 0.3; }
-.fp-area.is-active > rect, .fp-area.is-active > g > rect { fill-opacity: 0.42; stroke-width: 3; }
-.fp-hull.is-active rect { fill-opacity: 0.26; stroke-width: 2.2; stroke-dasharray: none; }
-.fp-area:focus-visible > rect, .fp-hull:focus-visible rect, .fp-rack:focus-visible > rect { stroke: var(--brand-red); stroke-width: 3; }
+.fp-area rect, .fp-area polygon, .fp-hull rect, .fp-hull polygon {
+  transition: fill-opacity 0.15s, stroke-width 0.15s, filter 0.15s;
+}
+.fp-area > rect, .fp-area > polygon, .fp-area > g > rect {
+  fill: var(--g); fill-opacity: 1; stroke: var(--c); stroke-width: 1.8; stroke-linejoin: round;
+}
+.fp-hull rect, .fp-hull polygon {
+  fill: var(--g); fill-opacity: 0.72; stroke: var(--c); stroke-width: 1.2; stroke-dasharray: 5 4; stroke-linejoin: round;
+}
+.fp-area.is-hover > rect, .fp-area.is-hover > polygon, .fp-area.is-hover > g > rect,
+.fp-hull.is-hover rect, .fp-hull.is-hover polygon { fill-opacity: 1; filter: brightness(1.06); }
+.fp-area.is-active > rect, .fp-area.is-active > polygon, .fp-area.is-active > g > rect {
+  fill-opacity: 1; stroke-width: 3.2; filter: saturate(1.25) brightness(1.04);
+}
+.fp-hull.is-active rect, .fp-hull.is-active polygon { fill-opacity: 1; stroke-width: 2.2; stroke-dasharray: none; }
+.fp-area:focus-visible > rect, .fp-area:focus-visible > polygon,
+.fp-hull:focus-visible rect, .fp-hull:focus-visible polygon,
+.fp-rack:focus-visible > rect { stroke: var(--brand-red); stroke-width: 3; }
 .fp-secure-fill { color: var(--c); stroke: none; fill-opacity: 1; }
 
-.fp-mepfs { --c: var(--fp-mepfs); }
-.fp-structural { --c: var(--fp-structural); }
-.fp-architectural { --c: var(--fp-architectural); }
-.fp-safekeeping { --c: var(--fp-safekeeping); }
-.fp-highvalue { --c: var(--fp-highvalue); }
-.fp-building { --c: var(--fp-building); }
-.fp-rebar { --c: var(--fp-rebar); }
-.fp-tiles { --c: var(--fp-tiles); }
-.fp-mrf { --c: var(--fp-mrf); }
+.fp-mepfs { --c: var(--fp-mepfs); --g: url(#fpg-mepfs); }
+.fp-structural { --c: var(--fp-structural); --g: url(#fpg-structural); }
+.fp-architectural { --c: var(--fp-architectural); --g: url(#fpg-architectural); }
+.fp-safekeeping { --c: var(--fp-safekeeping); --g: url(#fpg-safekeeping); }
+.fp-highvalue { --c: var(--fp-highvalue); --g: url(#fpg-highvalue); }
+.fp-building { --c: var(--fp-building); --g: url(#fpg-building); }
+.fp-rebar { --c: var(--fp-rebar); --g: url(#fpg-rebar); }
+.fp-tiles { --c: var(--fp-tiles); --g: url(#fpg-tiles); }
+.fp-mrf { --c: var(--fp-mrf); --g: url(#fpg-mrf); }
 
 .fp-area-t { font-size: 15px; font-weight: 800; letter-spacing: 0.6px; fill: var(--text); }
 .fp-t-mepfs { fill: var(--fp-mepfs); }
@@ -1563,17 +1574,18 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .fp-area-hint { font-size: 10.5px; font-weight: 600; letter-spacing: 0.3px; fill: var(--text-faint); }
 
 /* --- warehouse plan --- */
-.fp-shell { fill: var(--surface); stroke: var(--text); stroke-width: 2.4; }
+.fp-shell { fill: url(#fpg-shell); stroke: var(--text); stroke-width: 2.4; }
 .fp-canopy { fill: none; stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 6 4; }
-.fp-open rect { fill: var(--surface-2); stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 3; }
+.fp-open polygon { fill: url(#fpg-floor); stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 3; stroke-linejoin: round; }
 .fp-open-t { font-size: 11px; font-weight: 700; fill: var(--text-faint); letter-spacing: 0.5px; }
-.fp-open-s { font-size: 10px; fill: var(--text-faint); }
 .fp-rack > rect { fill: var(--c); fill-opacity: 0.6; stroke: var(--c); stroke-width: 1.2; transition: fill-opacity 0.15s; }
 .fp-rack:hover > rect { fill-opacity: 0.9; }
 .fp-rack.is-active > rect { fill-opacity: 0.95; }
 .fp-rack.is-dim > rect { fill-opacity: 0.22; }
 .fp-bay-div { stroke: var(--fp-paper); stroke-width: 0.9; opacity: 0.7; }
-.fp-rack-t { font-size: 11px; font-weight: 800; fill: #fff; paint-order: stroke; stroke: rgba(0, 0, 0, 0.35); stroke-width: 2.5; }
+/* The portrait plan renders about 0.76 viewBox units to the pixel, so a run's number
+   needs to be set larger here than it looks in the source to stay readable. */
+.fp-rack-t { font-size: 13px; font-weight: 800; fill: #fff; paint-order: stroke; stroke: rgba(0, 0, 0, 0.45); stroke-width: 3; }
 .fp-cant > rect { fill-opacity: 0.45; }
 .fp-floorarea rect { fill: var(--fp-safekeeping); fill-opacity: 0.16; stroke: var(--fp-safekeeping); stroke-width: 1; stroke-dasharray: 4 3; }
 .fp-floorarea:hover rect { fill-opacity: 0.3; }
@@ -1664,34 +1676,59 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .fp-row-go { color: var(--text-faint); flex: none; }
 .fp-more { align-self: center; margin: 4px 0 8px; }
 
-/* --- overview lists shown when nothing is selected --- */
+/* --- overview lists shown when nothing is selected ---
+   `button` in this stylesheet only inherits font-family, so these two controls were
+   painting the UA's own buttontext black — invisible on the dark theme's near-black
+   card and off-token in light mode. Both now set colour explicitly, and each tile
+   carries its area's colour as a left edge and on its figure. */
 .fp-pick { font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px; }
-.fp-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.fp-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 9px; }
 .fp-tile {
-  display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; gap: 2px 8px; text-align: left;
-  padding: 11px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); cursor: pointer;
+  display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 3px 10px; text-align: left;
+  padding: 12px 13px; border: 1px solid var(--border); border-left: 3px solid var(--tc, var(--border-strong));
+  border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); cursor: pointer;
+  transition: background 0.14s, border-color 0.14s, box-shadow 0.14s;
 }
-.fp-tile:hover { background: var(--surface); border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
-.fp-tile .fp-swatch { grid-row: 1 / 3; align-self: center; }
-.fp-tile .n { font-size: 11.5px; font-weight: 700; line-height: 1.25; }
-.fp-tile .v { font-size: 17px; font-weight: 800; grid-column: 2; }
-.fp-tile .u { display: none; }
+.fp-tile:hover { background: var(--surface); border-color: var(--border-strong); border-left-color: var(--tc); box-shadow: var(--shadow-sm); }
+.fp-tile:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
+.fp-tile .fp-swatch { display: none; }
+.fp-tile .n { grid-column: 1 / 3; font-size: 11.5px; font-weight: 700; line-height: 1.3; color: var(--text); }
+.fp-tile .v { grid-column: 1; font-size: 21px; font-weight: 800; color: var(--tc, var(--text)); line-height: 1.1; }
+.fp-tile .u { grid-column: 2; align-self: end; font-size: 10px; color: var(--text-muted); padding-bottom: 3px; }
+.fp-tile.fp-t-mepfs { --tc: var(--fp-mepfs); }
+.fp-tile.fp-t-structural { --tc: var(--fp-structural); }
+.fp-tile.fp-t-architectural { --tc: var(--fp-architectural); }
+.fp-tile.fp-t-safekeeping { --tc: var(--fp-safekeeping); }
+.fp-tile.fp-t-highvalue { --tc: var(--fp-highvalue); }
+.fp-tile.fp-t-building { --tc: var(--fp-building); }
+.fp-tile.fp-t-rebar { --tc: var(--fp-rebar); }
+.fp-tile.fp-t-tiles { --tc: var(--fp-tiles); }
+.fp-tile.fp-t-mrf { --tc: var(--fp-mrf); }
 .fp-mrf {
   margin-top: 12px; padding: 11px 12px; border: 1px dashed var(--border-strong); border-radius: var(--radius-sm);
-  font-size: 11px; color: var(--text-faint); line-height: 1.55;
+  font-size: 11px; color: var(--text-muted); line-height: 1.55;
 }
-.fp-arealist { display: flex; flex-direction: column; gap: 6px; }
+.fp-arealist { display: flex; flex-direction: column; gap: 7px; }
 .fp-arearow {
-  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border);
-  border-radius: var(--radius-sm); background: var(--surface-2); cursor: pointer; text-align: left; width: 100%;
+  display: flex; align-items: center; gap: 11px; padding: 11px 13px; border: 1px solid var(--border);
+  border-left: 3px solid var(--tc, var(--border-strong)); border-radius: var(--radius-sm);
+  background: var(--surface-2); color: var(--text); cursor: pointer; text-align: left; width: 100%;
+  transition: background 0.14s, border-color 0.14s, box-shadow 0.14s;
 }
-.fp-arearow:hover { background: var(--surface); border-color: var(--border-strong); }
+.fp-arearow:hover { background: var(--surface); border-color: var(--border-strong); border-left-color: var(--tc); box-shadow: var(--shadow-sm); }
+.fp-arearow:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 2px; }
+.fp-arearow .fp-swatch { display: none; }
 .fp-arearow-main { flex: 1; min-width: 0; }
-.fp-arearow-main .n { font-size: 12.5px; font-weight: 700; }
-.fp-arearow-main .s { font-size: 10.5px; color: var(--text-faint); }
-.fp-arearow-bar { width: 90px; height: 7px; border-radius: 4px; background: var(--border); overflow: hidden; flex: none; }
-.fp-arearow-bar span { display: block; height: 100%; border-radius: 4px; }
-.fp-arearow-pct { font-size: 12px; font-weight: 700; width: 36px; text-align: right; flex: none; }
+.fp-arearow-main .n { font-size: 12.5px; font-weight: 700; color: var(--text); }
+.fp-arearow-main .s { font-size: 10.5px; color: var(--text-muted); margin-top: 1px; }
+.fp-arearow-bar { width: 90px; height: 7px; border-radius: 4px; background: var(--border-strong); overflow: hidden; flex: none; }
+.fp-arearow-bar span { display: block; height: 100%; border-radius: 4px; background: var(--tc, var(--brand-red)); }
+.fp-arearow-pct { font-size: 12.5px; font-weight: 800; width: 38px; text-align: right; flex: none; color: var(--text); }
+.fp-arearow.fp-t-mepfs { --tc: var(--fp-mepfs); }
+.fp-arearow.fp-t-structural { --tc: var(--fp-structural); }
+.fp-arearow.fp-t-architectural { --tc: var(--fp-architectural); }
+.fp-arearow.fp-t-safekeeping { --tc: var(--fp-safekeeping); }
+.fp-arearow.fp-t-highvalue { --tc: var(--fp-highvalue); }
 .fp-rack-jump { display: flex; gap: 4px; flex-wrap: wrap; }
 .fp-rack-jump .btn { min-width: 30px; padding: 5px 8px; }
 

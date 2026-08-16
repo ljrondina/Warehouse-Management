@@ -5,8 +5,8 @@ import {
   SITE_AREAS, WH_AREAS, AREA_BY_ID, RACKS, CANTILEVER, FLOOR_AREA, HV_SHELVING,
   areaCapacity, rackOccupancy, areaItems, siteItems, slotItems, placement,
 } from '../data/warehouseMap'
-import SitePlan, { SiteLegend } from '../components/floorplan/SitePlan'
-import WarehousePlan, { WarehouseLegend } from '../components/floorplan/WarehousePlan'
+import SitePlan from '../components/floorplan/SitePlan'
+import WarehousePlan from '../components/floorplan/WarehousePlan'
 import RackElevation, { RackSpec } from '../components/floorplan/RackElevation'
 import LocationPanel from '../components/floorplan/LocationPanel'
 import { Card } from '../components/ui'
@@ -93,7 +93,7 @@ export default function StorageMap() {
 
     return (
       <Shell level={level} area={area} rack={rack} go={go}>
-        <Card title="Site Development Plan" icon="map" right={<span className="fp-scale">Central Warehouse Taytay · scale MTS</span>}>
+        <Card title="Stockyard" icon="map" right={<span className="fp-scale">Central Warehouse Taytay · scale MTS</span>}>
           <div className="fp-stage">
             <SitePlan
               selected={area}
@@ -102,10 +102,6 @@ export default function StorageMap() {
               onSelect={(id) => go({ area: area === id ? null : id })}
               onDrill={() => go({ level: 'warehouse', area: null })}
             />
-          </div>
-          <SiteLegend />
-          <div className="card-note">
-            Traced from the reference deck’s site development plan. Areas are clickable; the shed opens the warehouse plan.
           </div>
         </Card>
 
@@ -162,8 +158,8 @@ export default function StorageMap() {
 
     return (
       <Shell level={level} area={area} rack={rack} go={go}>
-        <Card title="Warehouse Plan — Top View" icon="warehouse" right={<span className="fp-scale">2,520 m² · 11 racks · single storey</span>}>
-          <div className="fp-stage">
+        <Card title="Warehouse Plan — Top View" icon="warehouse" right={<span className="fp-scale">11 racks · single storey</span>}>
+          <div className="fp-stage fp-stage-portrait">
             <WarehousePlan
               selected={area}
               hovered={hovered}
@@ -171,10 +167,6 @@ export default function StorageMap() {
               onSelect={(id) => go({ area: area === id ? null : id })}
               onOpenRack={(id) => go({ level: 'rack', rack: id, area: id === 'CANT' || id === 'FLOOR' ? 'safekeeping' : RACKS.find((r) => r.id === id)?.area || area })}
             />
-          </div>
-          <WarehouseLegend />
-          <div className="card-note">
-            Traced from the reference deck’s warehouse top view. Click an area for its materials, or a numbered rack run to open its elevation.
           </div>
         </Card>
 
@@ -215,15 +207,14 @@ export default function StorageMap() {
                 const p = areaItems(a.id)
                 const pct = c.positions ? Math.round((c.used / c.positions) * 100) : 0
                 return (
-                  <button key={a.id} className="fp-arearow" onClick={() => go({ area: a.id })}
+                  <button key={a.id} className={`fp-arearow fp-t-${a.role}`} onClick={() => go({ area: a.id })}
                     onMouseEnter={() => setHovered(a.id)} onMouseLeave={() => setHovered(null)}>
-                    <i className={`fp-swatch fp-sw-${a.role}`} />
                     <div className="fp-arearow-main">
                       <div className="n">{a.name}</div>
                       <div className="s">{num(p.length)} lines · {num(c.positions)} {c.unit}</div>
                     </div>
                     <div className="fp-arearow-bar" title={`${pct}% of positions in use`}>
-                      <span className={`fp-sw-${a.role}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                      <span style={{ width: `${Math.min(pct, 100)}%` }} />
                     </div>
                     <span className="tabular fp-arearow-pct">{pct}%</span>
                   </button>

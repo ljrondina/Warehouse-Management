@@ -45,14 +45,26 @@ export const SITE_BOUNDARY = [
   [9.796, 2.699], [9.801, 4.1], [9.806, 5.5], [3.695, 5.694],
 ].map(([x, y]) => sp(x, y))
 
-// The building is drawn as three rectangles: the main shed plus two ground-floor
-// wings either side of the loading/unloading recess at the bottom. Drawing it as one
-// box would swallow the recess the delivery trucks actually back into.
+// The deck draws the shed as three rectangles — the main box plus two ground-floor
+// wings either side of the loading recess. Overlapping fills leave seams where the
+// boxes meet, so the three are traced once as a single outline instead. The recess is
+// the notch at the bottom; a plain rectangle would swallow it.
 export const SITE_BUILDING = [
-  sr(6.599, 1.407, 3.083, 2.659),
-  sr(6.595, 4.06, 0.848, 0.648),
-  sr(8.329, 4.066, 1.351, 0.641),
-]
+  [6.597, 1.407], [9.681, 1.407], [9.681, 4.707], [8.329, 4.707],
+  [8.329, 4.063], [7.443, 4.063], [7.443, 4.707], [6.597, 4.707],
+].map(([x, y]) => sp(x, y))
+
+// Same treatment for the tiles bay: wide at the top, narrower below, one outline.
+export const SITE_TILES = [
+  [5.183, 3.847], [6.522, 3.847], [6.522, 4.683], [6.244, 4.683],
+  [6.244, 5.134], [5.183, 5.134],
+].map(([x, y]) => sp(x, y))
+
+const bbox = (pts) => {
+  const xs = pts.map((p) => p[0]); const ys = pts.map((p) => p[1])
+  const x = Math.min(...xs); const y = Math.min(...ys)
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }
+}
 
 // Areas that hold material, and are therefore clickable.
 export const SITE_AREAS = [
@@ -62,12 +74,12 @@ export const SITE_AREAS = [
     role: 'building',
     drill: true,
     note: '2,520 m² enclosed shed. Five material areas inside — open it to go to the warehouse plan.',
-    rects: SITE_BUILDING,
-    label: sr(6.599, 1.407, 3.083, 2.659),
+    poly: SITE_BUILDING,
+    label: sr(6.597, 1.407, 3.084, 2.656),
   },
   {
     id: 'rebar',
-    name: 'Deformed Rebar',
+    name: 'Deformed Bar Area',
     role: 'rebar',
     note: 'Open stockyard bay for reinforcing steel, kept outside the shed and reachable by truck.',
     rects: [sr(3.9675, 3.8635, 0.774, 1.291)],
@@ -77,8 +89,8 @@ export const SITE_AREAS = [
     name: 'Tiles Area',
     role: 'tiles',
     note: 'Covered tile stacking area on the open stockyard, beside the warehouse entrance road.',
-    rects: [sr(5.183, 3.847, 1.339, 0.835), sr(5.183, 4.684, 1.061, 0.45)],
-    label: sr(5.183, 3.847, 1.339, 0.835),
+    poly: SITE_TILES,
+    label: sr(5.183, 3.847, 1.339, 0.836),
   },
   {
     id: 'mrf',
@@ -89,44 +101,36 @@ export const SITE_AREAS = [
       'rather than physically moved, so this lists every line carrying a damaged quantity — the units awaiting ' +
       'disposition, not lines that have left their rack.',
     rotRect: { cx: 5.1565, cy: 2.462, w: 1.003, h: 0.566, rot: -28.29 },
-    rects: [],
   },
 ]
+SITE_AREAS.forEach((a) => {
+  a.rects = a.rects || []
+  // Every non-rotated area needs a box to centre its label in: the outline's bounds
+  // where there is one, otherwise its single rectangle.
+  if (!a.label) a.label = a.poly ? bbox(a.poly) : a.rects[0]
+})
 
-// Everything else the site plan delineates. Not clickable — nothing is stored here.
-export const SITE_FACILITIES = [
-  { id: 'yard', name: 'Open Stock Yard', kind: 'yard', rect: sr(4.32, 3.42, 2.28, 1.86), sub: 'accessible to trucks' },
-  { id: 'unload', name: '9.0 m Unloading Area', kind: 'yard', rect: sr(4.35, 2.86, 1.72, 0.52) },
-  { id: 'carpark', name: 'Car Park', kind: 'park', rect: sr(6.436, 4.812, 0.899, 0.299) },
-  { id: 'truckpark', name: 'Delivery Truck Parking', kind: 'park', rect: sr(8.932, 4.837, 0.856, 0.38) },
-  { id: 'queue', name: 'Queue Parking', kind: 'park', rect: sr(7.86, 4.96, 0.95, 0.24) },
-  { id: 'canopy-e', name: 'Canopy', kind: 'canopy', rect: sr(6.395, 3.384, 0.145, 0.366), vertical: true },
-  { id: 'gate', name: 'Entrance / Exit', kind: 'gate', rect: sr(6.568, 3.384, 0.145, 0.366), vertical: true },
-  { id: 'canopy-l', name: 'Canopy', kind: 'canopy', rect: sr(7.603, 3.959, 0.673, 0.097) },
-  { id: 'bay', name: 'Loading / Unloading', kind: 'dock', rect: sr(7.44, 4.34, 0.98, 0.42) },
-]
-
-// Guard posts, drawn where the slide places its guard-post glyphs.
-export const SITE_MARKERS = [
-  { id: 'guard-1', kind: 'guard', at: sp(7.604, 3.8) },
-  { id: 'guard-2', kind: 'guard', at: sp(4.19, 5.42) },
-]
-
-// Vehicle route along the site's south access road — the slide's ingress (blue) and
-// egress (pink) arrow rows, reduced to one line each with a direction marker.
-export const SITE_ROUTES = [
-  { id: 'egress', dir: 'out', from: sp(7.55, 5.3), to: sp(5.02, 5.3) },
-  { id: 'ingress', dir: 'in', from: sp(5.03, 5.43), to: sp(7.56, 5.43) },
-]
+// The one piece of context the site plan still draws: the open yard the deformed-bar
+// and tile bays sit inside. Everything else the deck marks up — car park, truck
+// parking, queue bay, canopies, gate, guard posts, the ingress/egress arrows — is
+// vehicle logistics, not storage, and only competed with the areas that are.
+export const SITE_YARD = { id: 'yard', name: 'Open Stock Yard', rect: sr(3.9, 3.42, 2.7, 1.86) }
 
 /* ----------------------------------------------------------- warehouse level */
 
-// The CAD raster behind slide 9 is 628 x 924 and portrait; the deck rotates it 90°
-// clockwise to present it. `pl` does the same rotation: a portrait pixel (ix, iy)
-// becomes landscape (924 - iy, ix), so the office end sits on the left and the rack
-// runs read left-to-right, exactly as the slide shows them.
-export const WH_VB = { w: 924, h: 628 }
-const pl = (ix0, iy0, ix1, iy1) => ({ x: 924 - iy1, y: ix0, w: iy1 - iy0, h: ix1 - ix0 })
+// The CAD raster behind slide 9 is 628 x 924 and portrait. The deck presents it
+// rotated 90° clockwise; we keep the PORTRAIT orientation instead, because that is the
+// one that lines up with the site plan — on both drawings the rack runs stand vertical,
+// the entrance canopy is on the west wall about three-quarters of the way down, and the
+// loading recess is bottom-centre. Turning the warehouse to match the deck's landscape
+// presentation would put it 90° out from the shed the user just clicked.
+//
+// `pl` is therefore an identity map from raster pixels to viewBox units, and every
+// measurement below stays in the coordinates it was taken in.
+export const WH_VB = { w: 628, h: 924 }
+const pl = (ix0, iy0, ix1, iy1) => ({ x: ix0, y: iy0, w: ix1 - ix0, h: iy1 - iy0 })
+// Rectilinear outline from raster pixels, for the areas drawn as several boxes.
+const pp = (pts) => pts.map(([x, y]) => [x, y])
 
 // 1 px of the CAD raster is ~76 mm: the drawing's own "3950 R-R" clear aisle measures
 // 52 px between rack runs. Used only for the dimension read-outs, never for stock.
@@ -206,7 +210,10 @@ export const WH_AREAS = [
   {
     id: 'safekeeping', name: 'Safekeeping Materials', short: 'Safekeeping', role: 'safekeeping',
     trades: ['General Requirements', 'Site Works', 'Allied Services'],
-    hull: [pl(288, 28, 600, 490), pl(400, 28, 600, 830)],
+    // Racks 6-11 plus the floor and cantilever beside them: one L-shaped outline
+    // rather than two overlapping boxes, which left a seam down the middle.
+    hull: [pl(288, 28, 600, 830)],
+    poly: pp([[288, 28], [600, 28], [600, 830], [400, 830], [400, 490], [288, 490]]),
     note: 'General requirements and project-held goods. Racks 6–11, plus the cantilever run and the open floor area.',
   },
   {
@@ -228,16 +235,19 @@ export const WH_ROOMS = [
   { id: 'pantry', name: 'Pantry', rect: pl(39, 727, 80, 760) },
   { id: 'ee', name: 'EE Cabinet', rect: pl(39, 644, 92, 678) },
   { id: 'check', name: 'Security Check', rect: pl(39, 592, 92, 644) },
-  { id: 'sorting', name: 'Sorting Bay', rect: pl(214, 592, 404, 700), area: '90.45 m²', accent: true },
+  { id: 'sorting', name: 'Sorting Bay', rect: pl(214, 592, 404, 700), accent: true },
   { id: 'platform', name: 'Platform', rect: pl(223, 700, 364, 730) },
   { id: 'loading', name: 'Loading & Unloading Bay', rect: pl(218, 730, 352, 845), accent: true },
 ]
 
-// Open floor, with the areas the drawing itself states.
-export const WH_OPEN = [
-  { id: 'open-1', name: 'Open Flat Area', area: '628.63 m²', rect: pl(38, 382, 607, 568) },
-  { id: 'open-2', name: 'Open Flat Area', area: '262.84 m²', rect: pl(405, 690, 607, 800) },
-]
+// The open floor: one continuous L, not the drawing's two separately dimensioned
+// pockets. They are contiguous on the plan — the band below the racks runs into the
+// strip beside the loading bay — and two boxes only read as two rooms.
+export const WH_OPEN = {
+  id: 'open', name: 'Open Flat Area',
+  poly: pp([[38, 382], [607, 382], [607, 800], [405, 800], [405, 568], [38, 568]]),
+  label: pl(38, 382, 400, 568),
+}
 
 export const AREA_BY_ID = Object.fromEntries(WH_AREAS.map((a) => [a.id, a]))
 

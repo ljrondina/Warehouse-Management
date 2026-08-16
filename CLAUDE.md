@@ -803,3 +803,79 @@ the rendered page; at 1280px the New Transaction control's right edge (1242) mat
 tab row's right edge exactly, vertically centered against it; at 375px the button sits
 top-right (327–363, matching the row width) with the tabs wrapped beneath it and zero
 horizontal page overflow. No console errors. `npm run build` passes.
+
+### 2026-08-17 — Session: Floor plan levels 1 and 2 — decluttered, portrait, gradients
+
+Seventeen changes to the stockyard view and six to the warehouse view, all cosmetic or
+compositional; the placement model and the racking level are untouched.
+
+**Level 1 — the site is now only what holds material.** Removed the 9.0 m unloading
+area, car park, delivery-truck parking, queue parking, the loading/unloading block, the
+canopy and gate slivers, the guard-post markers, the ingress/egress arrows and the north
+arrow. All of it was vehicle logistics, and on a card-sized drawing it crowded out the
+four areas the level exists to show. `SITE_FACILITIES`, `SITE_MARKERS` and `SITE_ROUTES`
+are gone; the single surviving piece of context is `SITE_YARD`, widened west from
+x 4.32 to x 3.90 so the deformed-bar bay sits inside it as it does on the drawing.
+The card is titled **Stockyard**, "Deformed Rebar" is now **Deformed Bar Area**.
+
+**Merged outlines.** The shed was three overlapping rectangles and the tiles bay two,
+which left seams where the boxes met. Both are now single rectilinear outlines
+(`SITE_BUILDING`, `SITE_TILES`) that keep the real shape — the shed still has its
+loading recess notched out of the bottom, the tiles bay is still wide at the top and
+narrower below. Same for Safekeeping and the open floor on level 2.
+
+**Gradients.** `planDefs.jsx` (new) emits one diagonal gradient per area role, stops
+reading the same `--fp-*` tokens the flat colours use, so a gradient tracks the theme
+without a second palette. Opacity lives in the stops, which leaves `fill-opacity` free
+to carry hover and selection on top. The shed shell and the open floor get neutral
+gradients of their own so they read as surfaces, not as a sixth material area.
+
+**Level 2 is portrait now, and that is what makes it line up with level 1.** The deck
+presents the warehouse rotated 90° clockwise; the underlying CAD is portrait. Portrait is
+the orientation that matches the site plan — on both drawings the rack runs stand
+vertical, the entrance canopy is on the west wall about three-quarters of the way down,
+and the loading recess is bottom-centre. Rotating the landscape view clockwise (as
+literally asked) would have put it 180° from the shed you just clicked; rotating it the
+other way is what "in line with the level 1 map" actually means, so `pl()` is now an
+identity map and every measurement stays in the coordinates it was taken in. A portrait
+drawing cannot be sized by width without running past the fold, so `.fp-stage-portrait`
+leads with height (`max-height: 78vh`, width follows the intrinsic ratio) and centres it.
+
+Also on level 2: the stated square-metre figures are off the map, the rack-run bay
+divisions now run horizontally to suit the rotation, and both legends and both card
+footnotes are gone from levels 1 and 2 (level 3 keeps its cell legend, which decodes
+colour rather than repeating the drawing).
+
+**Label sizing.** `PlanText` now drives every label on both plans. The area-label
+rotation threshold went from `h > w * 1.4` to `h > w * 2.2`, because the high-value room
+is 119 × 175 — barely oblong — and turning text in a near-square block looks wrong. A
+hull one rack deep (~21 units across) drops to 12 px so its name fits on one line inside
+the run; a hull that stays horizontal drops to 13 px because it wraps to several lines.
+The MRF label is wrapped and sized to its own angled box, where at heading size
+"MATERIAL RECOVERY" alone was wider than the bay it names. Rack numbers went 11 → 13 px:
+the portrait plan renders about 0.76 viewBox units to the pixel.
+
+**The contrast complaint was a real bug, not a taste issue.** This stylesheet's
+`button { font-family: inherit; cursor: pointer; }` does not set `color`, so the site
+tiles and the area rows — both `<button>` — were painting the user agent's own
+`buttontext` black. On the dark theme's near-black card that is invisible. Both now set
+`color: var(--text)` explicitly, carry their area's colour as a left border and on the
+figure, and the two 10–11 px captions moved from `--text-faint` to `--text-muted`.
+Measured after: every text/background pair on those cards is now **5.8:1 or better in
+both themes** (worst was 3.82:1 before, and the tile name was effectively 1:1 in dark).
+
+**Bug found while verifying:** dropping `rects: []` from the MRF entry meant the
+deformed-bar area had no label box either, and `centreOf(undefined)` crashed the whole
+site level. `SITE_AREAS.forEach` now falls back to the outline's bounds, then to the
+area's single rectangle.
+
+**Verified** at 1440×900 and 375×812, light and dark, on all three levels: zero labels
+clipped, zero label overlaps, zero page-level horizontal scroll from anything in `main`,
+no console errors on a clean dev server. Every level-2 area label measured inside its own
+hull. Click-through exercised end to end — tiles → panel, shed → warehouse, safekeeping
+hull → panel, Rack 10 → 50-cell elevation, breadcrumb back up.
+
+**Still outstanding, unchanged:** the shared topbar overflows a 375 px viewport on every
+page (38 px on /dashboard, 44 px on /inventory, 50 px here — it grows with the page
+title). Confirmed again this session that nothing inside `main` contributes to it; it is
+`Layout.jsx` and is being fixed separately.
