@@ -1,0 +1,38 @@
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+.vscode
+# Source data (keep out of repo)
+*.xlsx
+
+# Claude Code local settings
+.claude
+
+# Large logo source art (optimized copies live in public/)
+/Megawide Construction*.png
+/Megawide Construction*.ai
+*.ai
+/MegawideLogo*.png
+
+# ---------------------------------------------------------------------------
+# NOTHING BELOW MAY EVER BE COMMITTED. This repository is PUBLIC.
+# ---------------------------------------------------------------------------
+# Master copies of the real warehouse dataset. These feed scripts/generate-seeds.mjs
+# and stay on the maintainer's machine; the live data lives in Supabase.
+/private-data/
+
+# Source workbooks, drawings, packing lists and any other company document.
+/sample/
+*.pdf
+*.xls
+*.xlsx
+*.csv
+
+# Generated seed file — contains the real dataset.
+/supabase/seed_data.sql

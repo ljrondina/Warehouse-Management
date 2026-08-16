@@ -1,0 +1,1571 @@
+/* ============================================================
+   Megawide WMS — Design System
+
+   RESTRICTED PALETTE. Only these hues may appear anywhere in the UI:
+     #ee3124  brand red        #c42127  dark red
+     #2B2C2B  dark gray        #231F20  near black
+     #dcdbdb  light gray       #FFFFFF  white
+   Plus: green (permitted), orange (permitted — Incoming's role, for variety) and
+   yellow (permitted MINIMALLY — the low-stock warning role only). No other hues.
+   Variety otherwise comes from tints, shades and gradients of the above, not from
+   new colours. Every colour token is defined for BOTH themes and chosen so it clears
+   contrast against that theme's own card surface — a light-theme value dropped
+   into dark mode is how the "some things are invisible" bugs happened before.
+   ============================================================ */
+
+:root {
+  /* --- The six approved brand colours --- */
+  --brand-red: #ee3124;
+  --brand-red-dark: #c42127;
+  --brand-gray-dark: #2b2c2b;
+  --brand-black: #231f20;
+  --brand-gray: #dcdbdb;
+  --white: #ffffff;
+
+  /* Tints and shades derived from the approved six — the only sanctioned way to
+     add variety without introducing a new hue. */
+  --brand-red-darker: #8f1a1c;
+  --brand-red-light: #fdeceb;
+  --brand-red-mid: #f7bdb9;
+  --brand-red-soft: #f4695d;
+  --brand-gray-mid: #a8a7a7;
+  --brand-gray-soft: #7d7c7c;
+  --brand-gray-light: #f2f1f1;
+
+  /* Green — permitted. Muted so it sits beside the red rather than competing. */
+  --green: #2f7d5a;
+  --green-soft: #4a9e78;
+  --green-weak: #e9f2ee;
+  /* Orange — permitted; carries the Incoming role so it reads distinctly from both
+     Outgoing (deep red) and the Damaged/low-stock warning (yellow). */
+  --orange: #b85f13;
+  --orange-soft: #dd9950;
+  --orange-weak: #fbf0e3;
+  /* Yellow — permitted minimally; the warning role only. */
+  --yellow: #a8770f;
+  --yellow-soft: #c9962a;
+  --yellow-weak: #f7f0dd;
+
+  /* Sidebar is always the dark brand shell, in both themes */
+  --sidebar-bg: var(--brand-black);
+
+  /* Light theme surfaces */
+  --bg: #f4f3f3;
+  --bg-elev: var(--white);
+  --surface: var(--white);
+  --surface-2: #f7f6f6;
+  --border: rgba(35, 31, 32, 0.10);
+  --border-strong: rgba(35, 31, 32, 0.18);
+
+  --text: var(--brand-black);
+  --text-muted: #5a5858;
+  /* Darkened from #918f8f, which sat at 2.98:1 on white — under AA for the 10px
+     captions this token is used on (flow labels, unit sublabels, table hints). */
+  --text-faint: #767474;
+
+  --accent: var(--brand-red);
+  --accent-weak: var(--brand-red-light);
+
+  --ok: var(--green);
+  --ok-weak: var(--green-weak);
+  --warn: var(--yellow);
+  --warn-weak: var(--yellow-weak);
+  --danger: var(--brand-red-dark);
+  --danger-weak: var(--brand-red-light);
+  --info: #6b6a6a;
+  --info-weak: var(--brand-gray-light);
+
+  --shadow-sm: 0 1px 3px rgba(35, 31, 32, 0.07);
+  --shadow: 0 4px 12px rgba(35, 31, 32, 0.09);
+  --shadow-lg: 0 8px 24px rgba(35, 31, 32, 0.13);
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-xl: 16px;
+  --sidebar-w: 240px;
+  --sidebar-w-collapsed: 60px;
+  --topbar-h: 60px;
+
+  --font: 'Montserrat', 'Gotham', 'Segoe UI', system-ui, sans-serif;
+  --font-head: var(--font);
+
+  /* Composition flow badges — anchored on the same Incoming (orange) / Outgoing
+     (deep red) colours the movement bars and KPI cards use (see lib/colors.js
+     SERIES), so the concept is one colour everywhere it appears. */
+  --flow-in-1: #dd9950;
+  --flow-in-2: #b85f13;
+  --flow-out-1: #a3222a;
+  --flow-out-2: #7a1417;
+
+  /* Categorical chart ramp — alternates red and gray shades so neighbouring
+     series stay separable without reaching for another hue. */
+  --c1: #ee3124;
+  --c2: #2b2c2b;
+  --c3: #c42127;
+  --c4: #7d7c7c;
+  --c5: #f4695d;
+  --c6: #231f20;
+}
+
+:root[data-theme='dark'] {
+  /* Dark surfaces are built from #231F20 / #2B2C2B rather than a blue-gray. */
+  --bg: #191617;
+  --bg-elev: #231f20;
+  --surface: #231f20;
+  --surface-2: #2b2c2b;
+  --border: #3a3535;
+  --border-strong: #4d4747;
+
+  --text: #f2f1f1;
+  --text-muted: #a8a7a7;
+  /* Lightened from #7d7c7c (3.9:1 on the dark card) for the same reason. */
+  --text-faint: #9a9898;
+
+  --accent: #f4695d;
+  --accent-weak: #3a2220;
+
+  --ok: #4a9e78;
+  --ok-weak: #18271f;
+  /* Overrides the light-theme --orange tokens above: on the near-black dark card, a
+     lighter tint is what clears contrast rather than the deep burnt-orange light
+     theme uses on white. */
+  --orange: #dd9950;
+  --orange-soft: #e8b47d;
+  --orange-weak: #33240f;
+  --warn: #c9962a;
+  --warn-weak: #2a2316;
+  --danger: #f4695d;
+  --danger-weak: #33201e;
+  --info: #a8a7a7;
+  --info-weak: #2b2c2b;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.55);
+
+  --flow-in-1: #e8b47d;
+  --flow-in-2: #dd9950;
+  --flow-out-1: #fadad7;
+  --flow-out-2: #f7bdb9;
+
+  --c1: #f4695d;
+  --c2: #dcdbdb;
+  --c3: #ee3124;
+  --c4: #a8a7a7;
+  --c5: #f7bdb9;
+  --c6: #7d7c7c;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+h1, h2, h3, h4 { margin: 0; font-weight: 700; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- Layout ---------- */
+.app-shell { display: flex; min-height: 100vh; }
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 40;
+  transition: width 0.2s ease, transform 0.2s ease;
+}
+.main { flex: 1; margin-left: var(--sidebar-w); display: flex; flex-direction: column; min-width: 0; transition: margin-left 0.2s ease; }
+.content { padding: 24px 28px 48px; flex: 1; }
+
+/* Burger-collapsed sidebar (wide screens only — Layout.jsx never adds this class
+   while the mobile breakpoint is active, so there's no override needed here for
+   narrow screens): the rail narrows to icons-only rather than disappearing, and
+   the content reclaims the freed width. */
+.app-shell.nav-collapsed .sidebar { width: var(--sidebar-w-collapsed); }
+.app-shell.nav-collapsed .main { margin-left: var(--sidebar-w-collapsed); }
+/* Both sides of the collapse animate a layout property, so hint the compositor and
+   isolate the sidebar's internals from the page's layout work while it runs. */
+.sidebar { will-change: width; contain: layout paint; }
+.main { will-change: margin-left; }
+.nav-toggle { flex-shrink: 0; }
+
+/* The rail's mark is much smaller than the full wordmark, so it doesn't need the
+   same generous drop from the top — keeps the icon from looking stranded in a sea
+   of empty space above a 72px-wide column. */
+.app-shell.nav-collapsed .sidebar-head { padding: 20px 6px; }
+.app-shell.nav-collapsed .nav { padding-left: 6px; padding-right: 6px; }
+.app-shell.nav-collapsed .nav-item { justify-content: center; padding: 10px 0; gap: 0; }
+/* The label, lock badge and count badge all carry their own class specifically so
+   they can be hidden without touching the icon, which keeps its colour. Size is the
+   one thing that DOES change here — a step down from the expanded rail's 20px. */
+.app-shell.nav-collapsed .nav-item .ico { width: 17px; height: 17px; }
+.app-shell.nav-collapsed .nav-item .nav-label,
+.app-shell.nav-collapsed .nav-item .lock-ico,
+.app-shell.nav-collapsed .nav-item .badge-count { display: none; }
+
+/* Topbar has a fixed row of controls; on narrow screens the descriptive text is
+   dropped so the icons keep fitting instead of pushing the page sideways. */
+.topbar-site { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.topbar-site-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar-tools { min-width: 0; }
+@media (max-width: 900px) {
+  .topbar-tools { gap: 8px !important; }
+  .topbar-site-name { display: none; }
+}
+@media (max-width: 720px) {
+  .topbar-user-meta, .topbar-hide-sm { display: none; }
+}
+
+.topbar {
+  height: var(--topbar-h);
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 24px; position: sticky; top: 0; z-index: 30;
+}
+
+/* ---------- Logo ---------- */
+.logo-lockup { display: flex; flex-direction: column; gap: 9px; min-width: 0; align-items: flex-start; }
+.logo-lockup img { display: block; }
+.logo-sub { font-family: var(--font-head); font-size: 10.5px; letter-spacing: 3px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); padding-left: 1px; }
+.logo-sub.on-dark { color: var(--brand-red); }
+/* Sidebar lockup is centred, with each sub-label line stacked and its own weight —
+   "Procurement" / "×" / "Warehouse Management" reads as a lockup, not a run-on. */
+.sidebar-head .logo-lockup { align-items: center; gap: 10px; width: 100%; }
+.sidebar-head .logo-sub { display: flex; flex-direction: column; align-items: center; gap: 1px; padding-left: 0; }
+.sidebar-head .logo-sub-line {
+  font-size: 10px; letter-spacing: 1.8px; line-height: 1.4;
+  text-align: center; text-transform: uppercase;
+}
+.sidebar-head .logo-sub-line:nth-child(2) {
+  font-size: 8px; letter-spacing: 1px; opacity: 0.6; margin: 1px 0;
+}
+
+/* ---------- Sidebar nav (always the dark brand shell, regardless of app theme) ---------- */
+/* Extra top/bottom padding gives the mark room to breathe rather than crowding the
+   border directly above the nav list. */
+.sidebar-head { padding: 42px 16px 26px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: center; transition: padding 0.2s ease; }
+.nav { padding: 16px 12px 4px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.nav-group-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.3); padding: 14px 12px 6px; font-weight: 700; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius-sm);
+  color: rgba(255,255,255,0.65); font-weight: 500; font-size: 13px; border: 1px solid transparent; transition: all 0.15s;
+}
+.nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.9); }
+.nav-item.active { background: var(--brand-red); color: #fff; font-weight: 600; }
+.nav-item.locked { color: rgba(255,255,255,0.28); cursor: not-allowed; }
+.nav-item.locked:hover { background: transparent; }
+.nav-item .lock-ico { margin-left: auto; font-size: 11px; opacity: 0.8; }
+.nav-item .ico { width: 20px; height: 20px; flex-shrink: 0; }
+.nav-item .badge-count { margin-left: auto; background: #fff; color: var(--brand-red); font-size: 10px; padding: 1px 7px; border-radius: 10px; font-weight: 700; }
+.nav-item.active .badge-count { background: rgba(255,255,255,0.25); color: #fff; }
+
+/* Role switcher dropdown */
+.role-menu { position: absolute; right: 0; top: 44px; width: 250px; z-index: 50; padding: 6px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-lg); }
+.role-menu .role-opt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border-radius: var(--radius-sm); border: none; background: transparent; color: var(--text); font-size: 13px; font-weight: 500; text-align: left; }
+.role-menu .role-opt:hover { background: var(--surface-2); }
+.role-menu .role-opt.active { background: var(--accent-weak); color: var(--brand-red); font-weight: 700; }
+:root[data-theme='dark'] .role-menu .role-opt.active { color: var(--accent); }
+.role-menu .role-opt .chk { margin-left: auto; }
+
+.sidebar-foot { padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.06); }
+.role-pill { font-size: 11px; color: rgba(255,255,255,0.35); line-height: 1.6; }
+.role-pill b { color: rgba(255,255,255,0.75); }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+  padding: 9px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong);
+  background: var(--surface); color: var(--text); font-weight: 600; font-size: 13px; transition: all 0.15s;
+}
+.btn:hover { background: var(--surface-2); }
+.btn-primary { background: var(--brand-red); border-color: var(--brand-red); color: #fff; }
+.btn-primary:hover { background: var(--brand-red-dark); border-color: var(--brand-red-dark); }
+.btn-ghost { border-color: transparent; background: transparent; }
+.btn-ghost:hover { background: var(--surface-2); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.icon-btn { width: 38px; height: 38px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); display: inline-flex; align-items: center; justify-content: center; color: var(--text-muted); }
+.icon-btn:hover { background: var(--surface-2); color: var(--text); }
+
+/* ---------- Cards ---------- */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+.card-pad { padding: 14px 16px; }
+/* justify-content:center + an auto right margin on the title block: on one line the
+   auto margin eats the slack so the title sits left and the controls right; once the
+   controls wrap to their own line there is no auto margin on it, so they centre. */
+.card-head { display: flex; align-items: center; justify-content: center; gap: 8px 10px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.card-head > :first-child { margin-right: auto; }
+.card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); }
+.card-sub { font-size: 12px; color: var(--text-faint); font-weight: 500; }
+
+.section-title { font-family: var(--font-head); font-size: 15px; font-weight: 700; color: var(--text); display:flex; align-items:center; gap:10px; }
+.section-title svg { color: var(--brand-red); }
+.section-note { color: var(--text-muted); font-size: 12.5px; margin-top: 2px; }
+.priority-tag { font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 3px 9px; border-radius: 20px; background: var(--accent-weak); color: var(--brand-red); text-transform: uppercase; }
+:root[data-theme='dark'] .priority-tag { color: var(--accent); }
+
+/* ---------- KPI cards ---------- */
+.kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.kpi {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 9px 12px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden;
+}
+.kpi::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--kpi-color, var(--brand-red)); }
+.kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.kpi-icon { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: color-mix(in srgb, var(--kpi-color, var(--brand-red)) 12%, transparent); flex-shrink: 0; }
+.kpi-icon svg { width: 15px; height: 15px; }
+.kpi-label { font-size: 9.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.3; }
+.kpi-value { font-size: 18px; font-weight: 800; margin: 3px 0 1px; letter-spacing: -0.3px; font-variant-numeric: tabular-nums; }
+.kpi.has-tip { cursor: help; }
+.kpi.clickable { cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; }
+.kpi.clickable:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.kpi .kpi-expand { position: absolute; right: 12px; bottom: 10px; color: var(--text-faint); opacity: 0; transition: opacity 0.12s; }
+.kpi.clickable:hover .kpi-expand { opacity: 1; }
+.kpi-tip {
+  position: absolute; left: 12px; right: 12px; bottom: 100%; margin-bottom: 8px; z-index: 20;
+  background: var(--brand-gray-dark); color: #fff; padding: 9px 11px; border-radius: 8px;
+  font-size: 11.5px; line-height: 1.4; font-weight: 500; box-shadow: var(--shadow-lg);
+  opacity: 0; visibility: hidden; transform: translateY(4px); transition: all 0.16s; pointer-events: none;
+}
+:root[data-theme='dark'] .kpi-tip { background: var(--brand-black); border: 1px solid var(--border); }
+.kpi.has-tip:hover { overflow: visible; z-index: 30; }
+.kpi.has-tip:hover .kpi-tip { opacity: 1; visibility: visible; transform: translateY(0); }
+.card-icon { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: color-mix(in srgb, currentColor 12%, transparent); flex-shrink: 0; }
+.kpi-unit { font-size: 11px; color: var(--text-faint); font-weight: 600; }
+.kpi-trend { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; }
+.trend-up { color: var(--ok); }
+.trend-down { color: var(--danger); }
+
+/* ---------- Badges ---------- */
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge-ok { background: var(--ok-weak); color: var(--ok); }
+.badge-warn { background: var(--warn-weak); color: var(--warn); }
+.badge-danger { background: var(--danger-weak); color: var(--danger); }
+.badge-info { background: var(--info-weak); color: var(--info); }
+.badge-neutral { background: var(--surface-2); color: var(--text-muted); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+/* ---------- Tables ---------- */
+.table-wrap { overflow-x: auto; }
+table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.data thead th {
+  text-align: left; padding: 9px 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text-muted); font-weight: 700; border-bottom: 2px solid var(--brand-gray); background: var(--brand-gray-light);
+  position: sticky; top: 0; white-space: nowrap; cursor: pointer; user-select: none;
+}
+:root[data-theme='dark'] table.data thead th { background: var(--surface-2); border-bottom-color: var(--border-strong); }
+table.data thead th:hover { color: var(--brand-red); }
+table.data thead th.no-sort { cursor: default; }
+table.data tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.data tbody tr:hover { background: var(--surface-2); }
+table.data tbody tr { cursor: pointer; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.mono { font-family: 'Consolas', 'SF Mono', monospace; font-size: 12px; color: var(--text-muted); }
+.trunc { max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Page that fills the viewport instead of scrolling ----------
+   The shell is exactly as tall as the space under the topbar, so the page itself
+   never scrolls; only the region marked .inv-scroll does. 24px top + 24px bottom
+   padding is subtracted (the page sets its own bottom padding to match the top). */
+.page-fit {
+  display: flex; flex-direction: column; gap: 10px;
+  height: calc(100vh - var(--topbar-h) - 48px);
+  min-height: 420px;
+}
+.content:has(.page-fit) { padding-bottom: 24px; overflow: hidden; }
+.inv-head { flex-shrink: 0; }
+.inv-card { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+/* min-height:0 on the scroller is what actually lets a flex child shrink below its
+   content height — without it the table would push the card past the viewport. */
+/* scrollbar-gutter keeps the vertical scrollbar's track reserved, so its width can't
+   masquerade as horizontal overflow. overflow-x stays auto because below the table's
+   min-width a real horizontal scroll is the only alternative to unreadable columns. */
+.inv-scroll { flex: 1; min-height: 0; overflow: auto; scrollbar-gutter: stable; }
+/* Grid rather than flex-wrap: fractional tracks make every control stretch to fill
+   the row and shrink together as the window narrows, so the bar always spans the
+   full width on ONE line instead of spilling a control onto a second row. The search
+   gets the largest share; the two buttons size to their content. */
+.inv-filters {
+  display: grid; gap: 8px; align-items: center;
+  /* search | 4 selects | Section/Full | Collapse | Reset — the trailing controls
+     size to their content so the fractional tracks absorb every spare pixel. */
+  grid-template-columns: minmax(140px, 2fr) repeat(4, minmax(74px, 1fr)) auto auto auto;
+  padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.inv-filters .field { margin: 0; gap: 0; min-width: 0; }
+/* Padding matched to .dd-trigger.sm so the search box and the selects are exactly
+   the same height and sit on a shared baseline. */
+.inv-filters .lookup-input { padding: 6px 10px 6px 30px !important; font-size: 12.5px; }
+.inv-filters .btn { white-space: nowrap; }
+/* Height-matched to the inputs and buttons so all eight controls share one baseline
+   instead of the segmented pill floating mid-row. */
+.inv-filters .segmented { height: 29px; }
+.inv-filters .segmented button { padding-top: 0; padding-bottom: 0; }
+/* Compact trigger for filter bars — the form variant stays roomier. No max-width
+   here: the grid track owns the width so the control can stretch with the row. */
+.dd-trigger.sm { padding: 6px 8px 6px 10px; font-size: 12px; gap: 5px; }
+.dd-trigger.sm:not(.set) .dd-value { color: var(--text-muted); }
+.dd-trigger.sm.set { border-color: var(--brand-red); color: var(--brand-red); font-weight: 700; }
+:root[data-theme='dark'] .dd-trigger.sm.set { color: var(--accent); }
+/* Below tablet the single row would crush every control past legibility, so it
+   becomes two full-width rows — still fully occupied, just stacked. */
+@media (max-width: 900px) {
+  .inv-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .inv-search { grid-column: 1 / -1; }
+}
+.inv-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 12px; border-top: 1px solid var(--border); font-size: 12px; flex-shrink: 0;
+}
+
+/* Compact grouped table. Fixed layout + a <colgroup> is what makes user resizing
+   work: every non-description column carries an explicit px width sized so its
+   header AND its values stay fully readable, and the description column has no
+   width at all so it absorbs every remaining pixel. */
+/* min-width = the fixed columns (788px) plus a 160px floor for the description.
+   Without it the description track is squeezed to 0 on narrow viewports and the row
+   becomes unreadable; with it the columns hold their legible widths and the table
+   scrolls sideways instead — the lesser evil, and only below ~1250px. */
+.inv-table { table-layout: fixed; font-size: 12px; width: 100%; min-width: 948px; }
+/* z-index keeps the sticky header above the group bands, which also have their own
+   background and would otherwise paint over it while scrolling. */
+/* Stays a real table-cell so the colgroup widths keep header and body aligned;
+   `position: sticky` doubles as the containing block for the absolute drag grip. */
+.inv-table thead th {
+  padding: 8px 8px; font-size: 9.5px; z-index: 2; position: sticky; top: 0;
+  user-select: none; overflow: visible; white-space: normal; vertical-align: middle;
+}
+.th-label { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.inv-table thead th.sortable { cursor: pointer; }
+.inv-table thead th.sortable:hover { color: var(--brand-red); }
+:root[data-theme='dark'] .inv-table thead th.sortable:hover { color: var(--accent); }
+.th-caret { margin-left: 3px; font-size: 8px; color: var(--brand-red); vertical-align: middle; }
+:root[data-theme='dark'] .th-caret { color: var(--accent); }
+/* The drag handle sits inside the header, on its trailing edge. It stops click
+   propagation so grabbing it never also triggers the column's sort. */
+.col-grip {
+  position: absolute; top: 0; right: 0; width: 7px; height: 100%;
+  cursor: col-resize; touch-action: none;
+}
+.col-grip::after {
+  content: ''; position: absolute; top: 20%; bottom: 20%; right: 2px; width: 1px;
+  background: var(--border-strong); opacity: 0; transition: opacity 0.12s;
+}
+.inv-table thead th:hover .col-grip::after { opacity: 1; }
+.col-grip:hover::after { opacity: 1; background: var(--brand-red); width: 2px; }
+/* Applied to <body> for the duration of a drag so the table text can't highlight. */
+body.col-resizing { user-select: none; cursor: col-resize; }
+
+.inv-table tbody td { padding: 4px 8px; vertical-align: top; }
+.inv-table .mono { font-size: 11px; }
+/* Description ellipsises at whatever width is left; the full string is on the
+   title attribute, so hovering reveals it. */
+.inv-desc { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.inv-desc-sub {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 10px; color: var(--text-faint); margin-top: 1px;
+}
+/* Full view only: the trade path the section bands would otherwise have carried.
+   Tinted rather than faint so it reads as a category tag, not more description. */
+.inv-desc-path {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.2px; margin-top: 2px;
+  color: var(--brand-red-dark);
+}
+:root[data-theme='dark'] .inv-desc-path { color: var(--accent); }
+/* Full rows carry three lines, so they need no group indent and a touch more air. */
+.inv-item.full > td { padding-top: 5px; padding-bottom: 5px; }
+.inv-item.full > td:first-child { padding-left: 8px; }
+/* Zero quantities are dimmed so a row's real activity stands out from the noise. */
+.inv-table td.zero { color: var(--text-faint); }
+.inv-item { cursor: pointer; }
+
+/* ---------- Excel-style collapsible row groups ----------
+   Level 1 is the trade, level 2 the item group, indented and lighter. */
+.inv-band > td {
+  border-bottom: 1px solid var(--border-strong);
+  padding: 4px 8px !important; white-space: nowrap;
+}
+.inv-band { cursor: pointer; }
+.inv-band.lvl1 > td { background: var(--brand-gray); }
+:root[data-theme='dark'] .inv-band.lvl1 > td { background: #34302f; }
+.inv-band.lvl2 > td { background: var(--brand-gray-light); padding-left: 26px !important; }
+:root[data-theme='dark'] .inv-band.lvl2 > td { background: var(--surface-2); }
+.inv-band.lvl1:hover > td { background: #cfcece; }
+:root[data-theme='dark'] .inv-band.lvl1:hover > td { background: #3d3837; }
+.inv-band.lvl2:hover > td { background: #e9e8e8; }
+:root[data-theme='dark'] .inv-band.lvl2:hover > td { background: #333433; }
+/* Item rows sit under a level-2 band, so they share its indent. */
+.inv-item > td:first-child { padding-left: 26px; }
+
+.ib-inner { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ib-caret { display: grid; place-items: center; flex-shrink: 0; color: var(--text-muted); transition: transform 0.15s; transform: rotate(-90deg); }
+.ib-caret.open { transform: rotate(0deg); }
+/* The level-1 band sits on #dcdbdb, where the bright brand red reaches only 2.98:1
+   and even the dark red stops at 4.23:1 — still under AA for 11px text. The deepest
+   red clears it at 6.8:1 while staying unmistakably brand. */
+.ib-trade { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: var(--brand-red-darker); overflow: hidden; text-overflow: ellipsis; }
+:root[data-theme='dark'] .ib-trade { color: var(--accent); }
+.ib-group { font-size: 11.5px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; }
+/* --text-muted, not --text-faint: faint is tuned for the card surface and drops
+   below AA once the band's grey fill is behind it. */
+.ib-count { font-size: 10px; font-weight: 600; color: var(--text-muted); flex-shrink: 0; }
+/* Pushed to the right edge of the band, mirroring where the numeric columns sit. */
+.ib-agg { margin-left: auto; font-size: 10.5px; font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+
+/* ---------- Forms ---------- */
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+.field label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.input, .select, textarea.input {
+  width: 100%; padding: 9px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong);
+  background: var(--surface); color: var(--text); font-size: 13px; font-family: inherit;
+}
+.input:focus, .select:focus, textarea.input:focus { outline: none; border-color: var(--brand-red); box-shadow: 0 0 0 3px var(--accent-weak); }
+.input:disabled { background: var(--surface-2); color: var(--text-muted); }
+.search { position: relative; }
+.search .input { padding-left: 36px; }
+.search .ico { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-faint); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.filters .field { margin: 0; min-width: 150px; }
+
+/* ---------- Grids ---------- */
+.grid { display: grid; gap: 12px; }
+/* minmax(0,1fr) rather than 1fr: an auto-minimum track refuses to shrink below its
+   content's min-content width, which pushes wide cards (long titles + header chips)
+   past the viewport instead of letting them compress. */
+.grid-1 { grid-template-columns: minmax(0, 1fr); }
+.grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.row { display: flex; gap: 12px; }
+.spread { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mt { margin-top: 14px; }
+.mt-sm { margin-top: 8px; }
+.wrap-gap { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---------- Insight list rows ---------- */
+.insight-list { display: flex; flex-direction: column; }
+.insight-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); min-height: 56px; }
+.insight-row:last-child { border-bottom: none; }
+.rank { width: 24px; height: 24px; border-radius: 6px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+.rank.top { background: var(--accent-weak); color: var(--brand-red); }
+:root[data-theme='dark'] .rank.top { color: var(--accent); }
+.insight-main { min-width: 0; flex: 1; }
+.insight-main .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.insight-main .s { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.insight-num { min-width: 96px; flex-shrink: 0; }
+.insight-num .v { font-weight: 700; }
+.insight-num .u { font-size: 11px; }
+.bar { height: 6px; border-radius: 4px; background: var(--surface-2); overflow: hidden; margin-top: 5px; }
+.bar > span { display: block; height: 100%; background: var(--brand-red); border-radius: 4px; }
+/* The insight cards hold the complete ranked lists — a few thousand rows in total.
+   content-visibility lets the browser skip layout and paint for the rows scrolled
+   out of view, which is what keeps first render and the sidebar collapse animation
+   from stalling. contain-intrinsic-size supplies the 70px placeholder height so the
+   scrollbar still measures correctly while those rows are skipped. */
+.insight-row { cursor: pointer; content-visibility: auto; contain-intrinsic-size: auto 70px; }
+
+/* Rows are 70px, so collapsed shows exactly 5. Expanded, Dashboard.jsx sets an
+   inline max-height sized to fill the viewport below the card (down to the
+   show-less bar), so the 700px here is only a same-frame fallback before that JS
+   measurement commits — the real height always wins via inline-style specificity.
+   Both states are explicit pixel heights because max-height:auto is not animatable.
+   align-items:start on the grid keeps a neighbouring card from stretching when this
+   one opens. scrollbar-gutter reserves the scrollbar track in BOTH states so row
+   content never shifts sideways on expand. */
+.insight-grid { align-items: start; }
+.insight-scroll {
+  max-height: 350px; overflow: hidden; scrollbar-gutter: stable;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.insight-scroll.open { max-height: 700px; overflow-y: auto; }
+.insight-scroll::-webkit-scrollbar { width: 6px; }
+.insight-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+.insight-scroll::-webkit-scrollbar-track { background: transparent; }
+.insight-more {
+  display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
+  margin-top: 2px; padding: 8px 0 2px; background: none; border: none; border-top: 1px solid var(--border);
+  color: var(--text-muted); font-family: inherit; font-size: 11.5px; font-weight: 700;
+  letter-spacing: 0.3px; cursor: pointer; transition: color 0.15s;
+}
+.insight-more:hover { color: var(--brand-red); }
+:root[data-theme='dark'] .insight-more:hover { color: var(--accent); }
+.insight-more svg { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.insight-more.open svg { transform: rotate(180deg); }
+
+/* ---------- Login ---------- */
+.login-wrap { display: grid; grid-template-columns: 1.1fr 1fr; min-height: 100vh; }
+.login-hero {
+  background: linear-gradient(150deg, var(--brand-red-dark) 0%, var(--brand-red) 55%, var(--brand-red-soft) 100%);
+  color: #fff; padding: 56px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden;
+}
+.login-hero::after { content: ''; position: absolute; right: -120px; bottom: -120px; width: 420px; height: 420px; border: 60px solid rgba(255,255,255,0.08); border-radius: 40px; transform: rotate(15deg); }
+.login-hero h1 { font-family: var(--font-head); font-size: 34px; font-weight: 800; line-height: 1.15; letter-spacing: -0.3px; }
+.login-hero p { opacity: 0.9; max-width: 420px; }
+.login-form-side { background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 40px; }
+.login-card { width: 100%; max-width: 400px; }
+.login-card h2 { font-size: 24px; margin-bottom: 4px; }
+.hero-stats { display: flex; gap: 28px; }
+.hero-stats .n { font-family: var(--font-head); font-size: 30px; font-weight: 700; }
+.hero-stats .l { font-size: 12px; opacity: 0.85; }
+.demo-roles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.demo-role { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 11px; background: var(--surface); font-size: 12px; text-align: left; }
+.demo-role:hover { border-color: var(--brand-red); }
+.demo-role b { display: block; color: var(--text); }
+.demo-role span { color: var(--text-muted); font-size: 11px; }
+
+/* ---------- Misc ---------- */
+.checkbox { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); }
+.link { color: var(--brand-red); font-weight: 600; }
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; font-weight: 600; }
+.muted { color: var(--text-muted); }
+.faint { color: var(--text-faint); }
+.tabular { font-variant-numeric: tabular-nums; }
+.right { text-align: right; }
+.center { text-align: center; }
+.error-text { color: var(--danger); font-size: 13px; }
+.empty { text-align: center; padding: 48px 20px; color: var(--text-muted); }
+
+.location-crumb { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.location-crumb .seg { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; text-align: center; }
+.location-crumb .seg .l { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 1px; }
+.location-crumb .seg .v { font-weight: 700; font-size: 15px; }
+.location-crumb .arrow { color: var(--text-faint); }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(35, 31, 32,0.55); display: flex; align-items: flex-start; justify-content: center; padding: 48px 20px; z-index: 100; overflow-y: auto; }
+.modal { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 640px; box-shadow: var(--shadow-lg); }
+.modal-lg { max-width: 860px; }
+/* The two-column request form needs real width before splitting is an improvement over
+   stacking — below ~1100px .sk-form-cols collapses back to one column anyway. */
+.modal-xl { max-width: 1240px; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+.modal-body { padding: 18px 20px; }
+.modal-foot { padding: 13px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ---------- Add Material form ---------- */
+/* Tight throughout: the form is dense reference data, so section rhythm is carried
+   by a small caps heading and a hairline rule rather than by large empty gaps. */
+.add-form { display: flex; flex-direction: column; gap: 11px; }
+.form-section { display: flex; flex-direction: column; gap: 7px; }
+.form-section + .form-section { padding-top: 10px; border-top: 1px solid var(--border); }
+.form-section > h4 {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-head); font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);
+}
+.form-section > h4 svg { color: var(--brand-red); }
+:root[data-theme='dark'] .form-section > h4 svg { color: var(--accent); }
+
+/* Repeatable sub-block inside a form section — one per Safekeeping request item or
+   packing list. Grouped by a hairline outline and a red edge marker rather than by a
+   gray fill: a filled panel sat between the modal surface and the inputs inside it and
+   made the whole form read as three shades of nothing. The edge does the grouping and
+   the inputs keep the card's own background. */
+.sk-item-block {
+  padding: 10px 12px; border: 1px solid var(--border); border-left: 2.5px solid var(--brand-red);
+  border-radius: 8px; background: transparent; margin-bottom: 10px;
+}
+:root[data-theme='dark'] .sk-item-block { border-left-color: var(--accent); }
+.sk-item-block:last-child { margin-bottom: 0; }
+.sk-block-head { margin-bottom: 9px; }
+.sk-block-acts { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.sk-h4-note { font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text-faint); }
+
+/* ---------- Two-column request form ---------- */
+/* The batch register owns the right column; the request header and the two movement
+   sections stack down the left. align-items:start so the shorter column doesn't
+   stretch its sections to match the taller one. */
+/* General spans the full width above the columns, so the two below start level. */
+.sk-general { padding-bottom: 11px; border-bottom: 1px solid var(--border); }
+.sk-form-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 24px; align-items: start; }
+.sk-col { display: flex; flex-direction: column; gap: 11px; min-width: 0; }
+/* A column's first section must not draw the divider that `.form-section +
+   .form-section` gives every subsequent one — across columns there is nothing above it. */
+.sk-col > .form-section:first-child { padding-top: 0; border-top: none; }
+@media (max-width: 1080px) {
+  .sk-form-cols { grid-template-columns: minmax(0, 1fr); gap: 11px; }
+}
+
+/* ---------- Date / time popovers ---------- */
+/* Replaces the native date and time inputs, whose calendar is drawn by the OS and ignores
+   the app's palette entirely. Same trigger chrome as every other dropdown here. */
+.dt-trigger { position: relative; }
+.dt-clear {
+  display: grid; place-items: center; margin-left: auto; padding: 2px; border-radius: var(--radius-xs);
+  color: var(--text-faint); flex-shrink: 0;
+}
+.dt-clear:hover { color: var(--brand-red); background: var(--accent-weak); }
+.dt-pop {
+  position: absolute; top: calc(100% + 5px); left: 0; z-index: 60;
+  padding: 10px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-strong);
+  width: 268px;
+}
+.dt-pop.align-right { left: auto; right: 0; }
+.dt-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.dt-title { font-family: var(--font-head); font-size: 12.5px; font-weight: 800; }
+.dt-nav {
+  display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px;
+  background: none; border: 1px solid var(--border); color: var(--text-muted); cursor: pointer;
+}
+.dt-nav:hover { border-color: var(--brand-red); color: var(--brand-red); }
+.dt-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.dt-wd {
+  display: grid; place-items: center; height: 24px;
+  font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-faint);
+}
+.dt-cell {
+  display: grid; place-items: center; height: 31px; border-radius: 7px;
+  background: none; border: 1px solid transparent; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--text);
+}
+.dt-cell.blank { cursor: default; }
+.dt-cell:not(.blank):not(:disabled):hover { background: var(--surface-2); }
+.dt-cell:disabled { color: var(--text-faint); cursor: not-allowed; }
+/* Today is outlined, the selection is filled — so "where am I" and "what did I pick" stay
+   separable when they are different days. */
+.dt-cell.today { border-color: var(--brand-red-mid); }
+.dt-cell.sel { background: var(--brand-red); border-color: var(--brand-red); color: #fff; font-weight: 800; }
+.dt-foot { display: flex; gap: 6px; justify-content: flex-end; margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--border); }
+.dt-pop-time { width: 190px; padding: 6px; }
+.dt-slots { max-height: 236px; overflow-y: auto; display: flex; flex-direction: column; }
+.dt-slots::-webkit-scrollbar { width: 6px; }
+.dt-slots::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+.dt-slot {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  padding: 7px 9px; border-radius: 6px; background: none; border: none; cursor: pointer;
+  font-size: 12.5px; font-weight: 600; color: var(--text); text-align: left;
+}
+.dt-slot:hover { background: var(--surface-2); }
+.dt-slot.sel { color: var(--brand-red); font-weight: 800; background: var(--accent-weak); }
+:root[data-theme='dark'] .dt-slot.sel { color: var(--accent); }
+
+/* ---------- Batch multi-select ---------- */
+/* The trigger holds chips rather than one value, so it has to wrap and grow instead of
+   staying on the single fixed-height line a normal select sits on. */
+.dd-trigger.multi { flex-wrap: wrap; height: auto; min-height: 38px; row-gap: 4px; cursor: pointer; }
+.bp-chip {
+  font-size: 10.5px; font-weight: 700; color: var(--brand-red);
+  background: var(--accent-weak); border-radius: 4px; padding: 2px 6px; flex-shrink: 0;
+}
+:root[data-theme='dark'] .bp-chip { color: var(--accent); }
+/* Pushes the chevron to the far edge once chips wrap onto their own line. */
+.dd-trigger.multi > svg:last-child { margin-left: auto; }
+.sk-block-tag {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-head); font-size: 11px; font-weight: 800;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted);
+}
+/* Sits on the row that would otherwise hold L×W×H, so the grid keeps its rhythm
+   instead of collapsing when a counted packing type is chosen. */
+.sk-dim-note { align-self: center; font-size: 11.5px; line-height: 1.45; }
+
+/* ---------- Auto-generated identifiers ---------- */
+/* A system-issued value (request no., packing-list no.). Accent-tinted and tagged
+   rather than a disabled gray input — the value is already correct, and graying it out
+   reads as "broken/forbidden" instead of "we filled this in for you". */
+.field-auto .auto-box {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border: 1px dashed var(--brand-red-mid); border-radius: var(--radius-sm);
+  background: transparent; min-height: 38px;
+}
+:root[data-theme='dark'] .field-auto .auto-box { border-color: var(--brand-red-dark); }
+.field-auto .auto-val { font-weight: 700; font-size: 13px; color: var(--text); }
+.auto-pill {
+  margin-left: auto; font-size: 9px; font-weight: 800; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--brand-red); background: var(--accent-weak);
+  padding: 2px 6px; border-radius: 4px; flex-shrink: 0;
+}
+:root[data-theme='dark'] .auto-pill { color: var(--accent); }
+.auto-hint { font-size: 10.5px; }
+
+/* ---------- Safekeeping distribution: ranked list beside its donut ---------- */
+/* Fixed overall height so the card does not resize when the scope changes from 22 item
+   groups to 3 classes: the list scrolls inside a constant box and the ring stays put. The
+   donut column is generous — a 148px-radius ring needs the room, and the list was taking
+   space it could not use. */
+.sk-dist { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 24px; height: 400px; }
+/* Compact variant: pairs with the KPI column instead of running full width. The list is
+   dense and scrolls (every group reachable, not truncated at five) and the ring gets the
+   wider fixed track — it is the half that cannot usefully shrink. */
+/* flex:1 + min-height:0 rather than a fixed height: the card is a flex column stretched by
+   .dash-top's grid to the KPI column's height, so the list takes whatever is left over and
+   scrolls — no fixed 300px box leaving dead space under a short list. min-height:0 is what
+   lets it shrink below its content instead of pushing the card taller.
+   Not align-items:center — the grid's default stretch is what gives the list a definite
+   height to scroll against; the donut is centred by .sk-dist-chart's own flex instead. */
+/* flex:1 + min-height:0 so the card's height comes from the KPI column beside it, NOT from
+   how many groups the current scope happens to have — 7 projects and 22 item groups now
+   give exactly the same card. min-height:0 is what lets it shrink below its content
+   instead of pushing the card taller. */
+.sk-dist.compact { grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; height: auto; flex: 1 1 0; min-height: 0; }
+.sk-dist.compact .sk-dist-list { height: auto; min-height: 0; }
+.sk-dist.compact .sk-dist-chart .donut-chart { max-width: 260px; }
+/* Stacked layout has no KPI column to take its height from, so it needs an explicit one —
+   again fixed, so switching scope never resizes the card. */
+@media (max-width: 1024px) {
+  .sk-dist.compact { flex: none; height: 420px; }
+}
+.sk-dist.compact .sk-dist-chart .donut-chart { max-width: 300px; }
+
+/* Label row, then a full-width bar under it. The old insight-row treatment (three stacked
+   lines plus its own inline bar column) cost ~70px a row; this is ~36px, so the breakdown
+   still scrolls inside the card but each bar is thick enough to compare at a glance. */
+.sk-dist-list.dense { display: flex; flex-direction: column; padding-right: 8px; }
+/* margin:auto centres the rows vertically when they don't fill the box, WITHOUT the
+   clipping that justify-content:center causes once they overflow — an auto margin
+   collapses to 0 when there is no free space, so the first row stays reachable. */
+.skd-inner { margin: auto 0; width: 100%; }
+.skd-row { padding: 5px 0; }
+.skd-row + .skd-row { border-top: 1px solid var(--border); }
+.skd-head { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto auto 40px; align-items: center; gap: 8px; font-size: 11.5px; }
+.skd-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.skd-bar { display: block; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-top: 5px; }
+.skd-bar > span { display: block; height: 100%; border-radius: 3px; }
+.skd-val { font-weight: 700; text-align: right; }
+.skd-uom { font-size: 10px; min-width: 32px; }
+.skd-share { font-size: 10px; text-align: right; }
+.sk-swatch { width: 10px; height: 10px; }
+/* padding-right, not just scrollbar-gutter: the gutter reserves the track but the
+   right-aligned quantity still sat flush against it. */
+.sk-dist-list { height: 100%; overflow-y: auto; scrollbar-gutter: stable; min-width: 0; padding-right: 12px; }
+.sk-dist-list::-webkit-scrollbar { width: 6px; }
+.sk-dist-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+.sk-dist-list::-webkit-scrollbar-track { background: transparent; }
+/* Vertically centred against the full card height rather than the list's content. */
+/* flex-direction: column (not row) so the default stretch cross-axis sizing applies to
+   the single child: a ROW flex with align-items:center sizes .donut-wrap to its content
+   instead of the container, and ResponsiveContainer's width:100% then has nothing
+   determinate to measure against — it silently renders 0 width, no SVG at all. Column +
+   stretch gives it the container's real width; justify-content:center still centres it
+   vertically along the column axis. */
+.sk-dist-chart { min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+/* The shared donut caps itself at 320px for the dashboard's half-width card; here it has
+   a whole column and the cap would leave a ring floating in empty space. */
+.sk-dist-chart .donut-chart { max-width: 400px; }
+/* These rows are groups, not materials — nothing to open, so they must not advertise a
+   click the way the Inventory insight rows do. */
+.insight-row.static { cursor: default; }
+/* Carries the donut slice's colour, so the list doubles as the ring's legend. */
+.sk-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+@media (max-width: 1100px) {
+  .sk-dist { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .sk-dist-list { height: 340px; }
+  .sk-dist-chart { height: auto; }
+}
+
+/* ---------- Source-sheet table: fixed height, both axes scrolling ---------- */
+/* Vertical AND horizontal scrolling in one box, with the header pinned — the sheets are
+   13 wide columns, so neither axis fits. Pagination underneath caps the row count so the
+   DOM stays small on a 271-row sheet. */
+/* Flex, not the Inventory page's fixed 8-column grid — that grid assumes exactly four
+   select-sized tracks, but this bar has anywhere from one (Incoming/Outgoing: Project
+   only) to three (SOH: Project, Trade, Item Group) selects, and a fixed track count
+   would leave dead empty columns whenever a sheet uses fewer of them. Wrapping flex
+   sizes to however many controls are actually there. */
+/* 16px horizontal, matching .card-head and .pagination — at 12px the filter row and the
+   KPI strip sat 4px inboard of the card's own title and footer, which read as a wobble
+   down the left edge of every table card. */
+.sheet-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+.sheet-filters .inv-search { flex: 1 1 220px; min-width: 160px; }
+.sheet-filters > .field:not(.inv-search) { flex: 0 0 auto; min-width: 130px; }
+
+/* One height for every control on the bar. Left to their own styles these came out at
+   four DIFFERENT heights — search input 40px (.input's 9px padding + 13px text), select
+   and buttons ~31px, segmented 24px (.seg-sm's 4px padding + 10.5px text) — so the row
+   read as a ragged strip. Height is set explicitly and the vertical padding zeroed;
+   every one of these controls is already a centring flex box (or a bare input), so the
+   text stays optically centred without per-control padding maths. box-sizing:border-box
+   is global, so the declared height IS the rendered height, borders included. */
+.sheet-filters { --ctl-h: 30px; }
+.sheet-filters .field { margin: 0; gap: 0; min-width: 0; }
+.sheet-filters .lookup-input,
+.sheet-filters .dd-trigger,
+.sheet-filters .btn,
+.sheet-filters .segmented button { height: var(--ctl-h); }
+.sheet-filters .lookup-input { padding: 0 10px 0 30px !important; font-size: 12.5px; }
+.sheet-filters .dd-trigger { padding: 0 8px 0 10px; font-size: 12.5px; }
+.sheet-filters .btn { padding: 0 12px; font-size: 12px; white-space: nowrap; }
+.sheet-filters .segmented button { padding: 0 11px; font-size: 11px; }
+.sheet-scroll { height: 460px; overflow: auto; }
+/* Reuses .inv-table's own header/cell/band rules (see the Inventory Master List block
+   above) for visual parity — .sheet-table only adds the handful of things this table
+   does differently: no column-resize grips, and a fixed rather than flex-driven height. */
+.sheet-table { table-layout: fixed; border-collapse: separate; border-spacing: 0; min-width: 100%; }
+.sheet-table thead th { cursor: pointer; }
+/* Borderless per design request — overrides table.data's header rule and the shared
+   row/band dividers, scoped to .sheet-table only so the Inventory Master List (which
+   shares .inv-table but not this class) keeps its own borders untouched. */
+.sheet-table thead th { border-bottom: none; }
+.sheet-table tbody td { border-bottom: none; }
+.sheet-table .inv-band > td { border-bottom: none; }
+/* Headers wrap instead of truncating: a clipped "Location / Tow…" is worse than a
+   two-line label, and the base .inv-table rule forces a single nowrap line. Padding is
+   held identical to the body cells' so a header sits exactly over its own column. */
+.sheet-table thead th { white-space: normal; overflow: visible; padding: 8px 8px; vertical-align: middle; line-height: 1.25; }
+.sheet-table thead th .th-label { white-space: normal; overflow: visible; text-overflow: clip; max-width: none; }
+
+/* Compact rows. Two things drive height here: cell padding, and whether long text wraps.
+   Fixed column widths make wrapping the bigger factor — a 2nd-description that wraps to
+   four lines makes one row as tall as five, which is what forced constant scrolling. Every
+   cell truncates with the full value on hover instead. */
+.sheet-table tbody td { padding: 3px 8px; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.sheet-table .inv-item.full > td { padding-top: 3px; padding-bottom: 3px; }
+/* Description keeps two lines (name + secondary), both truncated, so the row lands at
+   ~30px rather than the ~70px the three-line insight treatment cost. */
+.sheet-table .inv-desc { font-size: 12px; line-height: 1.3; }
+.sheet-table .inv-desc-sub { font-size: 9.5px; line-height: 1.25; margin-top: 0; }
+.sheet-table .inv-band > td { padding-top: 3px !important; padding-bottom: 3px !important; }
+.sheet-table td.strong { font-weight: 700; }
+/* Badges and tags sit inside a 30px row, so they lose the standalone vertical padding. */
+.sheet-table .badge { padding: 1px 6px; font-size: 9.5px; }
+.sheet-scroll::-webkit-scrollbar { width: 9px; height: 9px; }
+.sheet-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 5px; }
+.sheet-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* Third nesting level (SOH: Item Group, under Trade, under Project) — .inv-band only
+   ships two. `padding-left` needs its own !important here, same as lvl2's: the base
+   `.inv-band > td` rule is itself !important, so a plain override (or an inline style)
+   would silently lose to it and every level would render at the same 8px indent. */
+.inv-band.lvl3 > td { background: var(--surface); padding-left: 40px !important; }
+:root[data-theme='dark'] .inv-band.lvl3 > td { background: var(--surface); }
+.inv-band.lvl3:hover > td { background: var(--surface-2); }
+.inv-band.lvl3 .ib-group { color: var(--text-muted); font-weight: 600; }
+/* Items under a 3-deep tree (SOH) need more indent than the 2-level default the
+   Inventory Master List was built for; items under a 1-deep tree (the transaction
+   logs) need less. Depth-driven, so both shapes read correctly without a second set
+   of row classes. */
+.inv-item[data-depth='1'] > td:first-child { padding-left: 26px; }
+.inv-item[data-depth='3'] > td:first-child { padding-left: 54px; }
+
+/* ---------- Delivery Tracker ---------- */
+/* The five bucket cards are the only card-format content here; the schedule itself is a
+   table (see DataSheet) so it reads against the source sheet row for row. */
+.dtk-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 12px 16px; }
+@media (max-width: 1100px) { .dtk-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .dtk-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Sized to the whole 27-row schedule at ~26px a row plus the sticky header, so the
+   tracker needs no vertical scrolling at all — it is a fixed-size dataset, unlike the
+   132/271/160-row source sheets below it. */
+.dtk-scroll { height: 745px; }
+@media (max-width: 1280px) { .dtk-scroll { height: 520px; } }
+/* A free-text target ("August 2026") is an estimate, not a date — tinted so it is not
+   mistaken for a committed schedule. */
+.dtk-est { color: var(--warn); font-weight: 600; }
+
+/* Two-line cell (name over secondary detail). min-width:0 is what lets both lines
+   ellipsise instead of forcing the cell wider than its column. */
+.dtk-itemtext { display: block; min-width: 0; }
+.dtk-trade { font-weight: 800; color: var(--brand-red-dark); letter-spacing: 0.02em; }
+:root[data-theme='dark'] .dtk-trade { color: var(--accent); }
+.dtk-note-tag {
+  display: inline-block; font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: 4px;
+}
+.dtk-note-tag.ok { background: var(--ok-weak); color: var(--ok); }
+.dtk-note-tag.warn { background: var(--warn-weak); color: var(--warn); }
+
+/* ---------- Consolidated request card (status tally + latest requests) ---------- */
+.sk-req-card { display: flex; flex-direction: column; min-width: 0; }
+.sk-req-card > .card-pad { flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.sk-status-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.sk-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 8px 4px; border-radius: 8px; border: 1px solid var(--border);
+}
+.sk-stat > svg { margin-bottom: 1px; }
+.sk-stat.tone-warn { color: var(--warn); background: var(--warn-weak); border-color: transparent; }
+.sk-stat.tone-info { color: var(--info); background: var(--info-weak); border-color: transparent; }
+.sk-stat.tone-ok { color: var(--ok); background: var(--ok-weak); border-color: transparent; }
+.sk-stat-val { font-size: 19px; font-weight: 800; line-height: 1.1; }
+.sk-stat-lbl { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.85; }
+.sk-req-list { display: flex; flex-direction: column; overflow-y: auto; min-height: 0; flex: 1; }
+.sk-req-row {
+  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+  padding: 8px 2px; background: none; border: none; border-bottom: 1px solid var(--border);
+  cursor: pointer; color: inherit; font: inherit;
+}
+.sk-req-row:last-child { border-bottom: none; }
+.sk-req-row:hover { background: var(--surface-2); }
+.sk-req-srn { font-size: 10.5px; font-weight: 700; color: var(--brand-red); flex-shrink: 0; }
+:root[data-theme='dark'] .sk-req-srn { color: var(--accent); }
+.sk-req-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.sk-req-proj { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-req-meta { font-size: 10px; color: var(--text-muted); }
+
+/* ---------- Safekeeping approval pipeline card ---------- */
+/* Mirrors .dash-top's other column: the card stretches to the KPI block's height, and
+   the rows spread into whatever height that turns out to be. */
+.sk-status-card { display: flex; flex-direction: column; min-width: 0; }
+.sk-status-card > .card-pad { flex: 1; display: flex; align-items: center; }
+.sk-status-list { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.sk-status-row { display: flex; align-items: center; gap: 11px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.sk-status-row:last-child { border-bottom: none; }
+.sk-status-ico { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; }
+.sk-status-ico.tone-warn { color: var(--warn); background: var(--warn-weak); }
+.sk-status-ico.tone-info { color: var(--info); background: var(--info-weak); }
+.sk-status-ico.tone-ok { color: var(--ok); background: var(--ok-weak); }
+.sk-status-lbl { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; }
+.sk-status-val { font-size: 19px; font-weight: 800; }
+.sk-status-row.total { border-top: 1px solid var(--border); margin-top: 2px; }
+.sk-status-row.total .sk-status-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); }
+.sk-status-row.total .sk-status-val { font-size: 15px; color: var(--text-muted); }
+
+/* Read-only label/value pairs, used by the Safekeeping request detail view. */
+.kv-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 16px; font-size: 13px; }
+.kv-grid > div { min-width: 0; }
+.kv-grid .faint { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
+@media (max-width: 700px) { .kv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Leading glyph inside a select trigger, matching the lookup fields' inset icon. */
+.dd-lead { color: var(--text-faint); flex-shrink: 0; }
+.dd-trigger.locked .dd-lead { color: inherit; opacity: 0.7; }
+/* Four columns so short fields (UOM, Quantity) stop eating a half-row each;
+   .span-2 takes half the row and .span-4 the whole width. */
+.form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px; }
+.form-grid .span-2 { grid-column: span 2; }
+.form-grid .span-4 { grid-column: 1 / -1; }
+.add-form .field { margin-bottom: 0; gap: 3px; }
+.add-form .field label { font-size: 10.5px; font-weight: 700; color: var(--text); }
+.add-form .field label .faint { font-weight: 500; }
+.add-form .input { padding: 7px 10px; font-size: 12.5px; }
+.add-form .lookup-input { padding-left: 30px !important; }
+.add-form .dd-trigger { padding: 7px 9px 7px 10px; font-size: 12.5px; }
+/* The Identify lookups sit at half width, but their suggestion rows carry a code, a
+   description and a trade path. The panel is allowed to outgrow its field so those
+   rows stay readable — it is absolutely positioned, so nothing reflows. */
+.form-grid .span-2 .dd-menu { min-width: 420px; }
+.form-grid .span-2:nth-child(even) .dd-menu { left: auto; right: 0; }
+/* The safekeeping request form has more than one span-2 pair per section (batch blocks
+   run Trade/Item Group, UOM/Quantity, Packing Type/Weight in sequence), so DOM-position
+   parity no longer says which side of a row a field is actually on — a full-width field
+   earlier in the same block shifts every pair's parity by one. That form controls
+   alignment explicitly per field (see `alignRight` on SelectField/LookupField/DateField/
+   TimeField), so the blanket parity guess is cancelled here rather than left to
+   silently mis-flip whichever pair happens to land on an even position. */
+#add-sk .span-2:nth-child(even) .dd-menu { left: 0; right: auto; }
+/* Ties on specificity with the reset directly above (identical #add-sk .span-2 … .dd-menu
+   shape) — declared after it, so on a tie source order hands the explicit alignRight
+   flag the win, regardless of which position in the DOM that field happens to fall on. */
+#add-sk .span-2 .dd-menu.align-right { left: auto; right: 0; }
+
+/* Always present in the DOM now (see AddMaterialModal.jsx) so its height is
+   reserved whether or not a flag is currently showing — min-height covers the
+   common single-line case; it can still grow for the rare two-flag case. */
+.form-status { display: flex; flex-direction: column; gap: 4px; min-height: 17px; }
+.form-flag { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; }
+.form-flag.ok { color: var(--ok); }
+.form-flag.err { color: var(--danger); }
+.form-flag.info { color: var(--info); }
+
+/* ---------- Dropdowns (lookup suggestions AND selects share this) ---------- */
+.lookup { position: relative; }
+.lookup-box { position: relative; display: flex; align-items: center; }
+.lookup-ico { position: absolute; left: 10px; color: var(--text-faint); pointer-events: none; }
+.lookup-input { width: 100%; padding-left: 31px !important; }
+
+/* The select trigger is styled to match .input exactly so a closed dropdown is
+   indistinguishable from a text field until it opens. */
+.dd-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%;
+  padding: 8px 10px 8px 11px; font-size: 13px; font-family: inherit; text-align: left;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.dd-trigger:hover { border-color: var(--brand-gray-mid); }
+.dd-trigger.open { border-color: var(--brand-red); box-shadow: 0 0 0 3px var(--accent-weak); }
+/* Autofilled from the item master: non-editable, with the padlock as the deliberate
+   way back out rather than a hard block. Marked by an accent OUTLINE only — a tinted
+   fill put a block of colour behind every master-derived field, which on a form with
+   several of them read as damage rather than as provenance. */
+.dd-trigger.locked {
+  background: transparent; border-color: var(--brand-red-mid);
+  color: var(--text); font-weight: 700; cursor: default;
+}
+:root[data-theme='dark'] .dd-trigger.locked { border-color: var(--brand-red-dark); }
+.lock-btn {
+  display: grid; place-items: center; flex-shrink: 0; padding: 2px;
+  background: none; border: none; border-radius: var(--radius-xs);
+  color: var(--brand-red-dark); opacity: 0.75; transition: opacity 0.15s, background 0.15s;
+}
+:root[data-theme='dark'] .lock-btn { color: var(--accent); }
+.lock-btn:hover { opacity: 1; background: rgba(238, 49, 36, 0.14); }
+.dd-trigger svg { color: var(--text-faint); flex-shrink: 0; transition: transform 0.15s; }
+.dd-trigger.open svg { transform: rotate(180deg); }
+.dd-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* width:max-content lets the panel size to its longest option label rather than
+   the trigger's own width — a narrow "sm" trigger stays narrow, but its options
+   (full trade/item-group/brand names) still get room to be read. min()/max() clamp
+   it to something sane on both ends. left:0 grows the panel rightward from the
+   trigger's left edge; .align-right flips that to grow leftward instead, for a
+   trigger sitting close to the row's right edge where growing right would overflow. */
+.dd-menu {
+  position: absolute; left: 0; top: calc(100% + 4px); z-index: 70;
+  width: max-content; min-width: 100%; max-width: min(320px, 90vw);
+  padding: 5px; max-height: 260px; overflow-y: auto; overflow-x: hidden; box-shadow: var(--shadow-lg);
+}
+.dd-menu.align-right { left: auto; right: 0; }
+.dd-head { display: flex; justify-content: space-between; padding: 3px 7px 5px; font-size: 10px; color: var(--text-faint); font-weight: 600; }
+.dd-opt {
+  display: flex; align-items: center; gap: 9px; width: 100%; padding: 6px 8px;
+  border: none; background: transparent; border-radius: var(--radius-xs);
+  text-align: left; color: var(--text);
+}
+.dd-opt.compact { padding: 6px 8px; justify-content: space-between; }
+.dd-opt.active { background: var(--surface-2); }
+.dd-opt.on { color: var(--brand-red); font-weight: 700; }
+:root[data-theme='dark'] .dd-opt.on { color: var(--accent); }
+.dd-opt svg { flex-shrink: 0; }
+.dd-code { font-size: 11px; font-weight: 700; color: var(--brand-red); flex-shrink: 0; }
+:root[data-theme='dark'] .dd-code { color: var(--accent); }
+.dd-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.dd-label { font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-hint { font-size: 10px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-tag { font-size: 9.5px; font-weight: 800; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+
+.add-done { text-align: center; padding: 20px 0; }
+.add-done-ico { padding: 12px; font-size: 20px; }
+.add-done h3 { margin-top: 14px; }
+
+@media (max-width: 720px) {
+  .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form-grid .span-2, .form-grid .span-4 { grid-column: 1 / -1; }
+}
+
+@media (max-width: 640px) {
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--brand-red); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+.pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-muted); }
+
+.dropzone { border: 2px dashed var(--border-strong); border-radius: var(--radius); padding: 28px; text-align: center; color: var(--text-muted); background: var(--surface-2); }
+
+/* Segmented toggle — individually bordered buttons, matching the reference's .seg-btn */
+.segmented { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.segmented button {
+  font-size: 11px; padding: 5px 12px; border-radius: 5px; font-weight: 600;
+  border: 1.5px solid var(--border-strong); background: var(--surface); color: var(--text-muted);
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  /* inline-flex so an option's optional icon sits on the text baseline row rather
+     than pushing the button taller than its icon-less siblings. */
+  display: inline-flex; align-items: center; gap: 5px;
+}
+/* The glyph is a supporting cue, not a second focal point — it stays a step
+   lighter than the label it precedes, and goes full-strength only when active. */
+.segmented button svg { opacity: 0.75; }
+.segmented button:hover svg, .segmented button.active svg { opacity: 1; }
+.segmented button:hover { border-color: var(--brand-red); color: var(--brand-red); }
+.segmented button.active { background: var(--brand-red); border-color: var(--brand-red); color: #fff; }
+.segmented button.active:hover { color: #fff; }
+.segmented.seg-sm button { padding: 4px 9px; font-size: 10.5px; }
+.chart-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ---------- Stock battery (compact: available/reserved tube + download/upload flow badges) ---------- */
+.battery-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; justify-content: center; padding: 4px 0; }
+.battery-col { display: flex; flex-direction: column; align-items: center; }
+.battery-tube { position: relative; width: 92px; height: 200px; border: 2px solid var(--border-strong); border-radius: 16px; overflow: hidden; background: var(--surface-2); display: flex; flex-direction: column-reverse; flex-shrink: 0; }
+.battery-seg { width: 100%; min-height: 2px; }
+.seg-avail { background: linear-gradient(180deg, #4a9e78, #2f7d5a 55%, #245f45); }
+.seg-res { background: linear-gradient(180deg, #a8a7a7, #8a8988 55%, #7d7c7c); }
+.battery-pct {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  font-family: var(--font); font-size: 22px; font-weight: 800; color: #fff;
+  text-shadow: 0 0 3px rgba(0,0,0,.85), 0 0 6px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.9);
+  white-space: nowrap; pointer-events: none;
+}
+.battery-stats { margin-top: 12px; text-align: center; }
+.battery-stat-main { display: flex; align-items: baseline; justify-content: center; gap: 5px; font-weight: 800; letter-spacing: -0.2px; }
+.bs-avail { font-size: 17px; color: var(--ok); }
+.bs-sep { font-size: 14px; color: var(--text-faint); font-weight: 500; }
+.bs-total { font-size: 17px; color: var(--text); }
+.bs-unit { font-size: 11px; font-weight: 600; color: var(--text-faint); }
+.battery-stat-sub { font-size: 10.5px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-faint); margin-top: 3px; }
+
+/* Download/upload style flow badges (Incoming/Outgoing) */
+.flow-col { display: flex; flex-direction: column; gap: 10px; }
+.flow-badge { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); }
+.flow-icon { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; color: #fff; }
+/* Incoming/Outgoing badges carry the same two reds as the movement-history bars and
+   the KPI cards. The anchors are tokens so they follow the theme — hardcoding the
+   light values left the dark theme showing light-theme reds. The glyph flips to the
+   brand black on dark, where the badge fills are the pale end of the ramp. */
+.flow-in .flow-icon { background: linear-gradient(135deg, var(--flow-in-1), var(--flow-in-2)); }
+.flow-out .flow-icon { background: linear-gradient(135deg, var(--flow-out-1), var(--flow-out-2)); }
+:root[data-theme='dark'] .flow-icon { color: var(--brand-black); }
+.flow-info { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.flow-val { font-size: 15px; font-weight: 800; color: var(--text); }
+.flow-lbl { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+
+.battery-legend { display: flex; flex-direction: column; gap: 6px; }
+.bl-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.bl-row b { color: var(--text); margin-left: 2px; }
+.bl-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+@media (max-width: 900px) { .battery-wrap { justify-content: flex-start; } }
+
+/* The composition card keeps the flow badges to the RIGHT of the tube; the badges
+   shrink to fit rather than dropping below it. */
+/* Badges ALWAYS sit to the right of the tube — the row never wraps. When the column
+   can no longer give them room, .dash-top drops to one column instead and the whole
+   composition card moves below the KPI cards (see the 1280px breakpoint). */
+.composition-card .battery-wrap { gap: 12px; width: 100%; justify-content: center; flex-wrap: nowrap; }
+.composition-card .battery-col { flex-shrink: 0; }
+.composition-card .flow-col { flex: 0 0 auto; }
+.composition-card .flow-lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Drawer (right-side sliding panel, vertical scroll — "work package status" pattern) ---------- */
+.drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 300; display: flex; align-items: flex-start; justify-content: flex-end; }
+.drawer-panel { background: var(--surface); width: 100%; max-width: 560px; height: 100%; overflow-y: auto; box-shadow: -4px 0 32px rgba(0,0,0,0.18); display: flex; flex-direction: column; }
+.drawer-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; position: sticky; top: 0; background: var(--surface); z-index: 1; gap: 12px; }
+.drawer-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.drawer-sub { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+.drawer-close { background: none; border: none; cursor: pointer; padding: 4px; color: var(--text-faint); flex-shrink: 0; }
+.drawer-close:hover { color: var(--brand-red); }
+.drawer-body { padding: 14px 16px; flex: 1; }
+@media (max-width: 640px) { .drawer-panel { max-width: 100%; } }
+
+/* Status card list — mirrors the reference site's work-package status cards (.wpc) */
+.wpc { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-sm); margin-bottom: 8px; padding: 11px 12px; border-left: 3px solid var(--border-strong); cursor: pointer; }
+.wpc:hover { border-color: var(--brand-red); }
+.wpc-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 3px; }
+.wpc-code { font-family: 'Consolas', monospace; font-size: 12px; font-weight: 700; color: var(--brand-red); }
+.wpc-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9px; white-space: nowrap; }
+.wpc-desc { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.35; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wpc-meta { font-size: 11px; color: var(--text-faint); margin-bottom: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wpc-row { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+.wpc-row > span { font-size: 12.5px; font-weight: 600; color: var(--text); }
+.wpc-row > span > small { font-size: 10px; font-weight: 400; color: var(--text-faint); display: block; line-height: 1.2; margin-bottom: 1px; text-transform: uppercase; letter-spacing: 0.04em; }
+.level-indicator {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.3px; color: var(--text-faint);
+  text-transform: uppercase; padding-left: 2px; pointer-events: none; user-select: none;
+}
+.level-indicator::before { content: '·'; margin-right: 8px; color: var(--border-strong); font-weight: 400; }
+
+/* ---------- Dashboard tab strip ----------
+   One dashboard per module (Inventory / Safekeeping / Excess), sharing the header
+   toolbar and filter bar above them. The active tab is joined to the content below by
+   an inset bottom border rather than a floating pill, so the strip reads as the top
+   edge of the panel it controls. */
+.dash-tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--border); padding: 0 2px; overflow-x: auto; scrollbar-width: none; }
+.dash-tabs::-webkit-scrollbar { display: none; }
+.dash-tab {
+  display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
+  padding: 10px 16px 11px; margin-bottom: -1.5px;
+  border: none; border-bottom: 2.5px solid transparent; background: transparent;
+  font-family: var(--font-head); font-size: 13.5px; font-weight: 600; color: var(--text-muted);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.dash-tab svg { color: var(--text-faint); transition: color 0.15s; }
+.dash-tab:hover:not(.locked) { color: var(--text); background: var(--surface-2); }
+.dash-tab:hover:not(.locked) svg { color: var(--brand-red); }
+.dash-tab.active { color: var(--brand-red); border-bottom-color: var(--brand-red); font-weight: 700; }
+.dash-tab.active svg { color: var(--brand-red); }
+:root[data-theme='dark'] .dash-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+:root[data-theme='dark'] .dash-tab.active svg { color: var(--accent); }
+.dash-tab.locked { color: var(--text-faint); cursor: not-allowed; }
+.dash-tab-lock { font-size: 10px; line-height: 1; }
+
+/* Sub-header line a tab can use to explain its own dataset, since the page-level
+   section-note is shared and carries the greeting instead. */
+.tab-note { font-size: 12.5px; color: var(--text-muted); }
+
+.locked-panel { text-align: center; padding: 44px 20px; }
+.locked-panel-ico { display: inline-grid; place-items: center; padding: 14px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-faint); }
+.locked-panel h3 { margin: 14px 0 6px; }
+.locked-panel p { max-width: 460px; margin: 0 auto; font-size: 13px; }
+
+/* ---------- + New Transaction menu ----------
+   Replaces the old per-page "+ Add Material" / "+ Add Request" buttons: one entry
+   point, present on every dashboard tab. Transfer expands its branch in place rather
+   than flying out sideways, which would overflow the viewport on narrow screens. */
+.txn-wrap { position: relative; }
+.txn-trigger { gap: 7px; }
+.txn-trigger .txn-caret { transition: transform 0.18s ease; opacity: 0.85; }
+.txn-trigger.open .txn-caret { transform: rotate(180deg); }
+.txn-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 70;
+  width: 320px; max-width: min(320px, calc(100vw - 32px));
+  padding: 6px; background: var(--surface); border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  animation: txn-in 0.14s ease-out;
+}
+@keyframes txn-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
+.txn-menu-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 5px 9px 7px; margin-bottom: 3px; border-bottom: 1px solid var(--border);
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-faint);
+}
+.txn-opt {
+  display: flex; align-items: center; gap: 11px; width: 100%; padding: 9px 10px;
+  border: none; background: transparent; border-radius: var(--radius-sm);
+  text-align: left; color: var(--text); transition: background 0.12s;
+}
+.txn-opt:hover:not(:disabled) { background: var(--surface-2); }
+.txn-opt.expanded { background: var(--accent-weak); }
+.txn-opt-ico {
+  display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px;
+  border-radius: 9px; background: var(--surface-2); border: 1px solid var(--border);
+  color: var(--brand-red); transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+:root[data-theme='dark'] .txn-opt-ico { color: var(--accent); }
+.txn-opt:hover:not(:disabled) .txn-opt-ico { background: var(--brand-red); border-color: var(--brand-red); color: #fff; }
+.txn-opt-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.txn-opt-label { font-size: 13px; font-weight: 700; }
+.txn-opt-hint { font-size: 10.5px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.txn-opt .txn-caret { color: var(--text-faint); flex-shrink: 0; transition: transform 0.18s ease; }
+.txn-opt.expanded .txn-caret { transform: rotate(180deg); }
+.txn-lock { font-size: 11px; flex-shrink: 0; opacity: 0.8; }
+.txn-opt:disabled { cursor: not-allowed; color: var(--text-faint); }
+.txn-opt:disabled .txn-opt-ico { color: var(--text-faint); background: transparent; }
+.txn-opt:disabled .txn-opt-label { font-weight: 600; }
+
+/* The branch is indented and rail-marked so an expanded Transfer reads as belonging
+   to the row above it rather than as three more top-level transaction types. */
+.txn-sublist { margin: 2px 0 4px 21px; padding-left: 10px; border-left: 1.5px solid var(--border-strong); }
+.txn-opt.sub { padding: 7px 9px; gap: 9px; }
+.txn-opt.sub .txn-opt-ico { width: 26px; height: 26px; border-radius: 7px; }
+.txn-opt.sub .txn-opt-ico svg { width: 14px; height: 14px; }
+.txn-opt.sub .txn-opt-label { font-size: 12.5px; }
+
+/* ---------- Filter search ---------- */
+.filter-search { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 12px; box-shadow: var(--shadow-sm); }
+.fs-bar { display: flex; align-items: center; gap: 10px; }
+.fs-ico { color: var(--text-faint); flex-shrink: 0; }
+.fs-input { flex: 1; min-width: 0; border: none; background: transparent; color: var(--text); font-family: inherit; font-size: 13.5px; padding: 7px 0; }
+.fs-count {
+  flex-shrink: 0; font-size: 11.5px; font-weight: 700; color: var(--text-muted);
+  background: var(--surface-2); border: 1px solid var(--border);
+  padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+}
+.fs-input:focus { outline: none; }
+.fs-input::placeholder { color: var(--text-faint); }
+.fs-clear { flex-shrink: 0; }
+
+.fs-suggest { position: absolute; left: 8px; right: 8px; top: calc(100% - 4px); z-index: 60; max-height: 340px; overflow-y: auto; padding: 6px; box-shadow: var(--shadow-lg); }
+.fs-suggest-head { display: flex; justify-content: space-between; padding: 4px 8px 6px; font-size: 11px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.fs-opt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 8px; border: none; background: transparent; border-radius: var(--radius-sm); text-align: left; color: var(--text); }
+.fs-opt:hover { background: var(--surface-2); }
+.fs-opt.on { background: var(--accent-weak); }
+.fs-check { width: 17px; height: 17px; border-radius: 5px; border: 1.5px solid var(--border-strong); display: grid; place-items: center; flex-shrink: 0; color: #fff; }
+.fs-check.on { background: var(--brand-red); border-color: var(--brand-red); }
+.fs-opt-main { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.fs-opt-label { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fs-opt-hint { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fs-opt-uom { font-size: 10px; font-weight: 800; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); padding: 2px 7px; border-radius: 5px; flex-shrink: 0; }
+
+.fs-tokens { display: flex; flex-wrap: wrap; gap: 7px; margin: 2px 0 8px; }
+.fs-token { display: inline-flex; align-items: center; gap: 7px; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 20px; padding: 4px 5px 4px 10px; font-size: 12px; max-width: 300px; }
+.fs-token-type { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-faint); }
+/* Icon form of the chip's type marker (Material / Trade / Item Group). */
+.fs-token-type.is-icon { display: inline-flex; align-items: center; color: var(--text-muted); }
+.fs-opt-kind { display: inline-flex; align-items: center; justify-content: center; width: 22px; flex-shrink: 0; color: var(--text-faint); }
+.fs-token-label { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fs-token-x { width: 18px; height: 18px; border-radius: 50%; border: none; background: transparent; color: var(--text-muted); display: grid; place-items: center; flex-shrink: 0; }
+.fs-token-x:hover { background: var(--brand-red); color: #fff; }
+.fs-token.type-item { border-color: var(--brand-red); }
+.fs-token.type-l1 { border-color: #7d7c7c; }
+.fs-token.type-l2 { border-color: #2f7d5a; }
+.fs-token.type-brand { border-color: #2b2c2b; }
+
+.fs-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 2px; padding: 8px 0; border-top: 1px solid var(--border); }
+.fs-uom-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-faint); }
+.fs-uom { font-size: 11px; font-weight: 800; color: var(--brand-red); background: var(--accent-weak); padding: 3px 9px; border-radius: 5px; }
+:root[data-theme='dark'] .fs-uom { color: var(--accent); }
+.fs-mixed { font-size: 11px; font-weight: 700; color: var(--warn); background: var(--warn-weak); padding: 3px 9px; border-radius: 5px; cursor: help; }
+
+/* Walkthrough tour */
+.tour-root { position: fixed; inset: 0; z-index: 200; }
+.tour-dim { position: fixed; inset: 0; background: rgba(35, 31, 32,0.6); }
+.tour-hole { position: fixed; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(35, 31, 32,0.6); border: 2px solid var(--brand-red); transition: all 0.25s ease; pointer-events: none; }
+.tour-card { position: fixed; width: 340px; max-width: calc(100vw - 32px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 16px; z-index: 201; }
+.tour-dots { display: flex; gap: 5px; margin-top: 12px; }
+.tour-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong); }
+.tour-dots span.on { background: var(--brand-red); width: 18px; border-radius: 3px; }
+
+/* Floor plan */
+.fp-grid { grid-template-columns: 1.4fr 1fr; gap: 16px; }
+.bin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 8px; }
+.bin-cell {
+  border: 1px solid var(--border); border-top: 3px solid var(--bc, var(--border-strong)); border-radius: 8px;
+  background: var(--surface-2); padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.bin-cell:hover { border-color: var(--bc); background: var(--surface); }
+.bin-cell.active { background: var(--bc); border-color: var(--bc); color: #fff; box-shadow: var(--shadow); }
+.bin-cell .bc-code { font-size: 11px; font-weight: 700; font-family: 'Consolas', monospace; }
+.bin-cell .bc-n { font-size: 10px; opacity: 0.8; }
+@media (max-width: 900px) { .fp-grid { grid-template-columns: 1fr; } }
+
+.sidebar-scrim { display: none; }
+.page-loading { display: grid; place-items: center; min-height: 40vh; color: var(--text-muted); font-size: 13px; }
+
+/* ---------- Dashboard top row: KPI block beside the composition gauge ---------- */
+.dash-top { display: grid; gap: 12px; align-items: stretch; }
+/* All nine cards share one 3-column grid with equal-height rows, so no card is
+   shorter than its neighbours and the block stretches to the composition card. */
+.dash-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 12px; min-width: 0; }
+.dash-kpis > .kpi { height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+.composition-card { display: flex; flex-direction: column; min-width: 0; }
+.composition-card > .card-pad { flex: 1; display: flex; align-items: center; justify-content: center; }
+
+/* ---------- Distribution donut ---------- */
+/* Legend sits under the donut, both centred. When the card is expanded to full page
+   width (.wide) there is room to put the legend beside the donut instead. */
+.donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.donut-chart { position: relative; width: 100%; max-width: 320px; }
+.donut-wrap.wide { flex-direction: row; align-items: center; justify-content: center; gap: 40px; }
+.donut-wrap.wide .donut-chart { flex: 0 0 360px; max-width: 360px; }
+.donut-wrap.wide .donut-legend { flex: 1 1 auto; max-width: 620px; }
+/* flex column, not `grid + place-items`: with auto rows, grid's default
+   align-content packs both lines against the top of the box instead of centring
+   them in the ring, which is what left the total sitting above the hole. */
+/* The centre label and Recharts' tooltip are both absolutely positioned siblings
+   inside .donut-chart, so without explicit z-indexes their stacking came down to DOM
+   order and flipped depending on when the tooltip mounted. Pinning both settles it:
+   the tooltip always wins. */
+.donut-center {
+  position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1px;
+  pointer-events: none; text-align: center;
+}
+.donut-chart .recharts-tooltip-wrapper { z-index: 5; }
+.donut-center-lbl { font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; font-weight: 700; color: var(--text-faint); }
+.donut-center-val { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; line-height: 1.1; color: var(--text); }
+.donut-legend { width: 100%; max-width: 420px; }
+
+/* ---------- Shared chart legend (movement history + distribution) ---------- */
+.chart-legend { --cl-dot: 9px; }
+.cl-item { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.cl-dot { width: var(--cl-dot); height: var(--cl-dot); border-radius: 3px; flex-shrink: 0; }
+/* Movement History's per-series-shape swatch (see LegendSwatch in charts.jsx) — a
+   little wider than the plain colour dot so a line's point marker and a bar glyph's
+   three columns both have room to read clearly at legend size. */
+.cl-swatch { flex-shrink: 0; }
+.cl-label { font-size: 12px; font-weight: 600; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Inline variant — a single wrapping row of swatch+label pairs, always centred. */
+.legend-inline { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+
+/* ---------- Movement History ---------- */
+/* Narrow: chart on top, legend beneath as a 3-column grid — six entries land as a
+   tidy 3x2 block, which fills the width a single wrapping row used to leave empty.
+   Wide (card expanded to full page width): legend becomes one column beside the
+   chart, since horizontal room is what the expansion buys. */
+/* Chevron points right when collapsed, and rotates a quarter turn to point down
+   once expanded — the same affordance the insight cards' show-more bar uses. */
+.chart-expand svg { transition: transform 0.2s ease; }
+.chart-expand.on svg { transform: rotate(90deg); }
+.chart-expand.on { color: var(--brand-red); }
+:root[data-theme='dark'] .chart-expand.on { color: var(--accent); }
+
+/* Grid stretch makes both charts match the taller card. Rather than let that slack
+   pool as dead space under the legend, the card body becomes a flex column and the
+   legend is pushed to the bottom edge, so the gap reads as spacing between chart
+   and legend instead. */
+.movement-card { display: flex; flex-direction: column; }
+.movement-card > .card-pad { flex: 1; display: flex; flex-direction: column; }
+.movement-wrap { display: flex; flex-direction: column; flex: 1; }
+/* The Movement History card is stretched to match Inventory Distribution beside it,
+   and Distribution grows when its legend switches to the longer Item Group list. The
+   slack that buys Movement History goes to the legend block, which centres its rows
+   inside it (align-content below) — so the extra height reads as breathing room
+   around the legend rather than as one conspicuous gap under the bars, which is
+   where `margin-top: auto` used to park all of it. */
+.movement-wrap:not(.wide) .legend-grid2 { flex: 1 1 auto; }
+.movement-chart { min-width: 0; }
+/* Two columns x three rows, and the whole block is centred as a unit: the columns
+   are content-width (not 1fr) so the pair sits together in the middle of the card
+   rather than being pushed to the outer edges of two wide tracks. */
+.legend-grid2 {
+  display: grid; grid-template-columns: repeat(2, max-content);
+  gap: 10px 34px; margin-top: 12px;
+  justify-content: center; align-content: center;
+  border-top: 1px solid var(--border);
+  /* Equal top and bottom padding, not just the top clearance the rule needs: the
+     padding sits inside the box that align-content centres within, so a one-sided
+     14px would push the centred rows 14px low of true centre. */
+  padding: 14px 0;
+}
+.legend-grid2 .cl-item { justify-content: flex-start; min-width: 118px; }
+.movement-wrap.wide { flex-direction: row; align-items: center; gap: 28px; }
+.movement-wrap.wide .movement-chart { flex: 1 1 auto; min-width: 0; }
+.legend-side {
+  display: flex; flex-direction: column; gap: 12px;
+  flex: 0 0 170px; padding-left: 22px; border-left: 1px solid var(--border);
+}
+@media (max-width: 420px) {
+  .legend-grid2 { grid-template-columns: max-content; }
+}
+
+/* List variant — same swatch and type, plus right-aligned value and share. */
+.legend-list { display: flex; flex-direction: column; }
+.legend-list .cl-item { gap: 8px; padding: 4.5px 0; border-bottom: 1px solid var(--border); }
+.legend-list .cl-item:last-child { border-bottom: none; }
+.legend-list .cl-label { flex: 1; color: var(--text); }
+.cl-val { font-size: 12px; font-weight: 700; color: var(--text); flex-shrink: 0; }
+.cl-pct { font-size: 11px; font-weight: 600; color: var(--text-faint); min-width: 30px; text-align: right; flex-shrink: 0; }
+
+/* Responsive */
+/* The right column must stay wide enough for tube + badges side by side (~400px of
+   content plus card padding), otherwise the whole card drops below the KPIs. */
+.dash-top { grid-template-columns: minmax(0, 2fr) minmax(420px, 1fr); }
+@media (max-width: 1480px) {
+  .dash-top { grid-template-columns: minmax(0, 1.6fr) minmax(420px, 1fr); }
+}
+@media (max-width: 1280px) {
+  .dash-top { grid-template-columns: minmax(0, 1fr); }
+}
+/* Safekeeping reverses .dash-top's proportions AND which side is narrow: the five KPI
+   cards stack in a single narrow column on the LEFT (a fixed width is enough for one
+   figure per row), and the compressed Distribution card takes the wide side that
+   frees up. Declared after the base rule (and re-declared inside each breakpoint) so
+   it wins on specificity-equal, source-order grounds. */
+.dash-top.sk-top { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); }
+/* 1024, not the 1280 the Inventory row uses: this pair needs far less width than a KPI
+   grid beside a battery gauge (a 300px KPI column plus a ~520px distribution card fits
+   inside ~840px), and at 1280 the old breakpoint matched exactly — collapsing to one
+   column on a perfectly wide screen, which is what left the card sized to its content
+   with dead space under a short list. */
+@media (max-width: 1024px) {
+  .dash-top.sk-top { grid-template-columns: minmax(0, 1fr); }
+}
+/* Single column: one KPI per row instead of the Inventory tab's 3-wide grid. */
+.sk-top .dash-kpis { grid-template-columns: 1fr; grid-auto-rows: auto; gap: 8px; }
+.sk-dist-card { display: flex; flex-direction: column; min-width: 0; }
+.sk-dist-card > .card-pad { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+@media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } .grid-3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); box-shadow: var(--shadow-lg); }
+  .sidebar-scrim { display: block; position: fixed; inset: 0; background: rgba(35, 31, 32,0.5); z-index: 39; }
+  .main { margin-left: 0; }
+  .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr); }
+  .kpi-grid, .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .login-wrap { grid-template-columns: 1fr; }
+  .login-hero { display: none; }
+  .content { padding: 16px 14px 40px; }
+  .topbar { padding: 0 12px; gap: 8px; }
+  .section-title { font-size: 18px; }
+  .chart-controls { width: 100%; }
+}
+@media (max-width: 560px) {
+  .kpi-grid, .kpi-grid[style], .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .donut-legend { flex-basis: 100%; }
+  .card-head { flex-wrap: wrap; gap: 10px; }
+  .filters .field { min-width: 100%; }
+  .hero-stats { gap: 16px; }
+}
