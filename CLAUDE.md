@@ -17,15 +17,17 @@ Montserrat / Barlow Condensed, light + dark mode.
 
 ## Current state
 
-- **Data**: **Postgres (Supabase)**, loaded before first render by `src/lib/hydrate.js`.
-  The JS modules in `src/data/` remain as the **bundled fallback** — if Supabase is
-  unconfigured, unreachable, or a reference table is empty, the app serves the compiled
-  snapshot instead of breaking. Settings → *Data source* shows which one is live.
+- **Data**: **Postgres (Supabase) only.** Loaded before first render by `src/lib/hydrate.js`.
+  There is NO bundled fallback any more — `src/data/*.js` are empty shells since the repo
+  went public (2026-08-16). If the load fails the app has no data and says so:
+  `hydrationStatus.source === 'empty'` with a reason, surfaced on Settings → *Data source*.
+  Master copies of the dataset live in `/private-data/` (gitignored).
 - **Auth**: `src/context/AuthContext.jsx` uses Supabase `signInWithPassword`, then reads
-  `public.profiles` for the role. Falls back to `DEMO_USERS` + `DEMO_PASSWORD` from
-  `src/data/roles.js` when Supabase is unconfigured **or when the real login fails**.
+  `public.profiles` for the role. The `DEMO_USERS` / `DEMO_PASSWORD` fallback in
+  `src/data/roles.js` is `import.meta.env.DEV`-only — production accepts real accounts only.
 - **Backend**: `supabase/schema.sql` (all tables, RLS, `is_admin()`, role-escalation guard,
-  signup trigger) + `supabase/seed_data.sql` (**generated** — never edit by hand).
+  signup trigger) + `supabase/seed/NN_seed.sql` (**generated** — never edit by hand,
+  gitignored, run in order).
 
 ## Data architecture (Phase 2, 2026-08-16)
 
@@ -49,11 +51,12 @@ are RLS-gated and the pre-render pass returns nothing without a session.
 Consequence: **arrays in `src/data/` must be mutated, never reassigned.** A
 `export const x = [...]` that gets replaced instead of refilled silently breaks hydration.
 
-**Seed generation**: `npm run seed` → regenerates `supabase/seed_data.sql` from the JS
-modules. Run it whenever a `src/data/*.js` source module changes. (The old hand-written
+**Seed generation**: `npm run seed` → regenerates `supabase/seed/NN_seed.sql` from the
+modules in `/private-data/`. Run it whenever a source module there changes, then paste
+the parts into the Supabase SQL Editor IN ORDER. (The old hand-written
 `seed_inventory.sql` had drifted to a different snapshot and was missing five columns;
 generating removes that failure mode.)
-- **Git**: branch `master` locally; **`main` is the deploy branch** on GitHub.
+- **Git**: branch `main`, single clean root commit (history reset 2026-08-16).
 - **Deploy**: GitHub Pages project site at `https://prcdepartment.github.io/prc-wh/`,
   built by `.github/workflows/deploy.yml` on every push to `main`.
 
@@ -82,7 +85,7 @@ generating removes that failure mode.)
 |---|-------|----------------|
 | ~~1~~ | ~~Demo-password fallback in `AuthContext.signIn`~~ | **Fixed 2026-08-16** — gated behind `import.meta.env.DEV`. Production builds accept only real Supabase credentials. |
 | ~~2~~ | ~~`switchRole()` lets any user change their own role client-side~~ | **Fixed 2026-08-16** — no-op in production, and the Switch Role button is hidden. |
-| ~~3~~ | ~~All business data lives in JS files~~ | **Fixed 2026-08-16** — all data in Postgres; the JS modules survive only as an offline fallback. |
+| ~~3~~ | ~~All business data lives in JS files~~ | **Fixed 2026-08-16** — all data in Postgres. The JS modules are empty shells; no data ships in the bundle. |
 | ~~4~~ | ~~Role permissions enforced only in the UI~~ | **Fixed 2026-08-16** — RLS on every table, plus a trigger that blocks self-escalation to admin. |
 | 5 | No CI, no tests, no error boundary | |
 | 6 | Writes still go nowhere | Add Material and movement entry are read-only UI; only Safekeeping Requests persist. Phase 3. |
