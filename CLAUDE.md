@@ -426,10 +426,19 @@ User side: create the `prcdepartment` org, rename repo → `prc-wh`, transfer, t
 `git remote set-url`, push, re-enable Pages, **re-add the two Actions secrets**
 (they do not reliably survive a transfer), re-run the workflow.
 
-**Still outstanding from the previous session:** the two Actions secrets were never
-added, so the published bundle contains no Supabase URL or key and nobody can sign in.
-Confirmed by downloading the deployed bundle and grepping it. Also confirmed the same
-way: zero real data in the published bundle.
+**Move completed and verified 2026-08-16.** `prcdepartment/prc-wh` exists, the old repo
+returns 301, run #9 on `ecd3827` succeeded, and `https://prcdepartment.github.io/prc-wh/`
+returns 200 and routes to `/login`. The two Actions secrets ARE now present — the
+deployed bundle contains the Supabase URL and publishable key. The deployed bundle
+contains no project name, item code, brand or price. Production build confirmed: no demo
+quick-sign-in panel, no credential prefill.
+
+**Note for future confusion:** the **Actions** tab is on the REPOSITORY page, not the
+organisation page. An organisation has Settings → Actions (policy only) and no run list.
+
+Remaining before the system is usable end to end: paste `supabase/seed/01..03_seed.sql`
+into the SQL Editor in order (the live database still lacks `item_master`, so the Add
+Material / Safekeeping lookups will find nothing).
 
 ### 2026-08-16 — Session: Overview layout, donut figures, overlay sidebar, mobile pass
 
