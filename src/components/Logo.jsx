@@ -7,7 +7,7 @@ import { useTheme } from '../context/ThemeContext'
 //  - 'white'  : white lockup, for the red login hero
 //  - 'mark'   : red icon only (compact / mobile)
 // Assets live in public/ and must be prefixed with the Vite base path so they
-// resolve under a GitHub Pages sub-path (/Warehouse-Management/) as well as at
+// resolve under a GitHub Pages sub-path (/prc-wh/) as well as at
 // the root in dev.
 const asset = (file) => `${import.meta.env.BASE_URL}${file}`
 

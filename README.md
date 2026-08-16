@@ -87,7 +87,7 @@ Open http://localhost:5173
 
 ```bash
 git init && git add . && git commit -m "Megawide WMS prototype"
-git remote add origin https://github.com/ljrondina/Warehouse-Management.git
+git remote add origin https://github.com/prcdepartment/prc-wh.git
 git branch -M main && git push -u origin main
 ```
 

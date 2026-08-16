@@ -54,13 +54,16 @@ modules. Run it whenever a `src/data/*.js` source module changes. (The old hand-
 `seed_inventory.sql` had drifted to a different snapshot and was missing five columns;
 generating removes that failure mode.)
 - **Git**: branch `master` locally; **`main` is the deploy branch** on GitHub.
-- **Deploy**: GitHub Pages project site at `https://ljrondina.github.io/Warehouse-Management/`,
+- **Deploy**: GitHub Pages project site at `https://prcdepartment.github.io/prc-wh/`,
   built by `.github/workflows/deploy.yml` on every push to `main`.
 
 ## Deployment (GitHub Pages)
 
-- **Repo**: `ljrondina/Warehouse-Management` · **Branch**: `main` · **Pages source**: GitHub Actions.
-- **Base path**: `vite.config.js` sets `base = '/Warehouse-Management/'` for production
+- **Repo**: `prcdepartment/prc-wh` · **Branch**: `main` · **Pages source**: GitHub Actions.
+  (Moved 2026-08-16 from `ljrondina/Warehouse-Management`.)
+- **Base path**: `vite.config.js` sets `base = '/prc-wh/'` for production. **It must equal
+  the repository name.** Rename the repo and this must change in the same commit, or every
+  asset 404s and the page loads blank.
   (`BASE_PATH=/ npm run build` to build for a root-level host instead).
   `BrowserRouter basename={import.meta.env.BASE_URL}` in `src/main.jsx` matches it, and
   `src/components/Logo.jsx` prefixes `public/` assets with `import.meta.env.BASE_URL`.
@@ -404,3 +407,23 @@ Supabase session, so the dashboard would otherwise render empty):
 **Mock data remaining in the app after this session:** unchanged — the Available/Reserved
 split inside Movement History (modelled; no reservation history exists) and the
 high-value secure cage assignment on the floor plan.
+
+### 2026-08-16 — Session: move to prcdepartment/prc-wh
+
+Site address changes from `ljrondina.github.io/Warehouse-Management` to
+`prcdepartment.github.io/prc-wh`. Code side done and committed (NOT pushed until the
+repo is actually renamed — pushing first would 404 every asset on the live site):
+
+- `vite.config.js` — production base `/prc-wh/`.
+- `public/404.html`, `src/components/Logo.jsx`, `README.md` — path references updated.
+- Verified `npm run build` emits `/prc-wh/` asset URLs and the SPA shim keeps
+  `pathSegmentsToKeep = 1` (still exactly one repo segment).
+
+User side: create the `prcdepartment` org, rename repo → `prc-wh`, transfer, then
+`git remote set-url`, push, re-enable Pages, **re-add the two Actions secrets**
+(they do not reliably survive a transfer), re-run the workflow.
+
+**Still outstanding from the previous session:** the two Actions secrets were never
+added, so the published bundle contains no Supabase URL or key and nobody can sign in.
+Confirmed by downloading the deployed bundle and grepping it. Also confirmed the same
+way: zero real data in the published bundle.
