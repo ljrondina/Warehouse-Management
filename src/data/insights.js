@@ -63,7 +63,9 @@ export const KPIS = (pool = items) => ({
   skuCount: pool.length,
 })
 
-export const TRENDS = { total: 3.2, available: 1.8, reserved: 6.4, incoming: 12.5, outgoing: -4.1, damaged: -2.3 }
+// (A hard-coded TRENDS map lived here. It was unreferenced, and leaving a set of
+// invented percentages exported is an invitation to wire them into a KPI card
+// later. Real trends are computed in analytics() below, from the ledger.)
 
 const groupBy = (pool, key) => {
   const map = {}
@@ -116,6 +118,122 @@ export const uomsOf = (pool = items) => [...new Set(pool.map((i) => i.uom))].sor
 // so the curve's shape is a consequence of the real ledger and the two halves of the
 // chart can never disagree about a period. Nothing here uses Math.random or
 // Date.now, so the series is stable across renders.
+// ---------------------------------------------------------------------------
+// Analytics metrics — every figure below is DERIVED, none is a literal. The
+// Analytics page previously carried a hard-coded "2.4x" turnover, a hard-coded
+// "78%" utilisation and four invented trend arrows; this block replaces them.
+//
+// The honest limits, stated once here rather than implied on the page:
+//   * Historic VALUE is back-cast, exactly like the stock curve in Movement
+//     History — today's valuation wound back through the ledger's flows priced at
+//     each code's average unit cost. The warehouse keeps no valuation history, so
+//     this is the closest thing to one that is still traceable to real rows.
+//   * Anything older than LEDGER_SPAN has no recorded flows, so it flatlines
+//     rather than being projected here. A projected trend ARROW would be an
+//     invented number wearing a computation's clothes.
+//   * There is NO rack-capacity data anywhere in the system — zones, racks and
+//     bins are derived from the item rows themselves — so a "warehouse
+//     utilisation % of capacity" cannot be computed at all and is not shown.
+
+// A code can appear on several inventory lines at different prices (same material,
+// different 2nd description), and the ledger only records the code. Weighted
+// average unit cost per code keeps the priced flows consistent with the valuation
+// they are wound back from.
+const avgCostByCode = (pool) => {
+  const acc = new Map()
+  for (const it of pool) {
+    const cur = acc.get(it.itemCode) || { v: 0, q: 0, p: it.unitPrice }
+    cur.v += it.inventoryValue
+    cur.q += it.totalQty
+    acc.set(it.itemCode, cur)
+  }
+  const out = new Map()
+  for (const [code, c] of acc) out.set(code, c.q > 0 ? c.v / c.q : c.p || 0)
+  return out
+}
+
+const DAYS_PER_YEAR = 365
+
+// Everything the Analytics page needs, computed once per pool.
+// Returns `null` fields (never zeroes) where the data cannot support a figure, so
+// the page can render an em dash instead of a confident-looking number.
+export const analytics = (pool = items) => {
+  const k = KPIS(pool)
+  const codes = new Set(pool.map((i) => i.itemCode))
+  const rows = LEDGER.filter((r) => codes.has(r.c))
+  const prices = avgCostByCode(pool)
+  const priceOf = (r) => prices.get(r.c) || 0
+
+  const { oldest, newest } = LEDGER_SPAN
+  const windowDays = Math.max(1, oldest - newest + 1)
+  const hasLedger = rows.length > 0 && oldest > newest
+
+  // Valuation as of the END of day-offset `t`: today's value undone by every flow
+  // recorded since (offsets strictly newer, i.e. smaller, than t).
+  const valueAt = (t) =>
+    Math.max(0, k.value + rows.reduce((a, r) => (r.off < t ? a + (r.dir === 'out' ? r.q : -r.q) * priceOf(r) : a), 0))
+
+  // Cost of goods issued inside an inclusive offset window (`from` is the older edge).
+  const issuedValue = (from, to) =>
+    rows.reduce((a, r) => (r.dir === 'out' && r.off <= from && r.off >= to ? a + r.q * priceOf(r) : a), 0)
+
+  // Annualised turns = cost issued over the window / average value held, scaled to a
+  // year. Average of the opening and closing valuation, which is the standard
+  // approximation when only two valuation points exist.
+  const turnsOver = (from, to) => {
+    const opening = valueAt(from + 1)
+    const closing = valueAt(to)
+    const avg = (opening + closing) / 2
+    if (avg <= 0) return null
+    const days = Math.max(1, from - to + 1)
+    return (issuedValue(from, to) / avg) * (DAYS_PER_YEAR / days)
+  }
+
+  const pctChange = (now, then) => (then > 0 ? ((now - then) / then) * 100 : null)
+
+  // Trend arrows compare like with like inside the RECORDED window only, anchored to
+  // the ledger's most recent day rather than to today. If the sheets stop 100 days
+  // back, "vs 30 days ago" would compare today's value against itself and report a
+  // confident 0%; anchoring makes it the last 30 days the ledger actually covers.
+  const lookback = Math.min(30, windowDays)
+  const valueTrend = hasLedger ? pctChange(valueAt(newest), valueAt(newest + lookback)) : null
+
+  // Turnover trend: the recent half of the ledger window against the older half.
+  const mid = Math.floor((oldest + newest) / 2)
+  const turnover = hasLedger ? turnsOver(oldest, newest) : null
+  const recentTurns = hasLedger ? turnsOver(mid, newest) : null
+  const priorTurns = hasLedger ? turnsOver(oldest, mid + 1) : null
+  const turnoverTrend =
+    recentTurns != null && priorTurns != null ? pctChange(recentTurns, priorTurns) : null
+
+  const nonMovingValue = pool.filter((i) => i.issueFrequency <= 1).reduce((a, b) => a + b.inventoryValue, 0)
+
+  return {
+    inventoryValue: k.value,
+    valueTrend,
+    turnover,
+    turnoverTrend,
+    // Share of stock on hand that is free to issue. Replaces the old "warehouse
+    // utilisation" tile: same slot, but a ratio the data can actually support.
+    availabilityPct: k.total > 0 ? (k.available / k.total) * 100 : null,
+    nonMovingValue,
+    nonMovingCount: pool.filter((i) => i.issueFrequency <= 1).length,
+    windowDays: hasLedger ? windowDays : null,
+    lookbackDays: hasLedger ? lookback : null,
+    // How far behind today the newest recorded movement is — the page uses this to
+    // qualify the trend rather than implying the comparison reaches the present.
+    ledgerLagDays: hasLedger ? newest : null,
+    // Back-cast monthly valuation, newest bucket last. Buckets that predate the
+    // ledger repeat the opening valuation rather than inventing a slope.
+    valueSeries: (n = 6) =>
+      Array.from({ length: n }, (_, i) => {
+        const back = n - 1 - i
+        const [, to] = PERIOD_CFG.month.span(back)
+        return { label: PERIOD_CFG.month.label(back), value: Math.round(valueAt(Math.max(to, newest))) }
+      }),
+  }
+}
+
 export const PERIODS = [
   { key: 'year', label: 'Year' },
   { key: 'quarter', label: 'Quarter' },

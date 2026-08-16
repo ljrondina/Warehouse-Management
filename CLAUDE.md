@@ -264,3 +264,50 @@ donut, the five insight lists, Low Stock, Reports and the Inventory table. Confi
   in code, not a real warehouse location.
 
 Verified `npm run build` passes.
+
+### 2026-08-16 — Session: Analytics page — every figure now derived
+
+Removed the last fabricated numbers in the app. Previously `Analytics.jsx` showed
+`Stock Turnover 2.4x` and `Warehouse Utilization 78%` as string literals, four
+hard-coded trend arrows (`3.2`, `5.1`, `1.4`, `-2.3`), and two "Last 6 months"
+charts fed by a `trend(base, seed)` helper that shaped a fake curve out of the
+current total. None of it touched the ledger.
+
+**New `analytics(pool)` in `src/data/insights.js`.** One function, computed per
+hydration, returning `null` (never zero) for anything the data cannot support:
+- `avgCostByCode(pool)` — weighted average unit cost per item code. The ledger
+  records only a code, while inventory carries several priced lines per code, so
+  flows are priced at the code's blended cost to stay consistent with the valuation
+  they are wound back from.
+- `valueAt(t)` — valuation at day-offset `t`: today's value undone by every recorded
+  flow since. Same back-cast technique as the Movement History stock curve.
+- **Stock Turnover** = cost issued over the ledger window ÷ average of opening and
+  closing valuation, annualised by `365 / windowDays`. Trend compares the recent half
+  of the window against the earlier half.
+- **Inventory Value trend** compares `valueAt(newest)` with `valueAt(newest + 30)` —
+  anchored to the ledger's newest recorded day, **not to today**. Anchoring to today
+  would compare the current value against itself whenever the sheets lag, and report
+  a confident 0%.
+- **Warehouse Utilization is gone.** Nothing in the system records rack capacity —
+  zones, racks and bins are derived from the item rows in `rebuildItems()` and
+  `StorageMap.jsx` — so utilisation is not computable at any accuracy. That tile now
+  shows **Stock Availability** (`available / total`), which is real. It carries no
+  trend arrow: there is no reservation history to compare against.
+- **Non-Moving Value** was reading `overstock()` (`totalQty > minLevel * 6`), which is
+  overstock, not non-movement. Now reads `issueFrequency <= 1`, matching its label and
+  the Dead Stock card.
+- Both trend charts now plot `valueSeries(6)` and the real monthly totals from
+  `movementCombinedSeries`. Buckets predating the ledger repeat the opening valuation
+  rather than sloping; the card subtitles say "back-cast from the ledger".
+- The page header now states the ledger's coverage and how stale the newest movement
+  is, so no reader assumes the comparison reaches the present.
+- Deleted the unused hard-coded `TRENDS` export from `insights.js`.
+
+**Verified** by bundling `insights.js` with esbuild and running it under Node against a
+synthetic two-item, three-row fixture: turnover, the back-cast series, the anchored
+value trend, availability and non-moving value all matched hand-computed expectations.
+`npm run build` passes.
+
+**Mock data remaining in the app after this session:** the Available/Reserved split in
+Movement History (modelled — no reservation history exists) and the high-value secure
+cage assignment (top 36 by line value, assigned in code, not a real location).
