@@ -107,18 +107,6 @@ export const distinct = (key) => [...new Set(items.map((i) => i[key]).filter(Boo
 export const uomsOf = (pool = items) => [...new Set(pool.map((i) => i.uom))].sort()
 
 // ---------------------------------------------------------------------------
-// Movement History series. Incoming and Outgoing are REAL: they are the CW Incoming
-// and CW Outgoing sheets, bucketed by their own document dates. The stock
-// composition on the left-hand scale is then BACK-CAST from those flows rather than
-// invented — stock on hand at any past date is today's SOH plus everything released
-// since, less everything received since:
-//
-//   total(t) = SOH_now + Σ outgoing(τ > t) − Σ incoming(τ > t)
-//
-// so the curve's shape is a consequence of the real ledger and the two halves of the
-// chart can never disagree about a period. Nothing here uses Math.random or
-// Date.now, so the series is stable across renders.
-// ---------------------------------------------------------------------------
 // Analytics metrics — every figure below is DERIVED, none is a literal. The
 // Analytics page previously carried a hard-coded "2.4x" turnover, a hard-coded
 // "78%" utilisation and four invented trend arrows; this block replaces them.
@@ -234,6 +222,18 @@ export const analytics = (pool = items) => {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Movement History series. Incoming and Outgoing are REAL: they are the CW Incoming
+// and CW Outgoing sheets, bucketed by their own document dates. The stock
+// composition on the left-hand scale is then BACK-CAST from those flows rather than
+// invented — stock on hand at any past date is today's SOH plus everything released
+// since, less everything received since:
+//
+//   total(t) = SOH_now + Σ outgoing(τ > t) − Σ incoming(τ > t)
+//
+// so the curve's shape is a consequence of the real ledger and the two halves of the
+// chart can never disagree about a period. Nothing here uses Math.random or
+// Date.now, so the series is stable across renders.
 export const PERIODS = [
   { key: 'year', label: 'Year' },
   { key: 'quarter', label: 'Quarter' },
@@ -371,4 +371,199 @@ export const movementCombinedSeries = (pool = items, granularity = 'month') => {
       outgoing,
     }
   })
+}
+
+// ---------------------------------------------------------------------------
+// ABC analysis — Pareto classification by inventory value.
+//
+// Lines are ranked by line value, then walked down accumulating share of the
+// warehouse's total valuation. Class boundaries use the cumulative share BEFORE the
+// line is added, so the line that straddles 80% lands in A: class A is then
+// guaranteed to cover at least 80% of value, which is the property the technique is
+// used for. B runs to 95%, C is the tail.
+//
+// The unit of analysis is the inventory LINE, not the item code — the same code can
+// be stocked as several lines with different conditions and prices, and they are
+// controlled separately on the floor. Lines with no recorded value are excluded
+// rather than dumped into C: a zero there means "no price recorded", not "cheap".
+const ABC_BANDS = [
+  { cls: 'A', upTo: 0.8, label: 'Class A', note: 'Top 80% of value — tight control, cycle-count often' },
+  { cls: 'B', upTo: 0.95, label: 'Class B', note: 'Next 15% of value — routine control' },
+  { cls: 'C', upTo: Infinity, label: 'Class C', note: 'Final 5% of value — bulk control, count rarely' },
+]
+
+export const abcAnalysis = (pool = items) => {
+  const ranked = [...pool].filter((i) => i.inventoryValue > 0).sort((a, b) => b.inventoryValue - a.inventoryValue)
+  const totalValue = sum(ranked, 'inventoryValue')
+  const unpriced = pool.length - ranked.length
+  if (!ranked.length || totalValue <= 0) return null
+
+  const bands = ABC_BANDS.map((b) => ({ ...b, count: 0, value: 0, qty: 0, rows: [] }))
+  let cum = 0
+  // Pareto curve for the chart: one point per line, x = share of lines, y = share of
+  // value. Drawn as a curve rather than 779 rows, so it stays readable at any size.
+  const curve = []
+  ranked.forEach((it, i) => {
+    const shareBefore = cum / totalValue
+    const band = bands.find((b) => shareBefore < b.upTo) || bands[bands.length - 1]
+    band.count += 1
+    band.value += it.inventoryValue
+    band.qty += it.totalQty
+    band.rows.push(it)
+    cum += it.inventoryValue
+    curve.push({ x: ((i + 1) / ranked.length) * 100, y: (cum / totalValue) * 100, cls: band.cls })
+  })
+
+  return {
+    totalValue,
+    totalLines: ranked.length,
+    unpriced,
+    curve,
+    bands: bands.map((b) => ({
+      ...b,
+      valueShare: (b.value / totalValue) * 100,
+      countShare: (b.count / ranked.length) * 100,
+    })),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Aging analysis — how long stock has sat without moving.
+//
+// Reads `lastMovementOffset`, the recorded days-since-last-movement carried on each
+// inventory line. That is a real column on public.inventory and is NOT derived from
+// the ledger, so aging stays available for lines the ledger window does not reach.
+const AGE_BANDS = [
+  { key: '0-30', label: '0–30 days', from: 0, to: 30, note: 'Moved within the last month' },
+  { key: '31-60', label: '31–60 days', from: 31, to: 60, note: 'Idle for one to two months' },
+  { key: '61-90', label: '61–90 days', from: 61, to: 90, note: 'Idle for two to three months' },
+  { key: '91-180', label: '91–180 days', from: 91, to: 180, note: 'Idle for three to six months' },
+  { key: '181-365', label: '181–365 days', from: 181, to: 365, note: 'Idle for six months to a year' },
+  { key: '365+', label: 'Over a year', from: 366, to: Infinity, note: 'No movement in over a year' },
+]
+
+export const agingAnalysis = (pool = items) => {
+  const dated = pool.filter((i) => Number.isFinite(i.lastMovementOffset))
+  if (!dated.length) return null
+  const bands = AGE_BANDS.map((b) => ({ ...b, count: 0, qty: 0, value: 0, rows: [] }))
+  for (const it of dated) {
+    const age = Math.max(0, it.lastMovementOffset)
+    const band = bands.find((b) => age >= b.from && age <= b.to)
+    if (!band) continue
+    band.count += 1
+    band.qty += it.totalQty
+    band.value += it.inventoryValue
+    band.rows.push(it)
+  }
+  const totalValue = sum(bands, 'value')
+  const totalCount = sum(bands, 'count')
+  // Anything past 90 days is the figure a warehouse actually acts on.
+  const staleValue = bands.filter((b) => b.from >= 91).reduce((a, b) => a + b.value, 0)
+  return {
+    bands: bands.map((b) => ({ ...b, valueShare: totalValue > 0 ? (b.value / totalValue) * 100 : 0 })),
+    totalValue,
+    totalCount,
+    staleValue,
+    staleShare: totalValue > 0 ? (staleValue / totalValue) * 100 : 0,
+    missing: pool.length - dated.length,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Activity — RECORDED ledger movement only.
+//
+// Deliberately different from movementCombinedSeries: that chart projects flows for
+// buckets predating the ledger so its stock curve does not draw a cliff. Nothing
+// here is projected. A bucket outside the recorded window reports zero and is
+// flagged `covered: false`, so the Activity tab can grey it out and say why rather
+// than presenting an estimate as a measurement.
+export const ledgerActivity = (pool = items, granularity = 'month') => {
+  const { n, label, span } = PERIOD_CFG[granularity] || PERIOD_CFG.month
+  const codes = new Set(pool.map((i) => i.itemCode))
+  const rows = LEDGER.filter((r) => codes.has(r.c))
+  const { oldest, newest } = LEDGER_SPAN
+  const hasLedger = rows.length > 0 && oldest >= newest
+  const prices = avgCostByCode(pool)
+  const priceOf = (code) => prices.get(code) || 0
+
+  const series = Array.from({ length: n }, (_, i) => {
+    const back = n - 1 - i
+    const [from, to] = span(back)
+    let inQty = 0, outQty = 0, inValue = 0, outValue = 0
+    for (const r of rows) {
+      if (r.off > from || r.off < to) continue
+      const v = r.q * priceOf(r.c)
+      if (r.dir === 'in') { inQty += r.q; inValue += v } else { outQty += r.q; outValue += v }
+    }
+    return {
+      label: label(back),
+      // A bucket is covered when it overlaps the ledger's recorded window at all.
+      covered: hasLedger && from >= newest && to <= oldest,
+      incoming: Math.round(inQty),
+      outgoing: Math.round(outQty),
+      net: Math.round(inQty - outQty),
+      incomingValue: Math.round(inValue),
+      outgoingValue: Math.round(outValue),
+      netValue: Math.round(inValue - outValue),
+    }
+  })
+
+  // Running total across the buckets shown, so the reader can see whether the period
+  // as a whole built stock up or drew it down.
+  let runQty = 0
+  let runValue = 0
+  for (const b of series) {
+    runQty += b.net
+    runValue += b.netValue
+    b.cumulative = runQty
+    b.cumulativeValue = runValue
+  }
+
+  // Top movers over the whole RECORDED window, grouped by item code (the only
+  // identifier the ledger carries). `id` points at the largest inventory line for
+  // that code so a row can still open a material profile.
+  const lineFor = new Map()
+  for (const it of pool) {
+    const cur = lineFor.get(it.itemCode)
+    if (!cur || it.totalQty > cur.totalQty) lineFor.set(it.itemCode, it)
+  }
+  const topBy = (dir, take = 8) => {
+    const acc = new Map()
+    for (const r of rows) {
+      if (r.dir !== dir) continue
+      const cur = acc.get(r.c) || { code: r.c, description: r.d, qty: 0, value: 0, moves: 0 }
+      cur.qty += r.q
+      cur.value += r.q * priceOf(r.c)
+      cur.moves += 1
+      acc.set(r.c, cur)
+    }
+    return [...acc.values()]
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, take)
+      .map((e) => {
+        const line = lineFor.get(e.code)
+        return { ...e, id: line?.id ?? null, uom: line?.uom || '', tradeL1: line?.tradeL1 || '', tradeL2: line?.tradeL2 || '' }
+      })
+  }
+
+  const totals = rows.reduce(
+    (a, r) => {
+      const v = r.q * priceOf(r.c)
+      if (r.dir === 'in') { a.inQty += r.q; a.inValue += v } else { a.outQty += r.q; a.outValue += v }
+      return a
+    },
+    { inQty: 0, outQty: 0, inValue: 0, outValue: 0 }
+  )
+
+  return {
+    hasLedger,
+    rowCount: rows.length,
+    windowDays: hasLedger ? oldest - newest + 1 : null,
+    ledgerLagDays: hasLedger ? newest : null,
+    coveredBuckets: series.filter((b) => b.covered).length,
+    series,
+    topIncoming: topBy('in'),
+    topOutgoing: topBy('out'),
+    totals: { ...totals, netQty: totals.inQty - totals.outQty, netValue: totals.inValue - totals.outValue },
+  }
 }

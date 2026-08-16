@@ -83,6 +83,9 @@ export default function Dashboard() {
     const next = new URLSearchParams(params)
     if (key === 'inventory') next.delete('tab')
     else next.set('tab', key)
+    // ?view is the Inventory tab's own sub-view; leaving it behind on another tab
+    // would silently restore a stale view when the user comes back.
+    next.delete('view')
     setParams(next, { replace: true })
   }
 

@@ -72,9 +72,12 @@ export function Segmented({ options, value, onChange, size }) {
 }
 
 /* ---------- Card ---------- */
-export function Card({ title, sub, right, icon, iconColor, children, pad = true, className = '' }) {
+// Unrecognised props land on the root element, which is how callers attach
+// `data-tour` anchors (the guided tour finds its targets by that attribute) without
+// needing a wrapper div that would break the surrounding grid's row sizing.
+export function Card({ title, sub, right, icon, iconColor, children, pad = true, className = '', ...rest }) {
   return (
-    <div className={`card ${className}`}>
+    <div className={`card ${className}`} {...rest}>
       {(title || right) && (
         <div className="card-head">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>

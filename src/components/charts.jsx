@@ -1,7 +1,8 @@
 import {
   ResponsiveContainer, ComposedChart, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, LabelList,
-  PieChart, Pie, AreaChart, Area, Line,
+  PieChart, Pie, AreaChart, Area, Line, ReferenceLine, ReferenceArea,
 } from 'recharts'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { num, peso, compact } from '../lib/format'
 import { BRAND, barsFor, categoricalFor, movementFor, seriesFor } from '../lib/colors'
 import { useTheme } from '../context/ThemeContext'
@@ -124,6 +125,127 @@ export function CategoryChart({ data, metric = 'qty' }) {
   )
 }
 
+// Tracks an element's rendered width. Only the leader-line donut needs it (its ring
+// is sized to leave room for the labels), so `enabled` keeps every other chart from
+// paying for an observer it will never read.
+function useElementWidth(ref, enabled) {
+  const [width, setWidth] = useState(0)
+  useLayoutEffect(() => {
+    if (!enabled || !ref.current) return
+    const el = ref.current
+    const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width))
+    ro.observe(el)
+    setWidth(el.getBoundingClientRect().width)
+    return () => ro.disconnect()
+  }, [ref, enabled])
+  return width
+}
+
+// ---------------------------------------------------------------------------
+// Leader-line labels for the distribution donut.
+//
+// Recharts' own `label`/`labelLine` places each label independently, so on a 9-slice
+// donut the thin slices stack their text on top of each other and the card becomes
+// unreadable. This lays the labels out as a whole instead: every label is projected
+// onto its slice's mid-angle, split into a left and a right column, then pushed apart
+// to a minimum spacing and clamped inside the chart box.
+//
+// To do that the geometry has to be known BEFORE recharts renders, which means the
+// pie's angles must be deterministic. Hence the fixed startAngle/endAngle (90 → -270,
+// i.e. clockwise from twelve o'clock) and paddingAngle={0} at the call site: with a
+// padding angle recharts redistributes the sweep and these mid-angles would drift off
+// their slices. Slice separation comes from the stroke instead.
+const RAD = Math.PI / 180
+const LABEL_GAP = 15        // minimum vertical distance between two labels
+const ELBOW = 14            // radial distance from the ring to the leader's elbow
+const STUB = 26             // horizontal run from the elbow to the text
+
+// Push a column of labels apart in place: spread downwards, then, if the column
+// overruns the bottom of the box, pin the last one and spread back upwards.
+function spreadColumn(list, top, bottom) {
+  list.sort((a, b) => a.y - b.y)
+  for (let i = 1; i < list.length; i++) list[i].y = Math.max(list[i].y, list[i - 1].y + LABEL_GAP)
+  const last = list[list.length - 1]
+  if (last && last.y > bottom) {
+    last.y = bottom
+    for (let i = list.length - 2; i >= 0; i--) list[i].y = Math.min(list[i].y, list[i + 1].y - LABEL_GAP)
+  }
+  if (list[0] && list[0].y < top) {
+    list[0].y = top
+    for (let i = 1; i < list.length; i++) list[i].y = Math.max(list[i].y, list[i - 1].y + LABEL_GAP)
+  }
+  return list
+}
+
+// Builds the renderer recharts calls per slice. The full layout is computed once for
+// a given cx/cy/radius and cached, so the per-slice callback is a lookup.
+function makeLeaderLabel({ data, key, palette, height, minPct }) {
+  const total = data.reduce((a, b) => a + (b[key] || 0), 0)
+  const cache = new Map()
+
+  const layout = (cx, cy, r) => {
+    const ck = `${cx}|${cy}|${r}`
+    if (cache.has(ck)) return cache.get(ck)
+    let cum = 0
+    const all = data.map((d, i) => {
+      const frac = total > 0 ? (d[key] || 0) / total : 0
+      const mid = 90 - 360 * (cum + frac / 2)
+      cum += frac
+      const rad = -mid * RAD // screen y grows downward, so the angle is negated
+      return { i, frac, cos: Math.cos(rad), sin: Math.sin(rad) }
+    })
+    // Slices too thin to label would collide no matter how they are spread. They keep
+    // their colour and their tooltip; the card prints a note saying how many are
+    // unlabelled, so a missing label never reads as missing data.
+    const shown = all.filter((p) => p.frac * 100 >= minPct)
+    const placed = new Map()
+    for (const side of ['r', 'l']) {
+      const col = shown
+        .filter((p) => (side === 'r' ? p.cos >= 0 : p.cos < 0))
+        .map((p) => ({ ...p, side, y: cy + (r + ELBOW) * p.sin }))
+      for (const p of spreadColumn(col, 10, height - 10)) placed.set(p.i, p)
+    }
+    const res = { placed, hidden: all.length - shown.length }
+    cache.set(ck, res)
+    return res
+  }
+
+  const render = ({ cx, cy, outerRadius, index }) => {
+    const { placed } = layout(cx, cy, outerRadius)
+    const p = placed.get(index)
+    if (!p) return null
+    const d = data[index]
+    const color = palette[index % palette.length]
+    const dir = p.side === 'r' ? 1 : -1
+    const x0 = cx + outerRadius * p.cos
+    const y0 = cy + outerRadius * p.sin
+    const x1 = cx + (outerRadius + ELBOW) * dir * Math.abs(p.cos || 0.2)
+    const x2 = cx + dir * (outerRadius + ELBOW + STUB)
+    const name = d.name.length > 16 ? `${d.name.slice(0, 15)}…` : d.name
+    return (
+      <g key={`lead-${index}`}>
+        <polyline
+          points={`${x0},${y0} ${x1},${p.y} ${x2},${p.y}`}
+          fill="none" stroke={color} strokeWidth={1.2} strokeOpacity={0.75}
+        />
+        <circle cx={x0} cy={y0} r={2} fill={color} />
+        <text
+          x={x2 + dir * 5} y={p.y} textAnchor={p.side === 'r' ? 'start' : 'end'}
+          dominantBaseline="middle" fontSize={11} fontWeight={600} fill="var(--text-muted)"
+        >
+          {name}
+          <tspan fontWeight={800} fill="var(--text)"> {(p.frac * 100).toFixed(0)}%</tspan>
+        </text>
+      </g>
+    )
+  }
+
+  // The hidden count needs the same layout, but the card wants it before any slice is
+  // drawn. Recomputed against a nominal geometry — `minPct` does not depend on cx/cy.
+  render.hiddenCount = data.filter((d) => (total > 0 ? ((d[key] || 0) / total) * 100 : 0) < minPct).length
+  return render
+}
+
 /* Distribution donut with center total; metric + scope driven by parent. */
 // `wide` lays the donut and its legend side by side (used when the card spans the
 // full page width); otherwise the legend sits centred beneath the donut.
@@ -135,17 +257,44 @@ export function CategoryChart({ data, metric = 'qty' }) {
 // a "₱0" would read as a real zero rather than as missing data.
 // `height`/`innerRadius`/`outerRadius` let a caller grow the ring to fill a taller card
 // instead of leaving a band of empty space around a fixed 250px chart.
+// `leaderLines` labels each slice in place with a leader line instead of printing a
+// legend beside the donut — the reader's eye goes straight from the wedge to its name
+// rather than bouncing between the ring and a colour key.
 export function DistributionDonut({
   data, metric = 'qty', wide = false, hideLegend = false, showValue = true, unit = 'units',
-  height, innerRadius = 62, outerRadius = 94,
+  height, innerRadius = 62, outerRadius = 94, leaderLines = false, minLabelPct = 2,
 }) {
   const { theme } = useTheme()
   const PALETTE = categoricalFor(theme)
   const key = metric === 'value' ? 'value' : 'qty'
   const total = data.reduce((a, b) => a + b[key], 0)
-  const h = height ?? (wide ? 300 : 250)
+  const h = height ?? (leaderLines ? (wide ? 360 : 330) : wide ? 300 : 250)
+  const boxRef = useRef(null)
+  const boxWidth = useElementWidth(boxRef, leaderLines)
+  // Leader labels need horizontal room on both flanks, so the ring is sized from the
+  // container rather than fixed: a 126px radius that fits a desktop card would push
+  // its own labels off the edge of a phone. LABEL_COLS is the room both columns need
+  // (elbow + stub + roughly ten characters of text).
+  const LABEL_COLS = 240
+  // Below this there is no arrangement that fits a readable ring between two columns
+  // of text, so the donut falls back to the legend rather than clipping its own
+  // labels at the card edge. boxWidth is 0 only on the very first layout pass, before
+  // paint (see useElementWidth), so this never flashes between the two modes.
+  const LEADER_MIN_WIDTH = 460
+  // Measured on the OUTER wrapper, never on .donut-chart: the `leader` class changes
+  // .donut-chart's own max-width, so deciding the mode from that element's width
+  // would latch — once it fell back to the legend the narrower box would keep the
+  // condition false even on a wide screen, and it could never return.
+  const useLeaders = leaderLines && (boxWidth === 0 || boxWidth >= LEADER_MIN_WIDTH)
+  // Mirrors the .donut-wrap.leader .donut-chart cap in the stylesheet.
+  const chartWidth = Math.min(boxWidth, 780)
+  const rOuter = useLeaders
+    ? Math.max(60, Math.min(wide ? 126 : 88, Math.round((chartWidth - LABEL_COLS) / 2)))
+    : outerRadius
+  const rInner = useLeaders ? Math.max(28, rOuter - 42) : innerRadius
+  const label = useLeaders ? makeLeaderLabel({ data, key, palette: PALETTE, height: h, minPct: minLabelPct }) : null
   return (
-    <div className={wide ? 'donut-wrap wide' : 'donut-wrap'}>
+    <div className={`${wide ? 'donut-wrap wide' : 'donut-wrap'}${useLeaders ? ' leader' : ''}`} ref={boxRef}>
       <div className="donut-chart">
         <ResponsiveContainer width="100%" height={h}>
           <PieChart>
@@ -154,7 +303,18 @@ export function DistributionDonut({
                 zero sweep, and Sector renders nothing when startAngle === endAngle. If
                 the Pie mounts while its flex parent still measures 0px wide, that
                 opening frame is the one that sticks and the donut never appears. */}
-            <Pie data={data} dataKey={key} nameKey="name" innerRadius={innerRadius} outerRadius={outerRadius} paddingAngle={2} stroke="var(--surface)" strokeWidth={3} cornerRadius={4} isAnimationActive={false}>
+            <Pie
+              data={data} dataKey={key} nameKey="name" innerRadius={rInner} outerRadius={rOuter}
+              /* Fixed angles + no padding angle in leader mode: makeLeaderLabel derives
+                 each slice's mid-angle itself, and a padding angle would shift every
+                 sector out from under its own label. */
+              startAngle={useLeaders ? 90 : 0} endAngle={useLeaders ? -270 : 360}
+              paddingAngle={useLeaders ? 0 : 2}
+              stroke="var(--surface)" strokeWidth={useLeaders ? 2 : 3}
+              cornerRadius={useLeaders ? 0 : 4}
+              label={label || undefined} labelLine={false}
+              isAnimationActive={false}
+            >
               {data.map((_, i) => <Cell key={i} fill={`url(#pieGrad-${i % PALETTE.length})`} />)}
             </Pie>
             <Tooltip
@@ -177,7 +337,15 @@ export function DistributionDonut({
           <span className="donut-center-val tabular">{metric === 'value' ? `₱${compact(total)}` : compact(total)}</span>
         </div>
       </div>
-      {!hideLegend && (
+      {/* In leader mode the labels ARE the legend, so the colour key is dropped. The
+          only thing still worth printing is how many slices were too thin to label —
+          otherwise their absence reads as data that failed to load. */}
+      {useLeaders && label?.hiddenCount > 0 && (
+        <div className="donut-note faint">
+          {label.hiddenCount} slice{label.hiddenCount === 1 ? '' : 's'} under {minLabelPct}% left unlabelled — hover the ring to read them
+        </div>
+      )}
+      {!useLeaders && !hideLegend && (
         <div className="chart-legend legend-list donut-legend">
           {data.map((d, i) => (
             <div key={d.name} className="cl-item" title={d.name}>
@@ -339,5 +507,194 @@ export function HBar({ data, color = BRAND.graySoft, money }) {
         </Bar>
       </BarChart>
     </ResponsiveContainer>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// ABC (Pareto) curve. x = share of stocked lines, ranked most valuable first;
+// y = the share of total value those lines account for. The classic "does 20% of
+// our lines really carry 80% of the money" picture, drawn from the actual rows
+// rather than assumed. The shaded columns are the A/B/C class boundaries and the
+// dashed rules are the 80% / 95% value cut-offs those classes are defined by.
+export function ParetoCurve({ curve, bands, height = 300 }) {
+  const { theme } = useTheme()
+  const S = seriesFor(theme)
+  const BAND_FILL = { A: S.total, B: S.damaged, C: S.neutral }
+  // Class boundaries expressed on the x scale (cumulative share of lines).
+  let acc = 0
+  const spans = bands.map((b) => {
+    const from = acc
+    acc += b.countShare
+    return { cls: b.cls, from, to: acc }
+  })
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <ComposedChart data={curve} margin={{ top: 12, right: 16, bottom: 24, left: 8 }}>
+        <defs>
+          <linearGradient id="gradPareto" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={S.total} stopOpacity={0.42} />
+            <stop offset="100%" stopColor={S.total} stopOpacity={0.04} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} stroke={gridColor} strokeDasharray="3 3" />
+        {spans.map((s) => (
+          <ReferenceArea key={s.cls} x1={s.from} x2={s.to} fill={BAND_FILL[s.cls]} fillOpacity={0.07} stroke="none"
+            label={{ value: s.cls, position: 'insideTop', fontSize: 12, fontWeight: 800, fill: BAND_FILL[s.cls] }} />
+        ))}
+        <XAxis type="number" dataKey="x" domain={[0, 100]} tick={axis} tickLine={false} axisLine={{ stroke: gridColor }}
+          tickFormatter={(v) => `${Math.round(v)}%`}
+          label={{ value: 'Share of stocked lines', position: 'insideBottom', offset: -14, fontSize: 11, fontWeight: 600, fill: 'var(--text-faint)' }} />
+        <YAxis domain={[0, 100]} tick={axis} tickLine={false} axisLine={false} width={44} tickFormatter={(v) => `${v}%`} />
+        <ReferenceLine y={80} stroke={S.total} strokeDasharray="5 4" strokeWidth={1.4} />
+        <ReferenceLine y={95} stroke={S.damaged} strokeDasharray="5 4" strokeWidth={1.4} />
+        <Tooltip
+          content={({ active, payload }) =>
+            active && payload?.length ? (
+              <Box>
+                <div style={{ fontWeight: 700 }}>Class {payload[0].payload.cls}</div>
+                <div>Top {payload[0].payload.x.toFixed(1)}% of lines</div>
+                <div className="muted">carry {payload[0].payload.y.toFixed(1)}% of value</div>
+              </Box>
+            ) : null
+          }
+        />
+        <Area type="monotone" dataKey="y" stroke={S.total} strokeWidth={2.4} fill="url(#gradPareto)" dot={false} isAnimationActive={false} />
+      </ComposedChart>
+    </ResponsiveContainer>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Aging bars — value (or line count) held in each days-since-last-movement band.
+// The ramp runs deliberately from the "available" green through the warning yellow
+// to brand red, so age reads as escalating risk without needing the legend.
+export function AgingBars({ bands, metric = 'value', height = 280, onPick }) {
+  const { theme } = useTheme()
+  const S = seriesFor(theme)
+  const RAMP = [S.available, S.available, S.damaged, S.damaged, S.outgoing, S.total]
+  const key = metric === 'value' ? 'value' : 'count'
+  const fmtV = metric === 'value' ? (v) => `₱${compact(v)}` : compact
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={bands} margin={{ top: 24, right: 16, bottom: 16, left: 8 }} barCategoryGap="22%">
+        <defs>{paletteStops('ageGrad', RAMP, theme === 'dark')}</defs>
+        <CartesianGrid vertical={false} stroke={gridColor} strokeDasharray="3 3" />
+        <XAxis dataKey="label" tick={<BarTick />} tickLine={false} axisLine={{ stroke: gridColor }} interval={0} height={34} />
+        <YAxis tick={axis} tickLine={false} axisLine={false} tickFormatter={fmtV} width={56} />
+        <Tooltip
+          cursor={{ fill: 'var(--surface-2)', radius: 6 }}
+          content={({ active, payload }) => {
+            if (!active || !payload?.length) return null
+            const d = payload[0].payload
+            return (
+              <Box>
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>{d.label}</div>
+                <div>{num(d.count)} line{d.count === 1 ? '' : 's'} · {num(d.qty)} units</div>
+                <div className="muted">{peso(d.value)} · {d.valueShare.toFixed(1)}% of value</div>
+                <div className="faint" style={{ fontSize: 11, marginTop: 3 }}>{d.note}</div>
+              </Box>
+            )
+          }}
+        />
+        <Bar dataKey={key} radius={[8, 8, 0, 0]} maxBarSize={72} isAnimationActive={false}
+          cursor={onPick ? 'pointer' : undefined} onClick={onPick ? (d) => onPick(d.payload) : undefined}>
+          {bands.map((_, i) => <Cell key={i} fill={`url(#ageGrad-${i % RAMP.length})`} />)}
+          <LabelList dataKey={key} position="top" formatter={fmtV} style={{ fontSize: 11, fontWeight: 800, fill: 'var(--text)' }} />
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Net inventory change — recorded receipts less recorded issues, per period, with
+// the running total across the window on the right-hand scale.
+//
+// Bars are signed: a period that received more than it released sits above the zero
+// rule in the Incoming colour, one that released more sits below it in the Outgoing
+// colour. Periods the ledger does not cover are drawn hollow rather than as a
+// confident zero — "we have no record" and "nothing moved" are different statements.
+export function NetChangeChart({ data, metric = 'qty', height = 320 }) {
+  const { theme } = useTheme()
+  const M = movementFor(theme)
+  const S = seriesFor(theme)
+  const key = metric === 'value' ? 'netValue' : 'net'
+  const cumKey = metric === 'value' ? 'cumulativeValue' : 'cumulative'
+  const fmtV = metric === 'value' ? (v) => `₱${compact(v)}` : compact
+
+  // An uncovered bucket has a net of zero, and a zero-height bar draws nothing — so
+  // "we hold no record of this period" and "this period was perfectly balanced" would
+  // look identical. The uncovered stretches are shaded instead, which is visible
+  // regardless of bar height. Runs rather than one span: the ledger window is
+  // contiguous, so what falls outside it is a leading and/or trailing stretch, and a
+  // single span across both would wrongly grey out the covered middle.
+  const uncoveredRuns = []
+  data.forEach((d, i) => {
+    if (d.covered) return
+    const last = uncoveredRuns[uncoveredRuns.length - 1]
+    if (last && last.endIdx === i - 1) { last.endIdx = i; last.to = d.label }
+    else uncoveredRuns.push({ from: d.label, to: d.label, endIdx: i })
+  })
+  const anyUncovered = uncoveredRuns.length > 0
+
+  return (
+    <div className="movement-wrap">
+      <div className="movement-chart">
+        <ResponsiveContainer width="100%" height={height}>
+          <ComposedChart data={data} margin={{ top: 12, right: 12, bottom: 4, left: 4 }}>
+            <CartesianGrid vertical={false} stroke={gridColor} strokeDasharray="3 3" />
+            <XAxis dataKey="label" tick={axis} tickLine={false} axisLine={{ stroke: gridColor }} />
+            <YAxis yAxisId="left" tick={axis} tickLine={false} axisLine={false} tickFormatter={fmtV} width={56} />
+            <YAxis yAxisId="right" orientation="right" tick={axis} tickLine={false} axisLine={false} tickFormatter={fmtV} width={56} />
+            {uncoveredRuns.map((r) => (
+              <ReferenceArea key={r.from} yAxisId="left" x1={r.from} x2={r.to}
+                fill="var(--text-faint)" fillOpacity={0.1} stroke="var(--border-strong)" strokeDasharray="4 3"
+                label={{ value: 'no ledger record', position: 'insideTop', fontSize: 10, fontWeight: 700, fill: 'var(--text-faint)' }} />
+            ))}
+            <ReferenceLine yAxisId="left" y={0} stroke="var(--border-strong)" strokeWidth={1.4} />
+            <Tooltip
+              cursor={{ fill: 'var(--surface-2)' }}
+              content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null
+                const d = payload[0].payload
+                if (!d.covered) {
+                  return <Box><div style={{ fontWeight: 700 }}>{label}</div><div className="muted">Outside the recorded ledger window — no data</div></Box>
+                }
+                const net = metric === 'value' ? d.netValue : d.net
+                return (
+                  <Box>
+                    <div style={{ fontWeight: 700, marginBottom: 4 }}>{label}</div>
+                    <div style={{ color: M.incoming }}>Received: {metric === 'value' ? peso(d.incomingValue) : num(d.incoming)}</div>
+                    <div style={{ color: M.outgoing }}>Issued: {metric === 'value' ? peso(d.outgoingValue) : num(d.outgoing)}</div>
+                    <div style={{ fontWeight: 700, marginTop: 3 }}>Net: {net >= 0 ? '+' : ''}{metric === 'value' ? peso(net) : num(net)}</div>
+                    <div className="faint" style={{ fontSize: 11 }}>Running: {metric === 'value' ? peso(d.cumulativeValue) : num(d.cumulative)}</div>
+                  </Box>
+                )
+              }}
+            />
+            <Bar yAxisId="left" dataKey={key} radius={[5, 5, 0, 0]} maxBarSize={54} isAnimationActive={false}>
+              {data.map((d, i) => (
+                <Cell key={i}
+                  fill={!d.covered ? 'transparent' : (d[key] >= 0 ? M.incoming : M.outgoing)}
+                  stroke={!d.covered ? 'var(--border-strong)' : 'none'}
+                  strokeDasharray={!d.covered ? '4 3' : undefined} />
+              ))}
+            </Bar>
+            <Line yAxisId="right" type="monotone" dataKey={cumKey} stroke={S.total} strokeWidth={2.5}
+              dot={{ r: 3, fill: S.total }} activeDot={{ r: 5 }} isAnimationActive={false} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="chart-legend legend-grid2">
+        <span className="cl-item"><LegendSwatch kind="bar" color={M.incoming} /><span className="cl-label">Net gain (received &gt; issued)</span></span>
+        <span className="cl-item"><LegendSwatch kind="bar" color={M.outgoing} /><span className="cl-label">Net draw (issued &gt; received)</span></span>
+        <span className="cl-item"><LegendSwatch kind="line" color={S.total} /><span className="cl-label">Running total</span></span>
+        {anyUncovered && (
+          <span className="cl-item"><LegendSwatch kind="dashed" color="var(--border-strong)" /><span className="cl-label">No ledger coverage</span></span>
+        )}
+      </div>
+    </div>
   )
 }

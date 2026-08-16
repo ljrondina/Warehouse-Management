@@ -27,14 +27,18 @@ export default function Tour() {
   // On step change: navigate, scroll the target into view once, then measure.
   useEffect(() => {
     if (!active || !current) return
-    if (current.route && location.pathname !== current.route) navigate(current.route)
+    // Compared against pathname + search, not pathname alone: two steps can share a
+    // route and differ only by ?view=, and comparing paths would leave the second one
+    // pointing at a card the previous view never mounted.
+    const want = current.route ? `${current.route}${current.search || ''}` : null
+    if (want && `${location.pathname}${location.search}` !== want) navigate(want, { replace: true })
     const t = setTimeout(() => {
       const el = document.querySelector(`[data-tour="${current.key}"]`)
       if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' })
       setTimeout(measure, 260)
     }, 380)
     return () => clearTimeout(t)
-  }, [active, step, current, location.pathname, navigate, measure])
+  }, [active, step, current, location.pathname, location.search, navigate, measure])
 
   useLayoutEffect(() => {
     if (!active) return

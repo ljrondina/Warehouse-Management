@@ -311,3 +311,96 @@ value trend, availability and non-moving value all matched hand-computed expecta
 **Mock data remaining in the app after this session:** the Available/Reserved split in
 Movement History (modelled — no reservation history exists) and the high-value secure
 cage assignment (top 36 by line value, assigned in code, not a real location).
+
+### 2026-08-16 — Session: Inventory module UI revamp (sub-views, composition, donut)
+
+Three changes to the Inventory dashboard, plus the data functions they needed.
+
+**1. The six quantity KPI cards are gone; their figures live in the composition card.**
+`src/components/InventoryComposition.jsx` (new) replaces `StockBattery.jsx` (deleted —
+it had no other caller). The gauge still shows the Available/Reserved split of stock on
+hand; beside it sit six tiles — Total, Available, Reserved, Incoming, Outgoing, Damaged
+— each with its role colour and icon, a hover description, and a click that opens the
+existing `KpiListModal` drawer filtered to that column. `COMPOSITION_STATS` in that file
+is the single definition of the six (field, role, icon, tooltip); `InventoryTab` no
+longer carries its own `QTY_CARDS`.
+
+**2. The distribution donut labels its slices in place.** `DistributionDonut` takes
+`leaderLines`; the legend is dropped and each slice gets a leader line to its name and
+percentage. Recharts' own `label`/`labelLine` places labels independently and they
+collide on a 9-slice donut, so `makeLeaderLabel` lays them out as a whole: mid-angles
+computed up front, split into left/right columns, spread to a 15px minimum and clamped
+to the chart box. That requires deterministic geometry, hence the fixed
+`startAngle={90} endAngle={-270}` and `paddingAngle={0}` in leader mode — a padding
+angle makes recharts redistribute the sweep and every label drifts off its slice.
+Slices under 2% are left unlabelled with a note saying how many (an unlabelled slice
+must not read as missing data).
+
+Two layout traps found while verifying and fixed:
+- The ring is sized from the measured container (`useElementWidth`), not a constant: a
+  126px radius that fits a desktop card pushes its labels off a phone screen. Below
+  460px the donut falls back to the legend entirely.
+- That measurement reads the OUTER `.donut-wrap`, never `.donut-chart`. The `leader`
+  class changes `.donut-chart`'s max-width, so measuring it latched: once it fell back
+  to the legend the narrower box kept the condition false and it could never return.
+- `.donut-wrap.wide` now stacks under 900px. The Inventory donut asks for `wide` at
+  every size, and the old rigid `flex: 0 0 360px` overflowed its own card on a phone.
+
+**3. The tab is split into Overview / Insights / Activity**, held in `?view=` so each is
+linkable and Back works between them. `Dashboard.selectTab` clears `?view` when leaving
+Inventory. Order within each view puts visualisations before lists.
+- *Overview* — the three value KPIs, then Inventory Composition, then Distribution.
+- *Insights* — ABC analysis and Aging analysis (both follow the filter bar), then the
+  five ranked lists (whole warehouse, unfiltered — labelled as such, since mixing the
+  two behaviours silently was the confusing part).
+- *Activity* — a totals strip, Movement History, Net Inventory Change, then Top
+  Incoming / Top Outgoing.
+
+**New in `src/data/insights.js`, all derived from Postgres rows:**
+- `abcAnalysis(pool)` — Pareto by line value. Class boundaries use the cumulative share
+  *before* the line is added, so the line straddling 80% lands in A and class A is
+  guaranteed to cover ≥80% of value. Lines with no price are excluded, not dumped in C:
+  a zero there means "no price recorded", not "cheap". Returns the per-line curve.
+- `agingAnalysis(pool)` — six bands over `lastMovementOffset`, a real column, so aging
+  works for lines the ledger window never reaches. Surfaces the over-90-day value.
+- `ledgerActivity(pool, granularity)` — RECORDED movement only, deliberately unlike
+  `movementCombinedSeries`, which projects pre-ledger buckets so its stock curve does
+  not draw a cliff. Buckets outside the recorded window report zero and carry
+  `covered: false`.
+
+**New charts** in `charts.jsx`: `ParetoCurve`, `AgingBars`, `NetChangeChart`.
+`NetChangeChart` shades uncovered stretches and prints "no ledger record" over them —
+an uncovered bucket has a net of zero, and a zero-height hollow bar draws nothing, so
+"we have no record" and "nothing moved" would have looked identical. The shading is
+computed as contiguous runs rather than one span: the ledger window is contiguous, so
+what falls outside it is a leading and/or trailing stretch, and one span across both
+would have wrongly greyed out the covered middle.
+
+**Supporting changes:** `Card` now forwards unrecognised props to its root element, so
+`data-tour` anchors attach without a wrapper div that would break grid row sizing.
+`NoData` (in `InventoryTab`) is used wherever a source is genuinely absent, instead of
+an empty chart that reads as "all zeroes". The guided tour gained `search` on a step,
+`Tour.jsx` compares pathname+search rather than pathname alone, and the steps were
+rewritten for the new structure (two new steps: the sub-views, and Activity).
+
+**Verified in a browser against a temporary local fixture** (240 lines, 700 ledger rows;
+the fixture and its `main.jsx` hook were deleted afterwards — the dev machine has no
+Supabase session, so the dashboard would otherwise render empty):
+- ABC returned A 80.14% / B 14.98% / C 4.88% of value with all 240 lines classified —
+  the ≥80% guarantee holds. Aging bucketed all 240 with none missing.
+- Donut: 9 slices, 9 labels, minimum column gap 42.5px, nothing clipped at 1440px;
+  clean fallback to the legend at 478px; no horizontal scroll at 375px.
+- Clicking the Reserved tile opened the drawer with 232 materials.
+- Year granularity marked 2022–2025 uncovered and shaded them; month granularity
+  correctly treated a partially-overlapping February as covered.
+- `abcAnalysis([])`, `agingAnalysis([])`, an unpriced-only pool and a pool with no
+  movement dates all return `null`; `ledgerActivity([])` reports `hasLedger: false` —
+  these are what drive the NoData panels.
+- Dark mode renders all three new charts; Analytics and the Safekeeping donut (legend
+  mode) are unaffected.
+
+`npm run build` passes.
+
+**Mock data remaining in the app after this session:** unchanged — the Available/Reserved
+split inside Movement History (modelled; no reservation history exists) and the
+high-value secure cage assignment on the floor plan.

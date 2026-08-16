@@ -1569,3 +1569,143 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   .filters .field { min-width: 100%; }
   .hero-stats { gap: 16px; }
 }
+
+/* ==========================================================================
+   Inventory module revamp — sub-views, consolidated composition card,
+   leader-line donut, ABC / aging / activity cards.
+   ========================================================================== */
+
+/* ---------- Sub-tabs (Overview / Insights / Activity) ----------
+   Pills rather than the underline used by .dash-tab one level up: two underline
+   strips stacked would read as one confused tab bar with no clear hierarchy. */
+.sub-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.sub-tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 14px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); color: var(--text-muted);
+  font-family: var(--font-head); font-size: 12.5px; font-weight: 600;
+  cursor: pointer; transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.sub-tab svg { color: var(--text-faint); transition: color 0.15s; }
+.sub-tab:hover { color: var(--text); background: var(--surface-2); }
+.sub-tab.active { color: #fff; background: var(--brand-red); border-color: var(--brand-red); font-weight: 700; }
+.sub-tab.active svg { color: #fff; }
+
+/* A quieter heading used inside a view to separate two groups of cards. */
+.section-sub {
+  font-family: var(--font-head); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.6px; text-transform: uppercase; color: var(--text-faint);
+}
+
+/* Explicit three-up row for the value KPIs now that the quantity cards have moved
+   inside the composition card. */
+.kpi-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* ---------- Inventory Composition (gauge + the six quantity tiles) ---------- */
+.comp-wrap { display: flex; align-items: stretch; gap: 22px; flex-wrap: wrap; }
+.comp-gauge { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; }
+/* The tiles take the rest of the row and wrap to two columns before they get narrow
+   enough to truncate a figure. */
+.comp-stats { flex: 1 1 420px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-content: center; }
+.comp-stat {
+  position: relative; display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 11px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface-2); cursor: pointer; min-width: 0;
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+}
+.comp-stat:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--cs-color); z-index: 20; }
+.comp-stat:focus-visible { outline: 2px solid var(--cs-color); outline-offset: 2px; }
+.cs-icon {
+  width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0;
+  color: var(--cs-color); background: color-mix(in srgb, var(--cs-color) 14%, transparent);
+}
+.cs-body { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.cs-val { font-size: 17px; font-weight: 800; letter-spacing: -0.3px; color: var(--text); }
+.cs-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-unit { margin-left: auto; font-size: 10px; font-weight: 600; color: var(--text-faint); flex-shrink: 0; }
+
+/* Hover description. A real element rather than a title attribute so it can carry a
+   full sentence and appear immediately instead of after the browser's own delay. */
+.comp-tip {
+  position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translate(-50%, 4px);
+  width: max(220px, 100%); max-width: 300px; padding: 9px 11px; z-index: 40;
+  background: var(--surface); color: var(--text-muted); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); box-shadow: var(--shadow-lg);
+  font-size: 11.5px; font-weight: 500; line-height: 1.45; text-align: left;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 0.14s, transform 0.14s, visibility 0.14s;
+}
+.comp-tip em { display: block; margin-top: 5px; font-style: normal; font-weight: 700; color: var(--cs-color); }
+.comp-stat:hover .comp-tip, .comp-stat:focus-visible .comp-tip { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+
+/* ---------- Leader-line donut ----------
+   No legend in this mode, so the ring gets the whole card width and the labels have
+   room on both flanks. */
+.donut-wrap.leader { flex-direction: column; gap: 6px; }
+/* Capped and centred: with no legend to fill the other half, an uncapped ring on a
+   very wide monitor leaves the labels stranded far from their slices. */
+.donut-wrap.leader .donut-chart { max-width: 780px; margin: 0 auto; flex: 1 1 auto; }
+
+/* The Inventory donut now asks for `wide` at every screen size (it is a full-width
+   card), so the side-by-side layout has to be able to give up and stack. Without
+   this the 360px fixed basis stays rigid and overflows its own card on a phone. */
+@media (max-width: 900px) {
+  .donut-wrap.wide { flex-direction: column; gap: 12px; }
+  .donut-wrap.wide .donut-chart { flex: 0 1 auto; max-width: 100%; }
+  .donut-wrap.wide .donut-legend { max-width: 100%; }
+}
+.donut-note { font-size: 11px; text-align: center; }
+
+/* ---------- Explicit "no data" panel ----------
+   Used wherever a chart's source is genuinely absent. Deliberately louder than the
+   plain .empty state: a blank chart reads as "all zeroes", which is a different and
+   much more misleading claim than "we have no record". */
+.nodata {
+  display: flex; align-items: flex-start; gap: 12px; padding: 18px;
+  border: 1px dashed var(--border-strong); border-radius: var(--radius-sm);
+  background: var(--surface-2); color: var(--text-muted);
+}
+.nodata > svg { color: var(--brand-red); flex-shrink: 0; margin-top: 1px; }
+.nodata b { display: block; color: var(--text); font-size: 13.5px; margin-bottom: 3px; }
+.nodata span { font-size: 12.5px; line-height: 1.5; }
+
+/* Footnote under a card's chart, for exclusions the reader has to know about. */
+.card-note { margin-top: 10px; font-size: 11.5px; line-height: 1.45; }
+
+/* ---------- ABC / aging class summary rows ---------- */
+.band-rows { margin-top: 12px; border-top: 1px solid var(--border); }
+.band-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.band-row:last-child { border-bottom: none; }
+.band-tag {
+  width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0;
+  font-weight: 800; font-size: 12px; color: var(--band);
+  background: color-mix(in srgb, var(--band) 14%, transparent);
+}
+.band-main { min-width: 0; flex: 1; }
+.band-t { font-size: 12.5px; font-weight: 600; }
+.band-s { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.band-v { font-weight: 700; font-size: 13px; }
+.band-u { font-size: 11px; }
+
+/* ---------- Activity summary strip ---------- */
+.activity-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.as-item {
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  padding: 11px 13px; border: 1px solid var(--border); border-left: 3px solid var(--as);
+  border-radius: var(--radius-sm); background: var(--surface);
+}
+.as-item > svg { color: var(--as); flex-shrink: 0; }
+.as-item > div { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.as-val { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
+.as-lbl { font-size: 10.5px; font-weight: 600; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 1100px) {
+  .comp-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .activity-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .kpi-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .comp-wrap { gap: 16px; }
+  .comp-stats { flex-basis: 100%; }
+  .comp-tip { width: 240px; }
+}
