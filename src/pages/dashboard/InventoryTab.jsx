@@ -264,13 +264,11 @@ export default function InventoryTab({ pool, qtyUnit }) {
               InventoryComposition. Each tile hovers for a description and clicks
               through to the material list behind it. */}
           <Card title="Inventory Composition" icon="box" className="composition-card" data-tour="kpis"
-            sub="Stock on hand split into available and reserved, with what is in transit either way. Hover a tile for its definition; click to list the materials."
             right={<Segmented size="sm" options={metricOpts} value={compMetric} onChange={setCompMetric} />}>
             <InventoryComposition k={k} unit={qtyUnit} metric={compMetric} series={S} onPick={setKpiModal} />
           </Card>
 
           <Card title="Inventory Distribution" icon="reports" className="distribution-card" data-tour="charts"
-            sub="Share of the current selection held in each trade or item group."
             right={
               <div className="chart-controls">
                 <Segmented size="sm" options={scopeOpts} value={donutScope} onChange={setDonutScope} />
@@ -288,8 +286,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
       {view === 'insights' && (
         <div className="mt" data-tour="insights">
           <div className="grid grid-2">
-            <Card title="ABC Analysis" icon="analytics"
-              sub="Lines ranked by value, most valuable first — the current selection.">
+            <Card title="ABC Analysis" icon="analytics">
               {!abc
                 ? <NoData what="No valued inventory" why="Every line in the current selection has a zero or missing unit price, so value cannot be ranked." />
                 : (
@@ -318,7 +315,6 @@ export default function InventoryTab({ pool, qtyUnit }) {
             </Card>
 
             <Card title="Aging Analysis" icon="clock"
-              sub="Days since each line last moved — the current selection."
               right={<Segmented size="sm" options={metricOpts} value={agingMetric} onChange={setAgingMetric} />}>
               {!aging
                 ? <NoData what="No movement dates" why="No line in the current selection carries a last-movement date, so age cannot be computed." />
@@ -348,7 +344,9 @@ export default function InventoryTab({ pool, qtyUnit }) {
 
           {/* Ranked lists read the FULL warehouse, not the filtered pool, so they stay
               a stable reference while the filter bar drives the analyses above. */}
-          <div className="section-sub mt">Ranked materials · whole warehouse, not affected by the filter</div>
+          {/* Kept because it states a real behavioural difference — the lists below
+              ignore the filter bar while the two analyses above follow it. */}
+          <div className="section-sub mt">Ranked materials · whole warehouse, unfiltered</div>
 
           <div className="grid grid-2 insight-grid mt-sm">
             <Card title="High Stock Items" icon="box" iconColor={S.total}
@@ -418,16 +416,19 @@ export default function InventoryTab({ pool, qtyUnit }) {
               </div>
 
               <Card title="Movement History" icon="trend" className="movement-card mt"
-                sub="Recorded receipts and issues, with stock on hand back-cast from them. The available/reserved split is modelled — the source sheets carry no reservation history."
                 right={<Segmented size="sm" options={periodOpts} value={period} onChange={setPeriod} />}>
                 {/* Always `wide`: the card spans the page, so the legend belongs in a
-                    column beside the chart rather than in a strip underneath it. The
-                    expand toggle that used to switch between the two is gone. */}
+                    column beside the chart rather than in a strip underneath it. */}
                 <MovementComposed data={movementData} wide />
+                {/* The one caveat on this chart that a reader cannot infer from it.
+                    It sits under the chart as a footnote rather than in the card head,
+                    where a paragraph of explanatory text crowded out the title. */}
+                <div className="card-note faint">
+                  Available/reserved split is modelled — the source sheets carry no reservation history.
+                </div>
               </Card>
 
               <Card title="Net Inventory Change" icon="analytics" className="mt"
-                sub="Recorded receipts less recorded issues per period, with the running total. Nothing here is projected — periods the ledger does not cover are drawn hollow."
                 right={<Segmented size="sm" options={metricOpts} value={flowMetric} onChange={setFlowMetric} />}>
                 {activity.coveredBuckets === 0
                   ? <NoData what="No coverage in this period" why={`The ledger's newest movement is ${num(activity.ledgerLagDays)} days old, so none of the ${period} buckets shown fall inside it. Try a wider granularity.`} />
@@ -436,12 +437,10 @@ export default function InventoryTab({ pool, qtyUnit }) {
 
               <div className="grid grid-2 insight-grid mt">
                 <Card title="Top Incoming Items" icon="incoming" iconColor={S.incoming}
-                  sub="Most received over the recorded window"
                   right={<Segmented size="sm" options={metricOpts} value={flowMetric} onChange={setFlowMetric} />}>
                   <FlowList rows={activity.topIncoming} tone={S.incoming} metric={flowMetric} />
                 </Card>
-                <Card title="Top Outgoing Items" icon="outgoing" iconColor={S.outgoing}
-                  sub="Most issued over the recorded window">
+                <Card title="Top Outgoing Items" icon="outgoing" iconColor={S.outgoing}>
                   <FlowList rows={activity.topOutgoing} tone={S.outgoing} metric={flowMetric} />
                 </Card>
               </div>

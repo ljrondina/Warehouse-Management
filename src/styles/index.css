@@ -1615,7 +1615,7 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .comp-gauge { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; }
 /* The tiles take the rest of the row and wrap to two columns before they get narrow
    enough to truncate a figure. */
-.comp-stats { flex: 1 1 420px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-content: center; }
+.comp-stats { flex: 1 1 320px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-content: center; }
 .comp-stat {
   position: relative; display: flex; align-items: center; gap: 10px; text-align: left;
   padding: 11px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -1625,13 +1625,14 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .comp-stat:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--cs-color); z-index: 20; }
 .comp-stat:focus-visible { outline: 2px solid var(--cs-color); outline-offset: 2px; }
 .cs-icon {
-  width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0;
+  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0;
   color: var(--cs-color); background: color-mix(in srgb, var(--cs-color) 14%, transparent);
 }
 .cs-body { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
 .cs-val { font-size: 17px; font-weight: 800; letter-spacing: -0.3px; color: var(--text); }
-.cs-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cs-unit { margin-left: auto; font-size: 10px; font-weight: 600; color: var(--text-faint); flex-shrink: 0; }
+/* The label is the part allowed to truncate — the figure never is, so it comes first
+   in the box and the label takes whatever width is left. */
+.cs-lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Hover description. A real element rather than a title attribute so it can carry a
    full sentence and appear immediately instead of after the browser's own delay. */
@@ -1730,7 +1731,26 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    the donut under its own leader-label minimum and bounce it into legend mode. */
 .overview-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
 @media (min-width: 1200px) {
-  .overview-grid { grid-template-columns: minmax(420px, 0.85fr) minmax(560px, 1.15fr); }
+  .overview-grid { grid-template-columns: minmax(400px, 0.8fr) minmax(600px, 1.2fr); }
+
+  /* In the two-column Overview the composition card is roughly half a screen wide —
+     not enough for the gauge and a three-across tile grid to sit side by side. Left
+     as a plain flex row they wrapped, stranding the gauge alone in a 230px column
+     with a third of the card empty beside it and making the card 80px taller than
+     the donut next to it.
+     So at this width the card lays out top-to-bottom instead: a horizontal gauge band
+     (tube beside its headline, which is where the headline reads best anyway) with the
+     six tiles in a full-width row of three underneath. */
+  .overview-grid .comp-wrap { flex-direction: column; align-items: stretch; gap: 18px; flex-wrap: nowrap; }
+  .overview-grid .comp-gauge { flex-direction: row; align-items: center; gap: 22px; }
+  .overview-grid .comp-gauge .battery-tube { width: 84px; height: 168px; }
+  .overview-grid .comp-headline { margin-top: 0; text-align: left; max-width: none; }
+  .overview-grid .comp-headline .ch-figure,
+  .overview-grid .comp-headline .ch-split { justify-content: flex-start; }
+  /* auto-fit rather than a fixed three: the composition column is ~490px at 1440 and
+     ~430px at 1280, which is three tiles at one width and two at the other. A hard
+     count truncates the longest label on the narrower screen. */
+  .overview-grid .comp-stats { flex: 0 0 auto; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 }
 .overview-grid > .card { min-width: 0; }
 .composition-card, .distribution-card { display: flex; flex-direction: column; }

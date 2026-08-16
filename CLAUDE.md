@@ -533,3 +533,56 @@ therefore measured with transitions disabled; the end states are correct, but th
 open/close animation itself was not observed.
 
 `npm run build` passes.
+
+### 2026-08-16 — Session: strip card sub-headers, fix the Overview desktop layout
+
+**1. Descriptive card sub-headers removed app-wide.** Every `sub=` that restated what a
+card showed or explained how to use it is gone — the seven on the Inventory tab, the
+Delivery Tracker's, and MaterialProfile's "Repository". Card heads now carry a title,
+an icon and their controls, nothing else.
+
+Two of them were not descriptions but data caveats, so those moved under their chart as
+a `.card-note` footnote rather than being deleted: Movement History's "available/reserved
+split is modelled" and Analytics' "back-cast from the ledger" on both trend charts. The
+`sub` props that survive are counts, not prose — MaterialProfile's "12 transactions",
+Settings' "7 trades" — which are data the header is the right place for.
+
+**2. Analytics' Trade Distribution now uses leader lines.** It was the last donut still
+drawing the old colour-key legend, which is what "the distribution chart still uses the
+old legend style" was pointing at — the Inventory Overview donut was already in leader
+mode at every desktop width I could measure (verified again this session at 1280, 1440
+and 1920). The Safekeeping donut deliberately keeps `hideLegend` and no leader lines: it
+is paired with a ranked list of the same breakdown, so labelling the ring too would
+print every category twice.
+
+**3. The Overview desktop layout was genuinely broken, and this was the mess.** In the
+two-column grid the composition card is ~490px wide, and `.comp-wrap` was a plain flex
+row with the tile grid at `flex-basis: 420px`. Gauge (230px) plus tiles (420px) does not
+fit 490px, so the tiles wrapped BELOW the gauge — leaving the gauge stranded in a 230px
+column with a third of the card empty beside it, and the card 80px taller than the donut
+it sits next to (531px vs 448px).
+
+Above 1200px the card now lays out top-to-bottom instead: a horizontal gauge band (tube
+beside the headline, which is where the headline reads best anyway) with the six tiles
+in a full-width row underneath. Card heights are now 395 vs 448 at 1440px and 461 vs 448
+at 1280px.
+
+The tile grid uses `repeat(auto-fit, minmax(150px, 1fr))` rather than a fixed three
+columns: the composition column is three tiles wide at 1440 and two at 1280, and forcing
+three truncated the longest label on the narrower screen.
+
+**4. The per-tile unit chip is gone.** Printing "units" six times down the card cost the
+figures the width they needed — at three-across every tile truncated both its value and
+its label. The headline beside the gauge already names the unit once, the card's own
+Quantity/Value toggle says which metric is showing, and each tile's title attribute
+still carries the exact figure with its unit. "Total Inventory" was also renamed **Total
+on Hand** — more accurate for what it counts, and the one label short enough to fit a
+third-width tile.
+
+**Verified** against the temporary fixture (deleted afterwards with its `main.jsx` hook):
+zero `.card-sub` elements on all three Inventory views and on Analytics; both caveat
+footnotes present; Analytics' donut renders 6 leader labels with quantities and nothing
+clipped; at 1280/1440 nothing truncates in either Quantity or Value mode (Value tiles
+run ₱482.4M / ₱408.9M / ₱73.4M / ₱70.7M / ₱51.7M / ₱6.8M); card-head height is a uniform
+59px across every card on Insights and Activity; no horizontal scroll at 375px and the
+mobile stacking is unchanged. `npm run build` passes.

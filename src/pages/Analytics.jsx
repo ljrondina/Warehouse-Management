@@ -61,16 +61,23 @@ export default function Analytics() {
       </div>
 
       <div className="grid grid-2 mt">
-        <Card title="Inventory Value Trend" sub="Last 6 months — back-cast from the ledger">
+        {/* The back-cast caveat moved out of the card head and under the chart, so the
+            header carries the title alone. It still has to be stated somewhere: these
+            curves are reconstructed from the ledger, not a recorded valuation history. */}
+        <Card title="Inventory Value Trend">
           <TrendArea data={valueSeries} money color="#ee3124" />
+          <div className="card-note faint">Last 6 months — back-cast from the ledger</div>
         </Card>
-        <Card title="Total Quantity Trend" sub="Last 6 months — back-cast from the ledger">
+        <Card title="Total Quantity Trend">
           <TrendArea data={qtySeries} color="#7d7c7c" />
+          <div className="card-note faint">Last 6 months — back-cast from the ledger</div>
         </Card>
       </div>
 
       <div className="grid grid-2 mt">
-        <Card title="Trade Distribution"><DistributionDonut data={byTradeL1()} metric="qty" /></Card>
+        {/* Same leader-line treatment as the Inventory dashboard's distribution card —
+            the slice names and figures sit on the ring rather than in a colour key. */}
+        <Card title="Trade Distribution"><DistributionDonut data={byTradeL1()} metric="qty" leaderLines wide /></Card>
         <Card title="Top Fast-Moving Materials"><HBar data={fastMoving(8).map((r) => ({ name: r.description.slice(0, 20), value: r.issueFrequency }))} color="#2f7d5a" /></Card>
       </div>
     </>

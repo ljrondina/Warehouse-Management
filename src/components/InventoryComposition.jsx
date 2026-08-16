@@ -17,7 +17,10 @@ import Icon from '../lib/icons'
 // movement chart and on the storage map.
 export const COMPOSITION_STATS = [
   {
-    key: 'total', valueKey: 'totalValue', field: 'totalQty', role: 'total', icon: 'inventory', label: 'Total Inventory',
+    // "Total on Hand" rather than "Total Inventory": it is the accurate name for what
+    // the figure counts, and it is the one label short enough to fit a third-width
+    // tile without truncating. The tooltip carries the full definition either way.
+    key: 'total', valueKey: 'totalValue', field: 'totalQty', role: 'total', icon: 'inventory', label: 'Total on Hand',
     tip: 'Stock on hand across every material in the Central Warehouse — always equal to Available plus Reserved. Damaged units are flagged in place and counted here; incoming and outgoing are in transit and are not.',
   },
   {
@@ -107,12 +110,15 @@ export default function InventoryComposition({ k, unit, metric = 'qty', series, 
           >
             <span className="cs-icon"><Icon name={s.icon} size={17} /></span>
             <span className="cs-body">
+              {/* No per-tile unit chip. Printing "units" six times down the card cost
+                  the figures the width they needed to render without truncating, and
+                  the headline beside the gauge already names the unit once. The exact
+                  value and its unit are on the tile's own title attribute. */}
               <span className="cs-val tabular" title={money ? peso(k[s.valueKey]) : `${num(k[s.key])} ${unit}`}>
                 {fmtTile(money ? k[s.valueKey] : k[s.key])}
               </span>
               <span className="cs-lbl">{s.label}</span>
             </span>
-            {!money && <span className="cs-unit">{unit}</span>}
             <span className="comp-tip">{s.tip}<em>Click to list these materials</em></span>
           </button>
         ))}

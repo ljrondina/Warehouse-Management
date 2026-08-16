@@ -169,7 +169,7 @@ export default function MaterialProfile() {
           />
         </Card>
 
-        <Card title="Attached Documents" sub="Repository">
+        <Card title="Attached Documents">
           {docs.map((d) => (
             <div className="insight-row" key={d.name}>
               <span className="badge badge-neutral" style={{ padding: 7 }}><Icon name={d.icon} size={15} /></span>

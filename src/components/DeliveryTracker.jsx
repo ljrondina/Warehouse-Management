@@ -123,7 +123,6 @@ export default function DeliveryTracker() {
     <Card
       pad={false}
       title="Delivery Tracker" icon="truck" iconColor={S.total}
-      sub="Warehouse Incoming Delivery Schedule — deliveries scheduled for storage at the Central Warehouse"
     >
       <div className="dtk-kpis">
         <KpiCard label="Total Scheduled" value={num(deliveryRows.length)} unit="deliveries" icon="truck" color={S.neutral}
