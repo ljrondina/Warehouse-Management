@@ -36,20 +36,22 @@ function NavItem({ item, role, onNavigate }) {
 export default function Layout({ children }) {
   const { user, signOut, switchRole, canSwitchRole } = useAuth()
   const { theme, toggle } = useTheme()
-  // `open` drives the off-canvas drawer on narrow screens; `collapsed` hides the
-  // sidebar on wide ones. One burger drives whichever applies at the current width.
+  // ONE piece of state for the sidebar, and it starts closed.
+  //
+  // Closed on desktop is the icon rail; closed on mobile is fully off-canvas. Open is
+  // the labelled panel, and on BOTH breakpoints it now overlays the page rather than
+  // pushing it: the rail's width is the only space the layout ever reserves, so
+  // opening the nav never reflows the dashboard underneath it. That reflow was the
+  // old behaviour and it made every chart on the page re-measure and redraw.
   const [open, setOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [roleOpen, setRoleOpen] = useState(false)
   const navigate = useNavigate()
   const role = ROLES[user.role]
 
-  // `collapsed` is the user's desktop preference and can be set while the window is
-  // wide, then persist in state even if the window is later narrowed. `isMobile`
-  // tracks the actual current breakpoint so the icon-only rail never applies on a
-  // narrow screen — there the sidebar must always open as the full off-canvas
-  // drawer, regardless of what was chosen on desktop.
+  // Which closed state applies is a pure question of viewport width, so it is tracked
+  // rather than inferred: the head swaps between the icon mark and the full wordmark
+  // in JS, and that decision has to agree with what the stylesheet is doing.
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 900px)').matches)
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 900px)')
@@ -64,7 +66,14 @@ export default function Layout({ children }) {
       window.removeEventListener('resize', check)
     }
   }, [])
-  const collapsedRail = collapsed && !isMobile
+  // Escape closes the overlay — it is a dismissible layer over the page now.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e) => e.key === 'Escape' && setOpen(false)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+  const collapsedRail = !open && !isMobile
 
   const notifications = [
     { icon: 'alert', tone: 'warn', text: `${counts.lowStock} materials below minimum stock`, to: '/low-stock' },
@@ -74,7 +83,7 @@ export default function Layout({ children }) {
   ]
 
   return (
-    <div className={`app-shell ${collapsedRail ? 'nav-collapsed' : ''}`}>
+    <div className={`app-shell ${collapsedRail ? 'nav-collapsed' : ''} ${open ? 'nav-open' : ''}`}>
       <aside className={`sidebar ${open ? 'open' : ''}`}>
         <div className="sidebar-head">
           {/* Collapsed rail shows the icon mark only — the full wordmark + sub-label
@@ -101,13 +110,10 @@ export default function Layout({ children }) {
         <header className="topbar">
           <button
             className="icon-btn nav-toggle"
-            onClick={() => {
-              // Below 900px the sidebar is an overlay drawer; above it, it docks.
-              if (window.matchMedia('(max-width: 900px)').matches) setOpen((o) => !o)
-              else setCollapsed((c) => !c)
-            }}
-            title={collapsedRail ? 'Show navigation' : 'Hide navigation'}
+            onClick={() => setOpen((o) => !o)}
+            title={open ? 'Hide navigation' : 'Show navigation'}
             aria-label="Toggle navigation"
+            aria-expanded={open}
           >
             <Icon name="menu" size={18} />
           </button>

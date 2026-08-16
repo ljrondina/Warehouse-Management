@@ -51,17 +51,32 @@ const sum = (arr, k) => arr.reduce((a, b) => a + (b[k] || 0), 0)
 // Every aggregate accepts an optional pool so the dashboard can respond to filters.
 // `total` is derived as available + reserved rather than read from totalQty so the
 // headline figure can never drift from the two components shown beneath it.
-export const KPIS = (pool = items) => ({
-  total: sum(pool, 'availableQty') + sum(pool, 'reservedQty'),
-  available: sum(pool, 'availableQty'),
-  reserved: sum(pool, 'reservedQty'),
-  incoming: sum(pool, 'incomingQty'),
-  outgoing: sum(pool, 'outgoingQty'),
-  damaged: sum(pool, 'damagedQty'),
-  value: sum(pool, 'inventoryValue'),
-  reservedValue: pool.reduce((a, b) => a + b.reservedQty * b.unitPrice, 0),
-  skuCount: pool.length,
-})
+export const KPIS = (pool = items) => {
+  const priced = (field) => pool.reduce((a, b) => a + (b[field] || 0) * (b.unitPrice || 0), 0)
+  const availableValue = priced('availableQty')
+  const reservedValue = priced('reservedQty')
+  return {
+    total: sum(pool, 'availableQty') + sum(pool, 'reservedQty'),
+    available: sum(pool, 'availableQty'),
+    reserved: sum(pool, 'reservedQty'),
+    incoming: sum(pool, 'incomingQty'),
+    outgoing: sum(pool, 'outgoingQty'),
+    damaged: sum(pool, 'damagedQty'),
+    // Purchase-cost value of each quantity column. Every one is the column times the
+    // line's unit price, so the same identity that holds for quantities —
+    // total = available + reserved — holds for the pesos beside them. `value` stays
+    // the sum of the recorded inventoryValue column, which is priced off totalQty and
+    // can differ slightly; it is what the valuation KPIs and Analytics report.
+    totalValue: availableValue + reservedValue,
+    availableValue,
+    reservedValue,
+    incomingValue: priced('incomingQty'),
+    outgoingValue: priced('outgoingQty'),
+    damagedValue: priced('damagedQty'),
+    value: sum(pool, 'inventoryValue'),
+    skuCount: pool.length,
+  }
+}
 
 // (A hard-coded TRENDS map lived here. It was unreferenced, and leaving a set of
 // invented percentages exported is an invitation to wire them into a KPI card

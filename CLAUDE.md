@@ -430,3 +430,97 @@ User side: create the `prcdepartment` org, rename repo → `prc-wh`, transfer, t
 added, so the published bundle contains no Supabase URL or key and nobody can sign in.
 Confirmed by downloading the deployed bundle and grepping it. Also confirmed the same
 way: zero real data in the published bundle.
+
+### 2026-08-16 — Session: Overview layout, donut figures, overlay sidebar, mobile pass
+
+**1. Donut labels carry the figure, sized by share.** Each leader label is now two
+lines: the category name at a constant 10.5px, and beneath it the quantity (or peso
+value) plus the percentage, sized between 10px and 22px by the slice's share of the
+ring. Scaled against the LARGEST share present, not against 100% — on a balanced
+nine-slice donut every label would otherwise render at the minimum and the emphasis
+would say nothing. The ramp is eased off linear (`^0.75`): pure square root compressed
+26% and 8% to three pixels apart, pure linear pushed the small slices under a
+comfortable reading size. `LABEL_GAP` went 15 → 30 for the second line.
+
+**2. Overview is two cards side by side; the value KPI cards are gone.**
+`.overview-grid` puts Composition beside Distribution above 1200px and stacks below it
+(under that, two columns push the donut below its leader-label minimum and bounce it
+into legend mode). The three value cards were removed: Total Inventory Value and
+Reserved Value are the same two figures the composition tiles now show in Value mode,
+and Average Value / SKU went with them, as agreed.
+
+**3. The composition card has its own Quantity/Value toggle** — the same control the
+donut has. `KPIS()` gained `totalValue`, `availableValue`, `incomingValue`,
+`outgoingValue` and `damagedValue`, each the quantity column times unit price, so the
+identity total = available + reserved holds for the pesos exactly as it does for the
+units. The gauge's split is computed from whichever metric is showing: reserved stock
+is not worth the same per unit as available stock, so the value split is genuinely a
+different percentage, and drawing one while labelling it as the other would be a quiet
+lie. `value` (the recorded `inventoryValue` column) is untouched and still what
+Analytics reports.
+
+**4. The available-of-SOH readout is now the card's headline** — `.comp-headline`, the
+largest type on the card at 30px, with the total in a smaller weight beside it, a
+caption, and Available/Reserved percentage chips underneath.
+
+**5. Sidebar: closed by default, and it overlays instead of resizing the page.** One
+piece of state (`open`), starting false. Closed on desktop is the 60px icon rail;
+closed on mobile is fully off-canvas. Open is the 240px labelled panel, and on BOTH
+breakpoints it now lies over the page — `.main`'s margin is pinned to the rail width
+and never changes, so the dashboard underneath does not reflow and its charts do not
+re-measure and redraw. A scrim appears at every width (it is a dismissible layer now,
+so it also takes the click-outside and Escape closes it).
+
+**Icon alignment** is the reason the two states read as one object: `.nav` and
+`.nav-item` carry IDENTICAL horizontal padding in both, and the icon is the first
+child in both, so its centre sits at 10 + 10 + 10 = 30px either way — which is also
+the centre of the 60px rail. The old rules that centred the collapsed item and shrank
+its icon to 17px were removed; each would move the icons on open. There is a comment
+in the stylesheet saying so, because it is easy to "tidy" back in.
+
+**6. Movement History always spans the page, legend on the left.** The expand toggle is
+gone and `wide` is passed unconditionally. `.movement-wrap.wide .legend-side` is
+ordered before the chart, so the reader learns what the six series are before meeting
+them stacked on one frame; below 900px it drops beneath the chart as a two-column
+strip.
+
+**7. Mobile pass.** Card heads put the title on its own line and give the controls the
+full width beneath. Sub-tabs scroll horizontally rather than wrapping. The composition
+card stacks the gauge beside the headline at tablet width and above it on a phone; the
+tiles go 3-up → 2-up → 1-up, since a peso figure plus its label will not share a
+half-width tile without one of them truncating. The tile tooltip pins to the card
+below 560px instead of centring on a tile it is wider than. Activity's summary strip
+and the aging/ABC band rows narrow the same way.
+
+**Bug found and fixed while verifying:** making `.card-pad` a flex row to centre the
+two Overview cards collapsed the donut to zero width and it rendered NOTHING — a
+recharts `ResponsiveContainer` has no intrinsic width, so as a bare flex item it
+shrinks to nothing, and with `isAnimationActive={false}` that opening zero-sweep frame
+is the one that sticks. Both pads now set `width: 100%; min-width: 0` on their child.
+
+Also added: a soft `feDropShadow` on the donut ring (on the Pie, not per Cell — per
+Cell each slice casts onto its neighbours and the ring looks striped), tuned separately
+for light and dark.
+
+**Verified in a browser** against the temporary local fixture (deleted afterwards,
+along with its `main.jsx` hook):
+- Overview at 1440px: two cards side by side, no value KPI cards, donut labels at
+  22/21/20/17/16/15px following share, nothing clipped.
+- Item Group view: 9 slices, 9 two-line labels, zero vertical overlaps, none clipped.
+- Sidebar closed → open: width 60 → 240, icon centres 31 → 31 (unchanged), `.main`
+  left edge 60 → 60 and content width 1370 → 1370 (page does not move).
+- Value toggle: all six tiles and the headline switch to pesos, Available ₱408.9M +
+  Reserved ₱73.4M = Total ₱482.4M.
+- Movement History: card 1314px wide, legend left of the chart on desktop, below it at
+  375px, expand button absent.
+- 375px across all three sub-views: no page-level horizontal scroll, nothing truncated.
+  (The only element exceeding the viewport is the locked Excess tab inside
+  `.dash-tabs`, which is a scroll container by design.)
+- No console errors.
+
+**Measurement caveat:** the browser pane was hidden during this session, so CSS
+transitions do not advance and screenshots are unavailable. Sidebar widths were
+therefore measured with transitions disabled; the end states are correct, but the
+open/close animation itself was not observed.
+
+`npm run build` passes.

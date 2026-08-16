@@ -156,9 +156,25 @@ function useElementWidth(ref, enabled) {
 // padding angle recharts redistributes the sweep and these mid-angles would drift off
 // their slices. Slice separation comes from the stroke instead.
 const RAD = Math.PI / 180
-const LABEL_GAP = 15        // minimum vertical distance between two labels
+const LABEL_GAP = 30        // minimum vertical distance between two two-line labels
 const ELBOW = 14            // radial distance from the ring to the leader's elbow
 const STUB = 26             // horizontal run from the elbow to the text
+
+// Each label's figure is sized by how much of the ring its slice takes, so the chart
+// can be read at a glance without comparing wedge angles: the biggest share carries
+// the biggest number. Scaled against the LARGEST share present rather than against
+// 100%, otherwise a well-balanced nine-slice donut would render every label at the
+// minimum size and the emphasis would say nothing.
+const FIGURE_MIN = 10
+const FIGURE_MAX = 22
+const figureSize = (frac, maxFrac) => {
+  if (!(maxFrac > 0)) return FIGURE_MIN
+  const t = Math.min(1, frac / maxFrac)
+  // Eased slightly off linear (^0.75). Pure square root compressed the range so hard
+  // that a 26% slice and an 8% one differed by three pixels and the emphasis said
+  // nothing; pure linear drops the small slices below comfortable reading size.
+  return Math.round(FIGURE_MIN + (FIGURE_MAX - FIGURE_MIN) * Math.pow(t, 0.75))
+}
 
 // Push a column of labels apart in place: spread downwards, then, if the column
 // overruns the bottom of the box, pin the last one and spread back upwards.
@@ -179,8 +195,9 @@ function spreadColumn(list, top, bottom) {
 
 // Builds the renderer recharts calls per slice. The full layout is computed once for
 // a given cx/cy/radius and cached, so the per-slice callback is a lookup.
-function makeLeaderLabel({ data, key, palette, height, minPct }) {
+function makeLeaderLabel({ data, key, palette, height, minPct, metric }) {
   const total = data.reduce((a, b) => a + (b[key] || 0), 0)
+  const maxFrac = total > 0 ? Math.max(...data.map((d) => (d[key] || 0) / total)) : 0
   const cache = new Map()
 
   const layout = (cx, cy, r) => {
@@ -222,19 +239,30 @@ function makeLeaderLabel({ data, key, palette, height, minPct }) {
     const x1 = cx + (outerRadius + ELBOW) * dir * Math.abs(p.cos || 0.2)
     const x2 = cx + dir * (outerRadius + ELBOW + STUB)
     const name = d.name.length > 16 ? `${d.name.slice(0, 15)}…` : d.name
+    const anchor = p.side === 'r' ? 'start' : 'end'
+    const tx = x2 + dir * 5
+    const size = figureSize(p.frac, maxFrac)
+    // Two lines: the name in a constant small size on top, the quantity (or value)
+    // beneath it sized by share. Keeping the NAME constant is deliberate — scaling it
+    // too would make small categories hard to read for no extra information, since
+    // the figure already carries the emphasis.
     return (
       <g key={`lead-${index}`}>
         <polyline
           points={`${x0},${y0} ${x1},${p.y} ${x2},${p.y}`}
           fill="none" stroke={color} strokeWidth={1.2} strokeOpacity={0.75}
         />
-        <circle cx={x0} cy={y0} r={2} fill={color} />
-        <text
-          x={x2 + dir * 5} y={p.y} textAnchor={p.side === 'r' ? 'start' : 'end'}
-          dominantBaseline="middle" fontSize={11} fontWeight={600} fill="var(--text-muted)"
-        >
+        <circle cx={x0} cy={y0} r={2.5} fill={color} />
+        <text x={tx} y={p.y - 7} textAnchor={anchor} dominantBaseline="middle"
+          fontSize={10.5} fontWeight={600} fill="var(--text-muted)">
           {name}
-          <tspan fontWeight={800} fill="var(--text)"> {(p.frac * 100).toFixed(0)}%</tspan>
+        </text>
+        <text x={tx} y={p.y + size / 2 - 1} textAnchor={anchor} dominantBaseline="middle"
+          fontSize={size} fontWeight={800} fill="var(--text)">
+          {metric === 'value' ? `₱${compact(d.value)}` : compact(d[key] || 0)}
+          <tspan fontSize={Math.max(9.5, size - 4)} fontWeight={700} fill={color}>
+            {'  '}{(p.frac * 100).toFixed(0)}%
+          </tspan>
         </text>
       </g>
     )
@@ -275,7 +303,8 @@ export function DistributionDonut({
   // container rather than fixed: a 126px radius that fits a desktop card would push
   // its own labels off the edge of a phone. LABEL_COLS is the room both columns need
   // (elbow + stub + roughly ten characters of text).
-  const LABEL_COLS = 240
+  // Two columns of "Name / 12.3K  26%". Wider than the name-only labels it replaced.
+  const LABEL_COLS = 300
   // Below this there is no arrangement that fits a readable ring between two columns
   // of text, so the donut falls back to the legend rather than clipping its own
   // labels at the card edge. boxWidth is 0 only on the very first layout pass, before
@@ -292,13 +321,25 @@ export function DistributionDonut({
     ? Math.max(60, Math.min(wide ? 126 : 88, Math.round((chartWidth - LABEL_COLS) / 2)))
     : outerRadius
   const rInner = useLeaders ? Math.max(28, rOuter - 42) : innerRadius
-  const label = useLeaders ? makeLeaderLabel({ data, key, palette: PALETTE, height: h, minPct: minLabelPct }) : null
+  const label = useLeaders
+    ? makeLeaderLabel({ data, key, palette: PALETTE, height: h, minPct: minLabelPct, metric })
+    : null
   return (
     <div className={`${wide ? 'donut-wrap wide' : 'donut-wrap'}${useLeaders ? ' leader' : ''}`} ref={boxRef}>
       <div className="donut-chart">
         <ResponsiveContainer width="100%" height={h}>
           <PieChart>
-            <defs>{paletteStops('pieGrad', PALETTE, theme === 'dark')}</defs>
+            <defs>
+              {paletteStops('pieGrad', PALETTE, theme === 'dark')}
+              {/* Soft drop shadow so the ring reads as a raised object rather than a
+                  flat cut-out. Kept subtle and offset downward only; on the near-black
+                  dark card a heavier shadow just muddies the slice edges, so the dark
+                  variant leans on opacity rather than spread. */}
+              <filter id="donutShadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy={theme === 'dark' ? 2 : 3} stdDeviation={theme === 'dark' ? 3 : 4}
+                  floodColor={theme === 'dark' ? '#000' : '#231f20'} floodOpacity={theme === 'dark' ? 0.5 : 0.22} />
+              </filter>
+            </defs>
             {/* isAnimationActive={false}: the mount animation starts every sector at a
                 zero sweep, and Sector renders nothing when startAngle === endAngle. If
                 the Pie mounts while its flex parent still measures 0px wide, that
@@ -313,6 +354,10 @@ export function DistributionDonut({
               stroke="var(--surface)" strokeWidth={useLeaders ? 2 : 3}
               cornerRadius={useLeaders ? 0 : 4}
               label={label || undefined} labelLine={false}
+              /* The filter goes on the Pie, not on each Cell: applied per sector it
+                 would cast a shadow from every slice onto its neighbours and the ring
+                 would look striped. */
+              filter="url(#donutShadow)"
               isAnimationActive={false}
             >
               {data.map((_, i) => <Cell key={i} fill={`url(#pieGrad-${i % PALETTE.length})`} />)}
@@ -417,6 +462,10 @@ export function MovementComposed({ data, wide = false }) {
     </div>
   )
 
+  // `wide` is now the only layout Movement History uses on desktop (the card always
+  // spans the page). It puts the legend in a column BESIDE the chart; the stylesheet
+  // orders it to the left, and drops it back underneath below the tablet breakpoint
+  // where there is no horizontal room to spare.
   return (
     <div className={wide ? 'movement-wrap wide' : 'movement-wrap'}>
       <div className="movement-chart">

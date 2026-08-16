@@ -185,34 +185,34 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
   position: fixed; top: 0; bottom: 0; left: 0; z-index: 40;
   transition: width 0.2s ease, transform 0.2s ease;
 }
-.main { flex: 1; margin-left: var(--sidebar-w); display: flex; flex-direction: column; min-width: 0; transition: margin-left 0.2s ease; }
+/* The page ONLY ever reserves the collapsed rail's width. Opening the sidebar widens
+   the sidebar itself and lets it overlay the page — it never changes this margin, so
+   the dashboard beneath does not reflow and every chart on it keeps its measured
+   size instead of re-drawing. */
+.main { flex: 1; margin-left: var(--sidebar-w-collapsed); display: flex; flex-direction: column; min-width: 0; }
 .content { padding: 24px 28px 48px; flex: 1; }
 
-/* Burger-collapsed sidebar (wide screens only — Layout.jsx never adds this class
-   while the mobile breakpoint is active, so there's no override needed here for
-   narrow screens): the rail narrows to icons-only rather than disappearing, and
-   the content reclaims the freed width. */
-.app-shell.nav-collapsed .sidebar { width: var(--sidebar-w-collapsed); }
-.app-shell.nav-collapsed .main { margin-left: var(--sidebar-w-collapsed); }
-/* Both sides of the collapse animate a layout property, so hint the compositor and
-   isolate the sidebar's internals from the page's layout work while it runs. */
+/* Closed is the icon rail; open is the labelled panel laid over the page. */
+.sidebar { width: var(--sidebar-w-collapsed); }
+.sidebar.open { width: var(--sidebar-w); box-shadow: var(--shadow-lg); }
 .sidebar { will-change: width; contain: layout paint; }
-.main { will-change: margin-left; }
 .nav-toggle { flex-shrink: 0; }
 
-/* The rail's mark is much smaller than the full wordmark, so it doesn't need the
-   same generous drop from the top — keeps the icon from looking stranded in a sea
-   of empty space above a 72px-wide column. */
+/* ICON ALIGNMENT — the whole point of the two states being the same object.
+   The nav's horizontal padding and the item's are IDENTICAL in both states, and the
+   icon is the first child in both, so its centre sits at the same x whether the
+   labels are showing or not: 10px nav + 10px item + half of a 20px icon = 30px,
+   which is also the centre of the 60px rail. Opening the sidebar therefore reveals
+   the labels without the icons moving at all. Nothing here may set a different
+   padding, a different icon size, or `justify-content: center` for the closed state —
+   each of those would shift the icons and break the effect. */
 .app-shell.nav-collapsed .sidebar-head { padding: 20px 6px; }
-.app-shell.nav-collapsed .nav { padding-left: 6px; padding-right: 6px; }
-.app-shell.nav-collapsed .nav-item { justify-content: center; padding: 10px 0; gap: 0; }
-/* The label, lock badge and count badge all carry their own class specifically so
-   they can be hidden without touching the icon, which keeps its colour. Size is the
-   one thing that DOES change here — a step down from the expanded rail's 20px. */
-.app-shell.nav-collapsed .nav-item .ico { width: 17px; height: 17px; }
+/* Only the text-bearing parts hide. The icon keeps its position, size and colour. */
 .app-shell.nav-collapsed .nav-item .nav-label,
 .app-shell.nav-collapsed .nav-item .lock-ico,
 .app-shell.nav-collapsed .nav-item .badge-count { display: none; }
+/* The labels would otherwise wrap and shove the icon up as the panel animates open. */
+.nav-item .nav-label { white-space: nowrap; overflow: hidden; }
 
 /* Topbar has a fixed row of controls; on narrow screens the descriptive text is
    dropped so the icons keep fitting instead of pushing the page sideways. */
@@ -256,11 +256,14 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
 /* Extra top/bottom padding gives the mark room to breathe rather than crowding the
    border directly above the nav list. */
 .sidebar-head { padding: 42px 16px 26px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: center; transition: padding 0.2s ease; }
-.nav { padding: 16px 12px 4px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+/* 10px here + 10px on .nav-item is what puts the icon centre at 30px — the centre of
+   the 60px collapsed rail. See the ICON ALIGNMENT note in the Layout section. */
+.nav { padding: 16px 10px 4px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .nav-group-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.3); padding: 14px 12px 6px; font-weight: 700; }
 .nav-item {
-  display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius-sm);
-  color: rgba(255,255,255,0.65); font-weight: 500; font-size: 13px; border: 1px solid transparent; transition: all 0.15s;
+  display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--radius-sm);
+  color: rgba(255,255,255,0.65); font-weight: 500; font-size: 13px; border: 1px solid transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.9); }
 .nav-item.active { background: var(--brand-red); color: #fff; font-weight: 600; }
@@ -1410,7 +1413,11 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .bin-cell .bc-n { font-size: 10px; opacity: 0.8; }
 @media (max-width: 900px) { .fp-grid { grid-template-columns: 1fr; } }
 
-.sidebar-scrim { display: none; }
+/* The open sidebar is a layer over the page at EVERY width now, so it gets a scrim at
+   every width too: it dims what is behind, says the layer is dismissible, and gives
+   the click-anywhere-to-close target. Lighter on desktop, where the rail is still
+   visible and the page is not fully obscured. */
+.sidebar-scrim { position: fixed; inset: 0; background: rgba(35, 31, 32, 0.32); z-index: 39; }
 .page-loading { display: grid; place-items: center; min-height: 40vh; color: var(--text-muted); font-size: 13px; }
 
 /* ---------- Dashboard top row: KPI block beside the composition gauge ---------- */
@@ -1549,9 +1556,11 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .sk-dist-card > .card-pad { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } .grid-3 { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 900px) {
-  .sidebar { transform: translateX(-100%); }
-  .sidebar.open { transform: translateX(0); box-shadow: var(--shadow-lg); }
-  .sidebar-scrim { display: block; position: fixed; inset: 0; background: rgba(35, 31, 32,0.5); z-index: 39; }
+  /* No rail on a phone — 60px of permanent chrome is too much of a narrow screen —
+     so closed means fully off-canvas and the content takes the whole width. */
+  .sidebar { width: var(--sidebar-w); transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-scrim { background: rgba(35, 31, 32, 0.5); }
   .main { margin-left: 0; }
   .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr); }
   .kpi-grid, .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1708,4 +1717,117 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   .comp-wrap { gap: 16px; }
   .comp-stats { flex-basis: 100%; }
   .comp-tip { width: 240px; }
+}
+
+/* ==========================================================================
+   Overview layout, composition headline, movement legend, mobile pass.
+   ========================================================================== */
+
+/* ---------- Overview: composition beside distribution ----------
+   Composition is content-sized (a gauge plus a fixed grid of six tiles, which stops
+   getting better past a point); the donut takes the rest, because its leader labels
+   need every pixel they can get. Stacks below 1200px, where two columns would push
+   the donut under its own leader-label minimum and bounce it into legend mode. */
+.overview-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (min-width: 1200px) {
+  .overview-grid { grid-template-columns: minmax(420px, 0.85fr) minmax(560px, 1.15fr); }
+}
+.overview-grid > .card { min-width: 0; }
+.composition-card, .distribution-card { display: flex; flex-direction: column; }
+.composition-card > .card-pad, .distribution-card > .card-pad { flex: 1; display: flex; align-items: center; }
+/* width:100% is load-bearing, not cosmetic. The pad is a flex row, and both children
+   size themselves from a recharts ResponsiveContainer (width="100%") or a wrapping
+   flex row — neither has an intrinsic width, so as bare flex items they collapse to
+   zero and the chart renders nothing at all. */
+.composition-card > .card-pad > *, .distribution-card > .card-pad > * { width: 100%; min-width: 0; }
+
+/* ---------- Composition headline ----------
+   The one line a warehouse manager reads first, so it is the largest type on the
+   card and the only place using the display face at this size. */
+.comp-headline { margin-top: 14px; text-align: center; max-width: 240px; }
+.ch-figure { display: flex; align-items: baseline; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.ch-avail {
+  font-family: var(--font-head); font-size: 30px; font-weight: 800; line-height: 1.05;
+  letter-spacing: -0.8px; color: var(--text);
+}
+.ch-of { font-size: 12px; font-weight: 600; color: var(--text-faint); }
+.ch-total { font-size: 17px; font-weight: 700; color: var(--text-muted); letter-spacing: -0.3px; }
+.ch-caption {
+  margin-top: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--text-faint); line-height: 1.35;
+}
+.ch-split { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.ch-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700;
+  color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border);
+}
+.ch-chip i { width: 7px; height: 7px; border-radius: 2px; background: var(--chip); flex-shrink: 0; }
+
+/* ---------- Movement History legend on the left ----------
+   Reading order runs legend-then-chart: the reader learns what the six series ARE
+   before meeting them stacked on one frame. */
+.movement-wrap.wide .legend-side {
+  order: -1;
+  padding-left: 0; padding-right: 22px;
+  border-left: none; border-right: 1px solid var(--border);
+}
+/* Under the tablet breakpoint there is no width to give a side column, so the legend
+   drops beneath the chart as a two-column strip. */
+@media (max-width: 900px) {
+  .movement-wrap.wide { flex-direction: column; align-items: stretch; gap: 0; }
+  .movement-wrap.wide .legend-side {
+    order: 0; flex: 0 0 auto;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px;
+    padding: 12px 0 2px; border-right: none; border-top: 1px solid var(--border);
+  }
+}
+
+/* ==========================================================================
+   Mobile pass. The dashboard grew three sub-views, a composition card and four
+   new charts; below are the places that needed narrowing rather than stacking.
+   ========================================================================== */
+@media (max-width: 900px) {
+  /* Card headers put the title on its own line and let the controls use the full
+     width beneath it — at this size a right-aligned control row was being squeezed
+     into a two-per-line stack beside a truncated title. */
+  .card-head { align-items: flex-start; padding: 11px 13px; }
+  .card-head > :first-child { margin-right: 0; flex: 1 1 100%; }
+  .chart-controls { width: 100%; justify-content: flex-start; gap: 8px; }
+  .card-pad { padding: 12px 13px; }
+
+  /* Sub-tabs scroll horizontally rather than wrapping to a second line. */
+  .sub-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .sub-tabs::-webkit-scrollbar { display: none; }
+  .sub-tab { flex: 0 0 auto; }
+
+  /* Two tiles per row keeps the figures readable; three truncated them. */
+  .comp-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .comp-wrap { flex-direction: column; align-items: stretch; gap: 18px; }
+  .comp-gauge { flex-direction: row; align-items: center; justify-content: center; gap: 20px; }
+  .comp-headline { margin-top: 0; text-align: left; }
+  .comp-headline .ch-figure, .comp-headline .ch-split { justify-content: flex-start; }
+  .battery-tube { width: 74px; height: 150px; }
+
+  .activity-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .band-row { gap: 9px; }
+  .band-s { white-space: normal; }
+}
+
+@media (max-width: 560px) {
+  .content { padding: 14px 12px 36px; }
+  /* One tile per row below this: at 2-up a peso figure like ₱482.4M plus its label
+     no longer fits the tile without truncating one of them. */
+  .comp-stats { grid-template-columns: minmax(0, 1fr); }
+  .comp-gauge { flex-direction: column; gap: 12px; }
+  .comp-headline { text-align: center; }
+  .comp-headline .ch-figure, .comp-headline .ch-split { justify-content: center; }
+  .activity-summary { grid-template-columns: minmax(0, 1fr); }
+  .ch-avail { font-size: 26px; }
+  /* The tooltip is wider than the tile it hangs off, so it is pinned to the card
+     rather than centred on the tile, which would push it off-screen. */
+  .comp-tip { left: 0; right: 0; width: auto; max-width: none; transform: translate(0, 4px); }
+  .comp-stat:hover .comp-tip, .comp-stat:focus-visible .comp-tip { transform: translate(0, 0); }
+  .sub-tab { padding: 6px 12px; font-size: 12px; }
+  .nodata { flex-direction: column; gap: 8px; padding: 14px; }
 }

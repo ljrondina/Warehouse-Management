@@ -5,7 +5,7 @@ import {
   topQuantity, fastMoving, lowStock, highValue, nonMoving, items,
   abcAnalysis, agingAnalysis, ledgerActivity,
 } from '../../data/insights'
-import { Card, KpiCard, Segmented } from '../../components/ui'
+import { Card, Segmented } from '../../components/ui'
 import InventoryComposition from '../../components/InventoryComposition'
 import { AgingBars, DistributionDonut, MovementComposed, NetChangeChart, ParetoCurve } from '../../components/charts'
 import { num, peso, fmtDate } from '../../lib/format'
@@ -220,7 +220,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
   const [highStockMetric, setHighStockMetric] = useState('qty')
   const [agingMetric, setAgingMetric] = useState('value')
   const [flowMetric, setFlowMetric] = useState('qty')
-  const [chartsWide, setChartsWide] = useState(false)
+  const [compMetric, setCompMetric] = useState('qty')
   const [kpiModal, setKpiModal] = useState(null)
 
   const INSIGHT_ROWS = useMemo(buildInsightRows, [items.length])
@@ -232,12 +232,6 @@ export default function InventoryTab({ pool, qtyUnit }) {
   const periodOpts = PERIODS.map((p) => ({ value: p.key, label: p.label }))
 
   const donutData = rollup(donutScope === 'l1' ? byTradeL1(pool) : byTradeL2(pool, 'all'))
-
-  const valueCards = [
-    { label: 'Total Inventory Value', value: peso(k.value), icon: 'reports', color: S.total, tip: 'Total purchase-cost value of all inventory currently held in the warehouse.' },
-    { label: 'Average Value / SKU', value: peso(k.skuCount ? k.value / k.skuCount : 0), icon: 'analytics', color: S.neutral, tip: 'Average purchase-cost value per stock-keeping unit across the current selection.' },
-    { label: 'Reserved Value', value: peso(k.reservedValue), icon: 'reserve', color: S.value, tip: 'Purchase-cost value of stock currently reserved for active project allocations.' },
-  ]
 
   const selectView = (key) => {
     const next = new URLSearchParams(params)
@@ -258,22 +252,24 @@ export default function InventoryTab({ pool, qtyUnit }) {
         ))}
       </div>
 
-      {/* ---------------------------------------------------------------- Overview */}
+      {/* ---------------------------------------------------------------- Overview
+          Composition and Distribution sit side by side on a full desktop and stack
+          below 1200px. The three value KPI cards that used to head this view are
+          gone: Total Inventory Value and Reserved Value are the same two figures the
+          composition tiles now show in Value mode, and Average Value / SKU was
+          dropped with them. */}
       {view === 'overview' && (
-        <div className="mt">
-          <div className="kpi-grid kpi-grid-3">
-            {valueCards.map((c) => <KpiCard key={c.label} {...c} tooltip={c.tip} />)}
-          </div>
-
-          {/* The six quantity figures live INSIDE this card now — see
+        <div className="mt overview-grid">
+          {/* The six quantity figures live INSIDE this card — see
               InventoryComposition. Each tile hovers for a description and clicks
               through to the material list behind it. */}
-          <Card title="Inventory Composition" icon="box" className="mt" data-tour="kpis"
-            sub="Stock on hand split into available and reserved, with what is in transit either way. Hover a tile for its definition; click to list the materials.">
-            <InventoryComposition k={k} unit={qtyUnit} series={S} onPick={setKpiModal} />
+          <Card title="Inventory Composition" icon="box" className="composition-card" data-tour="kpis"
+            sub="Stock on hand split into available and reserved, with what is in transit either way. Hover a tile for its definition; click to list the materials."
+            right={<Segmented size="sm" options={metricOpts} value={compMetric} onChange={setCompMetric} />}>
+            <InventoryComposition k={k} unit={qtyUnit} metric={compMetric} series={S} onPick={setKpiModal} />
           </Card>
 
-          <Card title="Inventory Distribution" icon="reports" className="mt" data-tour="charts"
+          <Card title="Inventory Distribution" icon="reports" className="distribution-card" data-tour="charts"
             sub="Share of the current selection held in each trade or item group."
             right={
               <div className="chart-controls">
@@ -423,17 +419,11 @@ export default function InventoryTab({ pool, qtyUnit }) {
 
               <Card title="Movement History" icon="trend" className="movement-card mt"
                 sub="Recorded receipts and issues, with stock on hand back-cast from them. The available/reserved split is modelled — the source sheets carry no reservation history."
-                right={
-                  <div className="chart-controls">
-                    <Segmented size="sm" options={periodOpts} value={period} onChange={setPeriod} />
-                    <button className={`icon-btn chart-expand ${chartsWide ? 'on' : ''}`} onClick={() => setChartsWide((w) => !w)}
-                      type="button" aria-expanded={chartsWide}
-                      title={chartsWide ? 'Collapse chart height' : 'Expand chart height'}>
-                      <Icon name="chevronRight" size={16} />
-                    </button>
-                  </div>
-                }>
-                <MovementComposed data={movementData} wide={chartsWide} />
+                right={<Segmented size="sm" options={periodOpts} value={period} onChange={setPeriod} />}>
+                {/* Always `wide`: the card spans the page, so the legend belongs in a
+                    column beside the chart rather than in a strip underneath it. The
+                    expand toggle that used to switch between the two is gone. */}
+                <MovementComposed data={movementData} wide />
               </Card>
 
               <Card title="Net Inventory Change" icon="analytics" className="mt"
