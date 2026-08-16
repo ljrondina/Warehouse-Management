@@ -34,5 +34,6 @@ dist-ssr
 *.xlsx
 *.csv
 
-# Generated seed file — contains the real dataset.
+# Generated seed files — these ARE the real dataset.
 /supabase/seed_data.sql
+/supabase/seed/

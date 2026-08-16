@@ -211,3 +211,20 @@ tooling's destructive-action guard and need to be run by the user.
 
 Order after that: make the repo public → Settings → Pages → Source: GitHub Actions →
 re-run the workflow.
+
+### 2026-08-16 — Session: history reset landed; seed split for the SQL Editor
+
+- History reset done by the user and **verified from outside**: the repo is public,
+  has exactly one commit, and `sample/*.pdf` and `seed_data.sql` both 404 on
+  raw.githubusercontent.com. `src/data/inventory.js` serves the empty shell.
+- **Pages 404 diagnosis**: both workflow runs failed. Run #2 was the force-push of the
+  clean commit and failed *before* Pages was enabled; enabling the source afterwards
+  does not retrigger a build, so nothing has ever been published. Fix is to re-run the
+  workflow manually (`workflow_dispatch` is already in the file).
+- **Seed no longer fits the SQL Editor.** Adding `item_master` took the file to 1.09 MB,
+  over Supabase's ~1 MB submission cap. `generate-seeds.mjs` now emits statement-aligned
+  parts into `supabase/seed/NN_seed.sql`, capped at 400 KB each (currently 3 files), to
+  be pasted in order. `truncate public.ledger` sits before the ledger inserts and the
+  parts are ordered, so a full in-order run stays idempotent.
+- `supabase/seed/` is gitignored — verified with `git check-ignore`. **Nothing in that
+  folder may ever be committed: it is the dataset.**
