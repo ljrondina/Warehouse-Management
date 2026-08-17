@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useTour } from '../context/TourContext'
@@ -35,9 +35,14 @@ function NavItem({ item, role, onNavigate }) {
 }
 
 // The page title now lives in the topbar rather than being repeated at the top of
-// every page body. Derived from the route so no page has to register anything; the
-// dashboard's three tabs are the one case where the same path carries two names.
+// every page body. It names the DESTINATION, matching the sidebar entry that leads
+// here — so /dashboard reads "Dashboard" on all three of its tabs rather than
+// renaming itself to "Inventory Insights" / "Safekeeping Insights" / "Excess
+// Materials" as you move between them. Which tab you are on is already answered by
+// the tab strip directly below, and a heading that changes underneath a nav item
+// that did not makes the two disagree about where you are.
 const ROUTE_TITLES = {
+  '/dashboard': 'Dashboard',
   '/inventory': 'Inventory Masterlist',
   '/movement': 'Movement History',
   '/reservations': 'Reservations',
@@ -46,45 +51,18 @@ const ROUTE_TITLES = {
   '/audit': 'Audit Logs',
   '/reports': 'Reports',
   '/analytics': 'Analytics',
-  '/storage': 'Warehouse Floor Plan',
+  // Matches the sidebar's own label, which is "Floor Plan", not "Warehouse Floor Plan".
+  '/storage': 'Floor Plan',
   '/settings': 'Settings',
   '/low-stock': 'Low Stock Alerts',
   '/purchase-requests': 'Purchase Requests',
   '/request-materials': 'Request Materials',
   '/delivery': 'Delivery Tracking',
 }
-const DASH_TITLES = { safekeeping: 'Safekeeping Insights', excess: 'Excess Materials' }
 
-// One icon per route/tab, reusing the same names the sidebar nav already uses for
-// that destination — so the topbar title and the nav item that led here match.
-const ROUTE_ICONS = {
-  '/inventory': 'inventory',
-  '/movement': 'incoming',
-  '/reservations': 'reserve',
-  '/approvals': 'approve',
-  '/users': 'users',
-  '/audit': 'audit',
-  '/reports': 'reports',
-  '/analytics': 'trend',
-  '/storage': 'map',
-  '/settings': 'settings',
-  '/low-stock': 'alert',
-  '/purchase-requests': 'request',
-  '/request-materials': 'request',
-  '/delivery': 'truck',
-}
-const DASH_ICONS = { safekeeping: 'vault', excess: 'excess' }
-
-function pageTitle(pathname, tabParam) {
-  if (pathname === '/dashboard') return DASH_TITLES[tabParam] || 'Inventory Insights'
+function pageTitle(pathname) {
   if (pathname.startsWith('/inventory/')) return 'Material Profile'
   return ROUTE_TITLES[pathname] || 'Megawide WMS'
-}
-
-function pageIcon(pathname, tabParam) {
-  if (pathname === '/dashboard') return DASH_ICONS[tabParam] || 'inventory'
-  if (pathname.startsWith('/inventory/')) return 'box'
-  return ROUTE_ICONS[pathname] || 'dashboard'
 }
 
 export default function Layout({ children }) {
@@ -97,16 +75,16 @@ export default function Layout({ children }) {
   // width for it — so opening the nav never reflows the dashboard underneath or makes
   // its charts re-measure.
   const [open, setOpen] = useState(false)
+  // Notifications live inside the account menu now, as a section that expands in
+  // place. This is the expanded/collapsed state of that section, not a popover.
   const [notifOpen, setNotifOpen] = useState(false)
   const [roleOpen, setRoleOpen] = useState(false)
   const [acctOpen, setAcctOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
-  const [params] = useSearchParams()
   const acctRef = useRef(null)
   const role = ROLES[user.role]
-  const title = pageTitle(location.pathname, params.get('tab'))
-  const titleIcon = pageIcon(location.pathname, params.get('tab'))
+  const title = pageTitle(location.pathname)
 
   // Escape closes whichever overlay is showing — both are dismissible layers.
   useEffect(() => {
@@ -168,8 +146,12 @@ export default function Layout({ children }) {
           {/* The page title sits here, where the warehouse name used to. It is the
               thing that changes as you move around, so it takes the primary slot; the
               warehouse is fixed context and moves to the right. */}
+          {/* The Megawide mark rather than a per-page glyph. The sidebar already
+              carries a distinct icon per destination; repeating it here said nothing
+              the nav had not already said, whereas the mark makes the heading read as
+              part of the product frame. */}
           <div className="topbar-title-wrap">
-            <Icon name={titleIcon} size={17} className="topbar-title-icon" />
+            <Logo variant="mark" height={20} />
             <h1 className="topbar-title">{title}</h1>
           </div>
 
@@ -213,37 +195,15 @@ export default function Layout({ children }) {
             <Icon name={theme === 'light' ? 'moon' : 'sun'} size={18} />
           </button>
 
-          <button className="icon-btn" onClick={startTour} data-tour="tour-btn" title="Take a Tour" aria-label="Take a Tour">
-            <Icon name="help" size={18} />
-          </button>
-
-          <div style={{ position: 'relative' }}>
-            <button className="icon-btn" onClick={() => setNotifOpen((o) => !o)} title="Notifications">
-              <Icon name="bell" size={18} />
-              <span style={{ position: 'absolute', top: 6, right: 7, width: 8, height: 8, background: 'var(--brand-red)', borderRadius: '50%' }} />
-            </button>
-            {notifOpen && (
-              <div className="card" style={{ position: 'absolute', right: 0, top: 44, width: 320, zIndex: 50 }}>
-                <div className="card-head"><div className="card-title" style={{ fontSize: 13 }}>Notifications</div></div>
-                <div style={{ padding: 6 }}>
-                  {notifications.map((n, i) => (
-                    <button key={i} className="nav-item" style={{ width: '100%' }} onClick={() => { setNotifOpen(false); navigate(n.to) }}>
-                      <span className={`badge badge-${n.tone}`} style={{ padding: 6 }}><Icon name={n.icon} size={14} /></span>
-                      <span style={{ fontSize: 12.5, whiteSpace: 'normal', textAlign: 'left' }}>{n.text}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* The name, department and a separate sign-out button used to sit out here
-              and were the widest thing in the bar. They are all inside this menu now;
-              the avatar is the only control the topbar spends width on. */}
+          {/* Notifications and the tour used to be two more icon buttons out here.
+              They are menu items now — the avatar plus the theme toggle are the only
+              width the topbar spends on tools. The unread dot moved onto the avatar,
+              since that is the control that now stands for "something is waiting". */}
           <div style={{ position: 'relative' }} ref={acctRef}>
             <button className="avatar avatar-btn" onClick={() => setAcctOpen((o) => !o)}
               title={user.name} aria-haspopup="menu" aria-expanded={acctOpen}>
               {initials(user.name)}
+              {notifications.length > 0 && <span className="avatar-dot" aria-hidden="true" />}
             </button>
             {acctOpen && (
               <div className="card acct-menu" role="menu">
@@ -255,6 +215,32 @@ export default function Layout({ children }) {
                     <div className="acct-role">{role.label}</div>
                   </div>
                 </div>
+
+                {/* Expands in place rather than opening a second popover beside this
+                    one — two stacked overlays off a single avatar is a layer too many,
+                    and the list is short enough to live here. */}
+                <button className={`acct-opt ${notifOpen ? 'open' : ''}`} role="menuitem"
+                  aria-expanded={notifOpen} onClick={() => setNotifOpen((o) => !o)}>
+                  <Icon name="bell" size={16} /> <span>Notifications</span>
+                  <span className="acct-count">{notifications.length}</span>
+                  <Icon name="chevronDown" size={14} className="acct-caret" />
+                </button>
+                {notifOpen && (
+                  <div className="acct-notifs">
+                    {notifications.map((n, i) => (
+                      <button key={i} className="acct-notif" role="menuitem"
+                        onClick={() => { setAcctOpen(false); setNotifOpen(false); navigate(n.to) }}>
+                        <span className={`badge badge-${n.tone}`}><Icon name={n.icon} size={13} /></span>
+                        <span className="acct-notif-txt">{n.text}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <button className="acct-opt" role="menuitem" data-tour="tour-btn"
+                  onClick={() => { setAcctOpen(false); startTour() }}>
+                  <Icon name="help" size={16} /> <span>Take a Tour</span>
+                </button>
                 <button className="acct-opt" role="menuitem"
                   onClick={() => { setAcctOpen(false); navigate('/settings') }}>
                   <Icon name="settings" size={16} /> <span>Account settings</span>

@@ -204,8 +204,10 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
    descriptive text drops so the icons keep fitting instead of pushing the page
    sideways — the title is the last thing to go, because it is the only part that
    tells you where you are. */
-.topbar-title-wrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.topbar-title-icon { color: var(--brand-red); flex-shrink: 0; }
+.topbar-title-wrap { display: flex; align-items: center; gap: 9px; min-width: 0; }
+/* The Megawide mark, not a per-page glyph — the sidebar already carries a distinct
+   icon per destination, so repeating it here said nothing new. */
+.topbar-title-wrap img { flex-shrink: 0; display: block; }
 .topbar-title {
   font-family: var(--font-head); font-size: 16px; font-weight: 700; color: var(--text);
   letter-spacing: -0.2px; margin: 0; min-width: 0;
@@ -219,7 +221,8 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
   .topbar-tools { gap: 6px !important; }
   .topbar-site { display: none; }
   .topbar-title { font-size: 14.5px; }
-  .topbar-title-icon { width: 15px; height: 15px; }
+  .topbar-title-wrap { gap: 7px; }
+  .topbar-title-wrap img { height: 17px; }
 }
 @media (max-width: 720px) { .topbar-hide-sm { display: none; } }
 
@@ -230,8 +233,11 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
 .avatar-btn { border: none; cursor: pointer; padding: 0; }
 .avatar-btn:hover { box-shadow: 0 0 0 2px var(--accent-weak); }
 .avatar-lg { width: 40px; height: 40px; font-size: 14px; flex-shrink: 0; }
-.acct-menu { position: absolute; right: 0; top: 46px; width: 250px; z-index: 50; padding: 6px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-lg); }
-.acct-head { display: flex; align-items: center; gap: 11px; padding: 10px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+.acct-menu { position: absolute; right: 0; top: 46px; width: 274px; z-index: 50; padding: 6px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-lg); }
+/* No rule under the identity block. It was a purely decorative divider between the
+   name and the menu options, and with the options now carrying their own icons the
+   grouping is legible without drawing a line to announce it. */
+.acct-head { display: flex; align-items: center; gap: 11px; padding: 10px; margin-bottom: 4px; }
 .acct-name { font-weight: 700; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .acct-meta { font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .acct-role { font-size: 10.5px; color: var(--text-faint); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
@@ -244,6 +250,33 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
 .acct-opt svg { color: var(--text-faint); flex-shrink: 0; }
 .acct-opt.danger:hover { background: var(--accent-weak); color: var(--brand-red); }
 .acct-opt.danger:hover svg { color: var(--brand-red); }
+
+/* ---------- Notifications, inside the account menu ----------
+   They used to be a bell icon-button with its own popover. Two overlays hanging off
+   adjacent topbar controls is a layer too many, and the list is four rows long, so it
+   expands in place here instead. The unread marker moved onto the avatar, which is
+   now the single control that says "something is waiting". */
+.avatar-dot {
+  position: absolute; top: -2px; right: -2px; width: 10px; height: 10px;
+  background: var(--brand-red); border-radius: 50%; border: 2px solid var(--bg-elev);
+}
+.avatar-btn { position: relative; overflow: visible; }
+.acct-count {
+  margin-left: auto; font-size: 10.5px; font-weight: 700; line-height: 1;
+  background: var(--accent-weak); color: var(--brand-red);
+  padding: 3px 7px; border-radius: 10px; flex-shrink: 0;
+}
+.acct-caret { transition: transform 0.15s; flex-shrink: 0; }
+.acct-opt.open .acct-caret { transform: rotate(180deg); }
+.acct-notifs { display: flex; flex-direction: column; gap: 2px; padding: 2px 0 4px; }
+.acct-notif {
+  display: flex; align-items: flex-start; gap: 9px; width: 100%; text-align: left;
+  padding: 7px 10px 7px 12px; border: none; background: transparent; cursor: pointer;
+  border-radius: var(--radius-sm); color: var(--text);
+}
+.acct-notif:hover { background: var(--surface-2); }
+.acct-notif .badge { padding: 5px; flex-shrink: 0; display: grid; place-items: center; }
+.acct-notif-txt { font-size: 12px; line-height: 1.35; min-width: 0; }
 
 .topbar {
   height: var(--topbar-h);
@@ -331,9 +364,13 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
 /* justify-content:center + an auto right margin on the title block: on one line the
    auto margin eats the slack so the title sits left and the controls right; once the
    controls wrap to their own line there is no auto margin on it, so they centre. */
-.card-head { display: flex; align-items: center; justify-content: center; gap: 8px 10px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--border); }
-.card-head > :first-child { margin-right: auto; }
-.card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); }
+/* nowrap at EVERY width, not just wide ones. The controls are pinned to the top-right
+   of the card and stay there; when space runs short the title truncates instead,
+   because a control that drops onto its own line changes the card's height, and the
+   Overview cards are fixed-height by design. */
+.card-head { display: flex; align-items: center; justify-content: center; gap: 8px 10px; flex-wrap: nowrap; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.card-head > :first-child { margin-right: auto; min-width: 0; }
+.card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-sub { font-size: 12px; color: var(--text-faint); font-weight: 500; }
 
 .section-title { font-family: var(--font-head); font-size: 15px; font-weight: 700; color: var(--text); display:flex; align-items:center; gap:10px; }
@@ -1198,7 +1235,52 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .segmented button.active { background: var(--brand-red); border-color: var(--brand-red); color: #fff; }
 .segmented button.active:hover { color: #fff; }
 .segmented.seg-sm button { padding: 4px 9px; font-size: 10.5px; }
-.chart-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ---------- Toggle (two-state sliding switch) ----------
+   Replaces the two-button segmented control for binary choices. Both labels stay
+   readable — the thumb slides behind the active one rather than the inactive option
+   disappearing.
+
+   The two options are equal grid tracks, NOT text-sized, so the thumb is exactly half
+   the track at rest and stays that width as it slides. Text-sized columns would make
+   the thumb resize mid-slide, which reads as the control growing rather than
+   switching. `flex-shrink: 0` is what keeps it pinned in a card head: it must never
+   compress or wrap onto a second line as the window narrows. */
+.toggle {
+  position: relative; display: inline-grid; grid-auto-flow: column;
+  grid-auto-columns: minmax(var(--tg-col, 84px), 1fr);
+  gap: 0; padding: 3px; flex-shrink: 0;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px;
+}
+.toggle-thumb {
+  position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px);
+  background: var(--brand-red); border-radius: 999px; transition: transform 0.18s ease;
+  box-shadow: var(--shadow); pointer-events: none;
+}
+.toggle button {
+  position: relative; z-index: 1; display: inline-flex; align-items: center;
+  justify-content: center; gap: 5px; min-width: 0;
+  padding: 5px 10px; border: none; background: transparent; border-radius: 999px;
+  font-family: var(--font-head); font-size: 11px; font-weight: 700;
+  color: var(--text-muted); white-space: nowrap; transition: color 0.15s;
+}
+.toggle button:hover { color: var(--text); }
+.toggle button.active, .toggle button.active:hover { color: #fff; }
+.toggle button svg { opacity: 0.8; flex-shrink: 0; }
+.toggle button.active svg { opacity: 1; }
+.toggle-lbl { overflow: hidden; text-overflow: ellipsis; }
+.toggle.toggle-sm { --tg-col: 78px; }
+.toggle.toggle-sm button { padding: 4px 9px; font-size: 10.5px; }
+@media (max-width: 700px) {
+  .toggle { --tg-col: 62px; }
+  .toggle.toggle-sm { --tg-col: 58px; }
+  .toggle button svg { display: none; }
+  .toggle.toggle-sm button { padding: 4px 6px; font-size: 10px; }
+}
+/* Two toggles in one card head (the distribution card's scope + metric). nowrap and
+   flex-shrink:0 — the pair holds the card's top-right corner at every width; below
+   620px they stack vertically there rather than wrapping under the title. */
+.chart-controls { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; flex-shrink: 0; }
 
 /* ---------- Stock battery (compact: available/reserved tube + download/upload flow badges) ---------- */
 .battery-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; justify-content: center; padding: 4px 0; }
@@ -1908,7 +1990,6 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   .content { padding: 16px 14px 40px; }
   .topbar { padding: 0 12px; gap: 8px; }
   .section-title { font-size: 18px; }
-  .chart-controls { width: 100%; }
 }
 @media (max-width: 560px) {
   .kpi-grid, .kpi-grid[style], .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
@@ -1986,6 +2067,14 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 }
 .comp-tip em { display: block; margin-top: 5px; font-style: normal; font-weight: 700; color: var(--cs-color); }
 .comp-stat:hover .comp-tip, .comp-stat:focus-visible .comp-tip { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+/* The clicked tile is the source of whatever the list panel is showing, so it holds a
+   visible selected state rather than reverting the moment the pointer leaves it. */
+.comp-stat.selected {
+  border-color: var(--cs-color);
+  box-shadow: inset 0 0 0 1px var(--cs-color), var(--shadow);
+  background: color-mix(in srgb, var(--cs-color) 9%, var(--surface));
+}
+.comp-stat.selected .cs-icon { background: var(--cs-color); color: #fff; }
 
 /* ---------- Leader-line donut ----------
    No legend in this mode, so the ring gets the whole card width and the labels have
@@ -2063,38 +2152,87 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    Overview layout, composition headline, movement legend, mobile pass.
    ========================================================================== */
 
-/* ---------- Overview: composition beside distribution ----------
-   Composition is content-sized (a gauge plus a fixed grid of six tiles, which stops
-   getting better past a point); the donut takes the rest, because its leader labels
-   need every pixel they can get. Stacks below 1200px, where two columns would push
-   the donut under its own leader-label minimum and bounce it into legend mode. */
-.overview-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
-@media (min-width: 1200px) {
-  .overview-grid { grid-template-columns: minmax(400px, 0.8fr) minmax(600px, 1.2fr); }
+/* ---------- Overview: two full-width cards, each split chart | list ----------
+   They used to sit side by side, which left the donut about 600px and the composition
+   card about 480px. Both are full width now and stack, so the chart gets the room its
+   leader labels want AND there is space down the right for the material list that used
+   to fly in as a full-screen drawer over the whole dashboard. Keeping the list inside
+   the card means the figure you clicked is still on screen beside the rows it
+   produced. */
+.overview-stack { display: flex; flex-direction: column; gap: 12px; }
+.overview-stack > .card { min-width: 0; }
 
-  /* In the two-column Overview the composition card is roughly half a screen wide —
-     not enough for the gauge and a three-across tile grid to sit side by side. Left
-     as a plain flex row they wrapped, stranding the gauge alone in a 230px column
-     with a third of the card empty beside it and making the card 80px taller than
-     the donut next to it.
-     So at this width the card lays out top-to-bottom instead: a horizontal gauge band
-     (tube beside its headline, which is where the headline reads best anyway) with the
-     six tiles in a full-width row of three underneath. */
-  .overview-grid .comp-wrap { flex-direction: column; align-items: stretch; gap: 18px; flex-wrap: nowrap; }
-  .overview-grid .comp-gauge { flex-direction: row; align-items: center; gap: 22px; }
-  .overview-grid .comp-gauge .battery-tube { width: 84px; height: 168px; }
-  /* flex:1 so the headline takes the width left beside the tube. Left content-sized
-     it stopped at 230px and the band ended with ~150px of dead space, which is what
-     made this card read as left-heavy next to the donut. */
-  .overview-grid .comp-headline { margin-top: 0; text-align: left; max-width: none; flex: 1 1 auto; min-width: 0; }
-  .overview-grid .comp-headline .ch-figure,
-  .overview-grid .comp-headline .ch-split { justify-content: flex-start; }
-  /* auto-fit rather than a fixed three: the composition column is ~490px at 1440 and
-     ~430px at 1280, which is three tiles at one width and two at the other. A hard
-     count truncates the longest label on the narrower screen. */
-  .overview-grid .comp-stats { flex: 0 0 auto; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+/* Fixed height, not content height. The card must not resize when a selection is made
+   or a toggle is flipped — the list scrolls inside its own panel instead. This is the
+   "card sizes are fixed" rule, and it is why .card-head is nowrap and why the list
+   panel is always present rather than conditionally rendered. */
+.card-split { display: flex; align-items: stretch; gap: 18px; width: 100%; min-width: 0; height: var(--split-h, 420px); }
+.card-split-main { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; }
+/* The chart inside has no intrinsic width (recharts ResponsiveContainer is width:100%),
+   so as a bare flex item it collapses to zero and renders nothing at all. */
+.card-split-main > * { width: 100%; min-width: 0; }
+
+.card-list-panel {
+  flex: 0 0 var(--clp-w, 320px); width: var(--clp-w, 320px); min-width: 0;
+  display: flex; flex-direction: column;
+  border-left: 1px solid var(--border); padding-left: 16px;
 }
-.overview-grid > .card { min-width: 0; }
+.clp-head { display: flex; align-items: flex-start; gap: 8px; padding-bottom: 9px; border-bottom: 1px solid var(--border); margin-bottom: 8px; flex-shrink: 0; }
+.clp-titles { min-width: 0; flex: 1 1 auto; }
+.clp-title { font-size: 13px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clp-sub { font-size: 10.5px; color: var(--text-faint); margin-top: 2px; }
+.clp-close { background: none; border: none; cursor: pointer; padding: 2px; color: var(--text-faint); flex-shrink: 0; }
+.clp-close:hover { color: var(--brand-red); }
+.clp-body { flex: 1 1 auto; overflow-y: auto; min-height: 0; margin-right: -6px; padding-right: 6px; }
+/* The idle state is deliberately a full-height block rather than nothing: an empty
+   panel that only appears on click would change the chart's width as you clicked it,
+   which is the reflow the fixed sizing exists to prevent. */
+.clp-idle {
+  flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; text-align: center; padding: 16px 10px; color: var(--text-faint);
+}
+.clp-idle b { font-size: 12.5px; color: var(--text-muted); font-weight: 700; }
+.clp-idle span { font-size: 11px; line-height: 1.45; max-width: 210px; }
+
+/* Denser rows for the in-card panel — the drawer had 560px to play with, this has
+   ~320px, so the four-figure footer goes two-up instead of four-across. */
+.mat-list.dense .wpc { padding: 9px 10px; }
+/* Two lines rather than one ellipsised line: at 320px a single-line description cuts
+   most material names before they say what the material is. */
+.mat-list.dense .wpc-desc {
+  font-size: 12px; white-space: normal; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+/* The base rule is a flex row, which at this width put each of the four figures on
+   its own line. A two-column grid keeps them paired and the panel compact. */
+.mat-list.dense .wpc-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; }
+.mat-list.dense .wpc-row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (min-width: 1500px) { .card-split { --clp-w: 360px; --split-h: 440px; } }
+@media (max-width: 1100px) {
+  /* Below this the panel and a readable chart cannot share the row: the donut would
+     drop under its leader-label minimum. The list moves beneath the chart instead.
+     The panel keeps a FIXED height here rather than sizing to its contents — an idle
+     panel is much shorter than a 200-row list, so without this the card grew by ~290px
+     the moment you clicked a tile, which is the jump the fixed sizing exists to stop. */
+  .card-split { flex-direction: column; height: auto; gap: 14px; }
+  .card-list-panel {
+    flex: 0 0 auto; width: 100%; height: 320px;
+    border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 12px;
+  }
+  .clp-idle { padding: 10px; }
+  .mat-list.dense .wpc-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+/* Two toggles plus a title do not fit one 375px row: the title was compressed to
+   literally zero width and the card lost its name. They stack at the card's top-right
+   corner instead — each toggle still unbroken and still right-aligned, which is what
+   "the toggles stay fixed top-right and never wrap" means at this width. */
+@media (max-width: 620px) {
+  .card-head .chart-controls { flex-direction: column; align-items: flex-end; gap: 5px; }
+  .card-head .card-title { min-width: 54px; }
+}
+@media (max-width: 640px) { .mat-list.dense .wpc-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 .composition-card, .distribution-card { display: flex; flex-direction: column; }
 .composition-card > .card-pad, .distribution-card > .card-pad { flex: 1; display: flex; align-items: center; }
 /* width:100% is load-bearing, not cosmetic. The pad is a flex row, and both children
@@ -2118,13 +2256,9 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   margin-top: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px;
   text-transform: uppercase; color: var(--text-faint); line-height: 1.35;
 }
-.ch-split { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-.ch-chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700;
-  color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border);
-}
-.ch-chip i { width: 7px; height: 7px; border-radius: 2px; background: var(--chip); flex-shrink: 0; }
+/* .ch-split / .ch-chip removed with the Available/Reserved percentage chips they
+   styled — the gauge already draws that split and prints the available share on its
+   own fill. */
 
 /* ---------- Movement History legend on the left ----------
    Reading order runs legend-then-chart: the reader learns what the six series ARE
@@ -2150,12 +2284,10 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    new charts; below are the places that needed narrowing rather than stacking.
    ========================================================================== */
 @media (max-width: 900px) {
-  /* Card headers put the title on its own line and let the controls use the full
-     width beneath it — at this size a right-aligned control row was being squeezed
-     into a two-per-line stack beside a truncated title. */
-  .card-head { align-items: flex-start; padding: 11px 13px; }
-  .card-head > :first-child { margin-right: 0; flex: 1 1 100%; }
-  .chart-controls { width: 100%; justify-content: flex-start; gap: 8px; }
+  /* The controls no longer drop onto their own line under the title — they hold the
+     card's top-right corner at every width (see .chart-controls / .card-head), which
+     is why the old full-width overrides that lived here are gone. */
+  .card-head { padding: 11px 13px; }
   .card-pad { padding: 12px 13px; }
 
   /* Sub-tabs scroll horizontally rather than wrapping to a second line. */
@@ -2168,7 +2300,7 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   .comp-wrap { flex-direction: column; align-items: stretch; gap: 18px; }
   .comp-gauge { flex-direction: row; align-items: center; justify-content: center; gap: 20px; }
   .comp-headline { margin-top: 0; text-align: left; }
-  .comp-headline .ch-figure, .comp-headline .ch-split { justify-content: flex-start; }
+  .comp-headline .ch-figure { justify-content: flex-start; }
   .battery-tube { width: 74px; height: 150px; }
 
   .activity-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2183,7 +2315,7 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   .comp-stats { grid-template-columns: minmax(0, 1fr); }
   .comp-gauge { flex-direction: column; gap: 12px; }
   .comp-headline { text-align: center; }
-  .comp-headline .ch-figure, .comp-headline .ch-split { justify-content: center; }
+  .comp-headline .ch-figure { justify-content: center; }
   .activity-summary { grid-template-columns: minmax(0, 1fr); }
   .ch-avail { font-size: 26px; }
   /* The tooltip is wider than the tile it hangs off, so it is pinned to the card
@@ -2215,36 +2347,52 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    different place. */
 .card-head { row-gap: 8px; }
 @media (max-width: 900px) {
-  /* nowrap is essential, not tidiness. .card-head inherits `flex-wrap: wrap` from its
-     base rule, and in a COLUMN container wrapping happens along the column axis — the
-     controls did not drop under the title, they wrapped into a second column beside
-     it and ran clear off the right edge of the card. That was the "mess". */
-  .card-head { flex-direction: column; align-items: stretch; flex-wrap: nowrap; }
-  /* `flex: 1 1 100%` here means 100% of the HEIGHT once the direction is column,
-     which is what forced the overflow in the first place. */
-  .card-head > :first-child { margin-right: 0; flex: 0 0 auto; }
-  .card-head .chart-controls,
-  .card-head > .segmented { width: 100%; justify-content: flex-start; align-items: center; gap: 8px; }
-  /* Each segmented group stays a single unbroken row and scrolls if it must; a
-     wrapped group put "Value" on a line of its own under "Quantity", which read as
-     two separate controls. */
-  .card-head .segmented { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  /* The head STAYS a row here. It used to become a column so the controls could take
+     their own full-width line, but that changed the card's height with the viewport,
+     which the fixed-height Overview cards cannot allow — and the toggles are now
+     required to hold the top-right corner at every width. The title gives up its
+     width instead (it truncates), and the card icon is dropped below 560px to buy the
+     title back some room. */
+  .card-head { flex-direction: row; align-items: center; flex-wrap: nowrap; }
+  .card-head > :first-child { margin-right: auto; min-width: 0; flex: 1 1 auto; }
+  .card-head .segmented { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
   .card-head .segmented::-webkit-scrollbar { display: none; }
   .card-head .segmented button { flex: 0 0 auto; }
-  .card-head > .chip { align-self: flex-start; }
+  .card-head > .chip { flex-shrink: 0; }
+}
+@media (max-width: 560px) {
+  .card-head { padding-left: 12px; padding-right: 12px; gap: 7px; }
+  .card-head .card-icon { display: none; }
 }
 
-/* ---------- Overview: uniform cards, no vertical scroll ----------
-   Both cards stretch to the same height and centre their contents, so the row reads
-   as one band rather than two cards of different sizes. */
-.overview-grid { align-items: stretch; }
-.overview-grid > .card { display: flex; flex-direction: column; }
-.overview-grid > .card > .card-pad { flex: 1; display: flex; align-items: center; }
+/* ---------- Overview: the composition card's own split layout ----------
+   The gauge is now sized to match the donut beside it on the next card down — a 300px
+   tube against a 300px ring — so the two cards read as a matched pair rather than one
+   large chart and one small one. The tube stands to the left of its headline, with the
+   six tiles filling the width beneath. */
+/* The gauge stands in its own full-height column with the headline beneath it, and the
+   six tiles take the rest of the row. Stacking the gauge ABOVE the tiles (which is
+   what this did when the card was half-width) caps the tube at whatever height is left
+   over — about 260px. Given its own column it can run the full height of the split,
+   which is what makes it match the donut's 300px ring on the card below. */
+.overview-stack .comp-wrap { flex-direction: row; align-items: stretch; gap: 24px; flex-wrap: nowrap; height: 100%; }
+.overview-stack .comp-gauge { flex: 0 0 auto; flex-direction: column; justify-content: center; gap: 14px; }
+.overview-stack .comp-headline { margin-top: 0; text-align: center; max-width: 220px; }
+.overview-stack .comp-headline .ch-figure { justify-content: center; }
+/* align-content:center, not stretch: with six tiles in two rows across a 420px column
+   a stretched row is ~200px tall and each tile becomes a mostly-empty box. */
+.overview-stack .comp-stats { flex: 1 1 auto; align-content: center; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 
-@media (min-width: 1200px) {
-  /* Tightened so the whole Overview clears a 768px-tall laptop without scrolling:
-     the two cards plus the tab strip, filter bar and sub-tabs above them have to fit
-     inside the viewport, and the donut's height is the biggest lever. */
-  .overview-grid > .card > .card-pad { padding-top: 10px; padding-bottom: 10px; }
-  .overview-grid .comp-wrap { gap: 14px; }
+@media (min-width: 1101px) {
+  /* Matched to the donut's ring at the widest leader tier: 150px radius = 300px across.
+     This is the "battery as large as the donut" sizing. */
+  .overview-stack .comp-gauge .battery-tube { width: 124px; height: 300px; }
+  .overview-stack .comp-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 1100px) {
+  .overview-stack .comp-wrap { flex-direction: column; align-items: stretch; gap: 18px; }
+  .overview-stack .comp-gauge { flex-direction: row; align-items: center; gap: 22px; }
+  .overview-stack .comp-headline { text-align: left; max-width: none; flex: 1 1 auto; min-width: 0; }
+  .overview-stack .comp-headline .ch-figure { justify-content: flex-start; }
+  .overview-stack .comp-gauge .battery-tube { width: 92px; height: 200px; }
 }

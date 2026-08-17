@@ -71,6 +71,38 @@ export function Segmented({ options, value, onChange, size }) {
   )
 }
 
+/* ---------- Toggle (two-state sliding switch) ----------
+   For binary choices only — Quantity/Value, Trade/Item Group. Segmented still
+   handles three-or-more (the period picker), where a sliding thumb stops being
+   readable.
+
+   The two options share ONE grid track each rather than sizing to their text, so
+   the thumb is always exactly half the track and lands flush on either side. Sizing
+   the columns to the labels would make the thumb width change as it slid, which
+   reads as the control resizing rather than switching. The whole thing is
+   `flex-shrink: 0` in CSS: it must never wrap or compress out of a card head. */
+export function Toggle({ options, value, onChange, size, className = '' }) {
+  const idx = Math.max(0, options.findIndex((o) => o.value === value))
+  return (
+    <div className={`toggle ${size === 'sm' ? 'toggle-sm' : ''} ${className}`} role="group">
+      <span className="toggle-thumb" style={{ transform: `translateX(${idx * 100}%)` }} aria-hidden="true" />
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          className={value === o.value ? 'active' : ''}
+          aria-pressed={value === o.value}
+          onClick={() => onChange(o.value)}
+          title={o.label}
+        >
+          {o.icon && <Icon name={o.icon} size={size === 'sm' ? 12 : 13} />}
+          <span className="toggle-lbl">{o.label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 /* ---------- Card ---------- */
 // Unrecognised props land on the root element, which is how callers attach
 // `data-tour` anchors (the guided tour finds its targets by that attribute) without

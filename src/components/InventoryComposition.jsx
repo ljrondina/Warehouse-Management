@@ -45,7 +45,7 @@ export const COMPOSITION_STATS = [
   },
 ]
 
-export default function InventoryComposition({ k, unit, metric = 'qty', series, onPick }) {
+export default function InventoryComposition({ k, unit, metric = 'qty', series, onPick, selectedKey }) {
   const money = metric === 'value'
   const available = money ? k.availableValue : k.available
   const reserved = money ? k.reservedValue : k.reserved
@@ -82,16 +82,11 @@ export default function InventoryComposition({ k, unit, metric = 'qty', series, 
             <span className="ch-of">of</span>
             <span className="ch-total tabular">{fmtBig(base)}</span>
           </div>
+          {/* The Available/Reserved percentage chips that used to sit here are gone.
+              The gauge draws that same split, and its own %-fill label prints the
+              available share — three statements of one number in one card. */}
           <div className="ch-caption">
             {money ? 'value' : unit} available of stock on hand
-          </div>
-          <div className="ch-split">
-            <span className="ch-chip" style={{ '--chip': series.available }}>
-              <i /> Available {availPct}%
-            </span>
-            <span className="ch-chip" style={{ '--chip': series.reserved }}>
-              <i /> Reserved {reservedPct}%
-            </span>
           </div>
         </div>
       </div>
@@ -101,9 +96,10 @@ export default function InventoryComposition({ k, unit, metric = 'qty', series, 
           <button
             key={s.key}
             type="button"
-            className="comp-stat"
+            className={`comp-stat ${selectedKey === s.key ? 'selected' : ''}`}
+            aria-pressed={selectedKey === s.key}
             style={{ '--cs-color': series[s.role] }}
-            onClick={() => onPick({ field: s.field, label: s.label })}
+            onClick={() => onPick(selectedKey === s.key ? null : { key: s.key, field: s.field, label: s.label })}
             // A real tooltip element rather than a title attribute so it can hold a
             // full sentence and appear without the browser's ~1s delay.
             aria-label={`${s.label}: ${s.tip}`}

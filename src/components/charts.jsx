@@ -163,17 +163,53 @@ const RAD = Math.PI / 180
 // the labels get their width back. `maxName` is generous at every tier because a
 // truncated category name is the thing the reader most needs — it is only tightened
 // where the alternative is text running off the card.
+// `wrapChars`/`maxLines` replaced a single `maxName` ellipsis budget. Truncating to
+// one line meant a phone showed "Electrical Wi…" and the reader had to hover a ring
+// they cannot hover on a touch screen. Wrapping to two or three short lines spends
+// vertical space — which the column has — instead of horizontal space, which it does
+// not, and it is what lets the ring itself grow: every tier's ring is materially
+// bigger than the one-line layout could afford.
+// `wrapChars` has to clear the LONGEST SINGLE WORD in the taxonomy, not the average
+// label: a word wider than the line budget is the one case wrapping cannot rescue, and
+// it ellipsises. "Architectural" (13) and "Requirements" (12) are the binding pair, so
+// no tier drops below 14 — which is what sets the phone ring at 72 rather than larger.
 const LEADER_TIERS = [
-  { minWidth: 620, ring: 126, elbow: 14, stub: 26, name: 10.5, figMin: 10, figMax: 22, gap: 32, maxName: 28 },
-  { minWidth: 470, ring: 100, elbow: 12, stub: 20, name: 10, figMin: 10, figMax: 18, gap: 30, maxName: 20 },
-  { minWidth: 380, ring: 78, elbow: 10, stub: 14, name: 9.5, figMin: 9.5, figMax: 15, gap: 29, maxName: 17 },
+  { minWidth: 620, ring: 150, elbow: 14, stub: 26, name: 10.5, figMin: 11, figMax: 22, pad: 8, wrapChars: 20, maxLines: 3 },
+  { minWidth: 470, ring: 118, elbow: 12, stub: 18, name: 10, figMin: 10, figMax: 17, pad: 7, wrapChars: 16, maxLines: 3 },
+  { minWidth: 380, ring: 92, elbow: 10, stub: 12, name: 9.5, figMin: 9.5, figMax: 14, pad: 6, wrapChars: 14, maxLines: 3 },
   // Phones. Below this a ring plus two readable text columns genuinely does not fit,
   // and the donut falls back to the legend rather than clipping its own labels.
-  // The gap has to clear a two-line label (name + figure) or the columns collide —
-  // it is the label's own height, not an arbitrary spacing.
-  { minWidth: 296, ring: 62, elbow: 8, stub: 10, name: 9, figMin: 9, figMax: 13, gap: 28, maxName: 14 },
+  { minWidth: 296, ring: 72, elbow: 7, stub: 6, name: 8, figMin: 8.5, figMax: 11, pad: 5, wrapChars: 13, maxLines: 3 },
 ]
 const tierFor = (width) => LEADER_TIERS.find((t) => width >= t.minWidth) || null
+
+// Greedy word wrap to a character budget. Anything that still does not fit inside
+// `maxLines` ends in an ellipsis on the last line rather than being dropped silently —
+// a name that just stops reads as the category's real name.
+function wrapName(name, maxChars, maxLines) {
+  const words = String(name).split(/\s+/).filter(Boolean)
+  const lines = []
+  let cur = ''
+  for (let i = 0; i < words.length; i++) {
+    // A single word wider than the whole line has to be broken somewhere, or it
+    // runs past the edge of the chart box no matter how the column is spread.
+    const w = words[i].length > maxChars ? `${words[i].slice(0, maxChars - 1)}…` : words[i]
+    const next = cur ? `${cur} ${w}` : w
+    if (next.length <= maxChars) { cur = next; continue }
+    lines.push(cur)
+    cur = w
+    if (lines.length === maxLines) break
+  }
+  if (lines.length < maxLines && cur) lines.push(cur)
+  if (lines.length === maxLines) {
+    const shown = lines.join(' ').replace(/…/g, '').length
+    if (shown < words.join(' ').length) {
+      const last = lines[maxLines - 1]
+      lines[maxLines - 1] = last.length >= maxChars ? `${last.slice(0, maxChars - 1)}…` : `${last}…`
+    }
+  }
+  return lines
+}
 
 // Each label's figure is sized by how much of the ring its slice takes, so the chart
 // can be read at a glance without comparing wedge angles: the biggest share carries
@@ -191,17 +227,31 @@ const figureSize = (frac, maxFrac, tier) => {
 
 // Push a column of labels apart in place: spread downwards, then, if the column
 // overruns the bottom of the box, pin the last one and spread back upwards.
-function spreadColumn(list, top, bottom, gap) {
-  list.sort((a, b) => a.y - b.y)
-  for (let i = 1; i < list.length; i++) list[i].y = Math.max(list[i].y, list[i - 1].y + gap)
-  const last = list[list.length - 1]
-  if (last && last.y > bottom) {
-    last.y = bottom
-    for (let i = list.length - 2; i >= 0; i--) list[i].y = Math.min(list[i].y, list[i + 1].y - gap)
+//
+// Each entry carries its OWN height `h` (a wrapped label is one, two or three name
+// lines tall) and `y` is the centre of that block, so the minimum separation between
+// two neighbours is half of each plus the padding. A single constant gap — which is
+// what this used before labels could wrap — either overlapped the tall ones or left
+// the short ones drifting far from their slice.
+function spreadColumn(list, top, bottom, pad) {
+  const minGap = (a, b) => a.h / 2 + pad + b.h / 2
+  const down = (from) => {
+    for (let i = from; i < list.length; i++) {
+      list[i].y = Math.max(list[i].y, list[i - 1].y + minGap(list[i - 1], list[i]))
+    }
   }
-  if (list[0] && list[0].y < top) {
-    list[0].y = top
-    for (let i = 1; i < list.length; i++) list[i].y = Math.max(list[i].y, list[i - 1].y + gap)
+  list.sort((a, b) => a.y - b.y)
+  down(1)
+  const last = list[list.length - 1]
+  if (last && last.y + last.h / 2 > bottom) {
+    last.y = bottom - last.h / 2
+    for (let i = list.length - 2; i >= 0; i--) {
+      list[i].y = Math.min(list[i].y, list[i + 1].y - minGap(list[i], list[i + 1]))
+    }
+  }
+  if (list[0] && list[0].y - list[0].h / 2 < top) {
+    list[0].y = top + list[0].h / 2
+    down(1)
   }
   return list
 }
@@ -213,6 +263,10 @@ function makeLeaderLabel({ data, key, palette, height, minPct, metric, tier }) {
   const maxFrac = total > 0 ? Math.max(...data.map((d) => (d[key] || 0) / total)) : 0
   const cache = new Map()
 
+  // 1.35× the font size — a normal text line-height. A flat +2 left consecutive
+  // wrapped lines' glyph boxes grazing each other.
+  const nameLH = tier.name * 1.35
+
   const layout = (cx, cy, r) => {
     const ck = `${cx}|${cy}|${r}`
     if (cache.has(ck)) return cache.get(ck)
@@ -222,7 +276,17 @@ function makeLeaderLabel({ data, key, palette, height, minPct, metric, tier }) {
       const mid = 90 - 360 * (cum + frac / 2)
       cum += frac
       const rad = -mid * RAD // screen y grows downward, so the angle is negated
-      return { i, frac, cos: Math.cos(rad), sin: Math.sin(rad) }
+      const lines = wrapName(d.name, tier.wrapChars, tier.maxLines)
+      const size = figureSize(frac, maxFrac, tier)
+      return {
+        i, frac, lines, size,
+        // The block is the wrapped name stacked on the figure beneath it. Its height
+        // is what spreadColumn separates neighbours by. The +5 is the gap between the
+        // last name line and the figure: without it their glyph boxes graze by a
+        // pixel or two, which at 22px reads as the two lines touching.
+        h: lines.length * nameLH + size + 5,
+        cos: Math.cos(rad), sin: Math.sin(rad),
+      }
     })
     // Slices too thin to label would collide no matter how they are spread. They keep
     // their colour and their tooltip; the card prints a note saying how many are
@@ -233,7 +297,7 @@ function makeLeaderLabel({ data, key, palette, height, minPct, metric, tier }) {
       const col = shown
         .filter((p) => (side === 'r' ? p.cos >= 0 : p.cos < 0))
         .map((p) => ({ ...p, side, y: cy + (r + tier.elbow) * p.sin }))
-      for (const p of spreadColumn(col, 10, height - 10, tier.gap)) placed.set(p.i, p)
+      for (const p of spreadColumn(col, 4, height - 4, tier.pad)) placed.set(p.i, p)
     }
     const res = { placed, hidden: all.length - shown.length }
     cache.set(ck, res)
@@ -251,14 +315,14 @@ function makeLeaderLabel({ data, key, palette, height, minPct, metric, tier }) {
     const y0 = cy + outerRadius * p.sin
     const x1 = cx + (outerRadius + tier.elbow) * dir * Math.abs(p.cos || 0.2)
     const x2 = cx + dir * (outerRadius + tier.elbow + tier.stub)
-    const name = d.name.length > tier.maxName ? `${d.name.slice(0, tier.maxName - 1)}…` : d.name
     const anchor = p.side === 'r' ? 'start' : 'end'
     const tx = x2 + dir * 5
-    const size = figureSize(p.frac, maxFrac, tier)
-    // Two lines: the name in a constant small size on top, the quantity (or value)
-    // beneath it sized by share. Keeping the NAME constant is deliberate — scaling it
-    // too would make small categories hard to read for no extra information, since
-    // the figure already carries the emphasis.
+    const { lines, size, h } = p
+    // The block is centred on p.y, so the name lines stack from its top edge and the
+    // figure sits beneath them. Keeping the NAME size constant is deliberate —
+    // scaling it too would make small categories hard to read for no extra
+    // information, since the figure already carries the emphasis.
+    const blockTop = p.y - h / 2
     return (
       <g key={`lead-${index}`}>
         <polyline
@@ -266,12 +330,14 @@ function makeLeaderLabel({ data, key, palette, height, minPct, metric, tier }) {
           fill="none" stroke={color} strokeWidth={1.2} strokeOpacity={0.75}
         />
         <circle cx={x0} cy={y0} r={2.5} fill={color} />
-        <text x={tx} y={p.y - size / 2 - 2} textAnchor={anchor} dominantBaseline="middle"
-          fontSize={tier.name} fontWeight={600} fill="var(--text-muted)">
-          {name}
-        </text>
-        <text x={tx} y={p.y + size / 2 - 1} textAnchor={anchor} dominantBaseline="middle"
-          fontSize={size} fontWeight={800} fill="var(--text)">
+        {lines.map((ln, li) => (
+          <text key={li} x={tx} y={blockTop + nameLH * (li + 0.5)} textAnchor={anchor}
+            dominantBaseline="middle" fontSize={tier.name} fontWeight={600} fill="var(--text-muted)">
+            {ln}
+          </text>
+        ))}
+        <text x={tx} y={blockTop + lines.length * nameLH + size / 2 + 4} textAnchor={anchor}
+          dominantBaseline="middle" fontSize={size} fontWeight={800} fill="var(--text)">
           {metric === 'value' ? `₱${compact(d.value)}` : compact(d[key] || 0)}
           <tspan fontSize={Math.max(9.5, size - 4)} fontWeight={700} fill={color}>
             {'  '}{(p.frac * 100).toFixed(0)}%
@@ -304,6 +370,7 @@ function makeLeaderLabel({ data, key, palette, height, minPct, metric, tier }) {
 export function DistributionDonut({
   data, metric = 'qty', wide = false, hideLegend = false, showValue = true, unit = 'units',
   height, innerRadius = 62, outerRadius = 94, leaderLines = false, minLabelPct = 2,
+  onSliceClick, selectedName,
 }) {
   const { theme } = useTheme()
   const PALETTE = categoricalFor(theme)
@@ -321,9 +388,14 @@ export function DistributionDonut({
   // useElementWidth), so defaulting to the widest tier never flashes between modes.
   const tier = leaderLines ? tierFor(boxWidth === 0 ? 780 : chartWidth) : null
   const useLeaders = Boolean(tier)
-  const h = height ?? (useLeaders ? (chartWidth < 420 ? 300 : wide ? 360 : 330) : wide ? 300 : 250)
+  const h = height ?? (useLeaders ? (chartWidth < 420 ? 344 : wide ? 380 : 340) : wide ? 300 : 250)
   const rOuter = useLeaders ? tier.ring : outerRadius
-  const rInner = useLeaders ? Math.max(24, rOuter - Math.min(42, rOuter * 0.36)) : innerRadius
+  const rInner = useLeaders ? Math.max(24, rOuter - Math.min(46, rOuter * 0.36)) : innerRadius
+  // The centre readout is sized from the HOLE, not fixed at 20px. A constant size is
+  // what made the total overlap the ring on a phone: the small tier's hole is ~105px
+  // across and "₱482.4M" at 20px is wider than that. Scaling it off rInner keeps the
+  // same optical fit at every tier.
+  const centreVal = Math.round(Math.max(12, Math.min(24, rInner * 0.32)))
   const label = useLeaders
     ? makeLeaderLabel({ data, key, palette: PALETTE, height: h, minPct: minLabelPct, metric, tier })
     : null
@@ -362,8 +434,16 @@ export function DistributionDonut({
                  would look striped. */
               filter="url(#donutShadow)"
               isAnimationActive={false}
+              onClick={onSliceClick ? (_, i) => onSliceClick(data[i], i) : undefined}
+              style={onSliceClick ? { cursor: 'pointer' } : undefined}
             >
-              {data.map((_, i) => <Cell key={i} fill={`url(#pieGrad-${i % PALETTE.length})`} />)}
+              {/* With a selection, the unselected slices drop to a third opacity so the
+                  chosen wedge reads as the source of the list beside it. No selection
+                  means no dimming at all, rather than everything at a uniform 0.35. */}
+              {data.map((d, i) => (
+                <Cell key={i} fill={`url(#pieGrad-${i % PALETTE.length})`}
+                  fillOpacity={selectedName && d.name !== selectedName ? 0.32 : 1} />
+              ))}
             </Pie>
             <Tooltip
               content={({ active, payload }) =>
@@ -380,9 +460,11 @@ export function DistributionDonut({
             />
           </PieChart>
         </ResponsiveContainer>
-        <div className="donut-center">
-          <span className="donut-center-lbl">Total</span>
-          <span className="donut-center-val tabular">{metric === 'value' ? `₱${compact(total)}` : compact(total)}</span>
+        <div className="donut-center" style={{ maxWidth: rInner * 1.72 }}>
+          <span className="donut-center-lbl" style={{ fontSize: Math.max(8, centreVal * 0.46) }}>Total</span>
+          <span className="donut-center-val tabular" style={{ fontSize: centreVal }}>
+            {metric === 'value' ? `₱${compact(total)}` : compact(total)}
+          </span>
         </div>
       </div>
       {/* In leader mode the labels ARE the legend, so the colour key is dropped. The

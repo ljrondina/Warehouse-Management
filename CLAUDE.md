@@ -1008,3 +1008,117 @@ migrate over.
 **Verified** on fresh page loads at 1440×900, light and dark: site, warehouse in both
 orientations with sections on and off, and all four racking views — zero labels clipped,
 zero overlaps, nothing outside a scroll container. `npm run build` passes.
+
+### 2026-08-17 — Session: Overview split cards, sliding toggles, topbar/account consolidation
+
+Thirteen requests across mobile, desktop and general chrome. Two clarified before
+building: the Megawide mark goes on **topbar page titles only** (card icons stay
+meaningful), and the toggles are **sliding switches with both labels visible**.
+
+**1. The Overview is two full-width cards, each split chart | list.** They used to sit
+side by side (~480px and ~600px). Now they stack, and each card carries the material
+list down its own right-hand side. That list is the one that used to fly in as a
+full-screen drawer over the entire dashboard — `KpiListModal` is **deleted**, its rows
+extracted to `src/components/MaterialList.jsx`, which also exports the `CardListPanel`
+the cards use. Clicking a composition tile fills the composition card's panel; clicking
+a donut slice fills the distribution card's. The clicked tile takes a selected state and
+the unselected donut slices drop to 0.32 opacity, so the panel always has a visible
+source. Clicking the same target again clears it.
+
+`Others` is the rollup bucket, not a category, so it resolves to every line NOT in one
+of the eight named slices — matching on the literal name would have listed nothing.
+Changing the Trade/Item Group scope clears the selection, because a Trade name is not
+an Item Group name and the panel heading would otherwise survive its own ring.
+
+**2. Card sizes are fixed.** `.card-split` is a fixed height (420px, 440 above 1500px)
+and the list scrolls inside its panel. The idle panel is always rendered rather than
+appearing on click — a panel that appeared would change the chart's width as you clicked
+it. Measured: the composition card is 508px tall and its chart area 843×420 both before
+and after a selection, at desktop and at 375px. On mobile the panel stacks under the
+chart at a fixed 320px for the same reason: sized to content it grew the card ~290px the
+moment a tile was clicked.
+
+**3. The battery is now as large as the donut** — 124×300 against the donut's 150px
+ring (300px across), measured. Getting there meant giving the gauge its own full-height
+column with the headline beneath it and the six tiles beside it; stacked above the tiles
+(the old half-width layout) the tube is capped at whatever height is left, ~260px.
+The Available/Reserved percentage chips are gone: the gauge draws that split and prints
+the available share on its own fill, so the chips were the third statement of one number.
+
+**4. Donut labels wrap instead of ellipsising, and the ring grew at every tier.**
+`maxName` (a one-line character budget) became `wrapChars`/`maxLines`, with a greedy word
+wrap to two or three lines. Wrapping spends vertical space, which the column has, rather
+than horizontal space, which it does not — which is what paid for the bigger rings
+(150 from 126 at desktop, 72 from 62 on a phone).
+
+`wrapChars` is set by the **longest single word** in the taxonomy, not the average
+label: a word wider than the line is the one case wrapping cannot rescue.
+"Architectural" (13) and "Requirements" (12) are the binding pair, so no tier drops
+below 13 — that is what caps the phone ring at 72 rather than larger. Found by
+measurement, not estimate: labels render at ~5.3px per character, not the ~4.6 assumed,
+and "Plumbing Works" overflowed by exactly 5px at a 14-character budget.
+
+`spreadColumn` now separates neighbours by half of each label's OWN height plus padding,
+because a wrapped label is one, two or three lines tall; the old constant gap either
+overlapped the tall ones or stranded the short ones. Label line-height went from a flat
+`+2` to `1.35×` the font size, and the figure sits 4px below the last name line — at a
+flat +2 the glyph boxes grazed, which at 22px reads as the two lines touching.
+
+**5. The donut's centre total no longer overlaps the ring on a phone.** It was a fixed
+20px; the small tier's hole is ~105px across and "₱482.4M" at 20px is wider than that.
+It is now sized off the inner radius (`clamp(12, rInner × 0.32, 24)`), giving 24px at
+desktop and 15px on a phone, and the block is capped at `rInner × 1.72`.
+
+**6. Quantity/Value and Trade/Item Group are sliding toggles** — new `Toggle` in
+`ui.jsx`, one pill track with a thumb that slides behind the active label. The two
+options are **equal grid tracks, not text-sized**, so the thumb is exactly half the
+track and stays that width as it slides; sized to their labels the thumb would resize
+mid-slide, which reads as the control growing rather than switching. `Segmented` stays
+for the three-option period picker, where a sliding thumb stops being readable.
+
+**7. The toggles hold the card's top-right corner and never wrap.** `.card-head` is
+`flex-wrap: nowrap` at every width now and the title truncates instead. Three leftover
+rules from the old "controls take their own full-width line" design were still forcing
+`width: 100%` and `flex-wrap: wrap`, one of them a duplicate `.chart-controls`
+definition later in the file that silently overrode the new one — that is why the
+controls were still spanning the full head. Below 620px the distribution card's two
+toggles stack vertically in that corner rather than side by side: at 375px the pair plus
+a title do not fit one row, and the title was being compressed to **literally zero
+width**, so the card lost its name entirely. Both titles now render in full (171px and
+168px at 375px).
+
+**8. Topbar titles come from the sidebar.** `/dashboard` reads "Dashboard" on all three
+tabs instead of renaming itself per tab, and `/storage` is "Floor Plan", matching its nav
+label rather than "Warehouse Floor Plan". `ROUTE_ICONS`/`DASH_ICONS` and `pageIcon()`
+were deleted; the Megawide mark replaces them.
+
+**9. Notifications and the tour moved inside the account dropdown**, and the topbar is
+down to the theme toggle plus the avatar. Notifications expand in place as a section of
+that menu rather than opening a second popover off an adjacent control. The unread dot
+moved onto the avatar, which is now the single control that says something is waiting.
+
+**10. The rule under the account name is gone.** It was `.acct-head`'s `border-bottom` —
+a purely decorative divider between the identity block and the options, and with the
+options now carrying their own icons the grouping reads without it.
+
+**Verified against a temporary local fixture** (240 inventory lines + 700 ledger rows;
+the fixture and its `main.jsx` hook were deleted afterwards and `dist/` confirmed free of
+it — this machine signs in through the DEV demo fallback, which has no Supabase session,
+so every table hydrates empty and the charts would otherwise render nothing).
+
+At 1440×900, light and dark: both Overview cards 1374×508 and identical; tube 124×300 vs
+ring 300; 20 donut labels with **zero overlaps, zero clipped, zero ellipsised**; card
+heads a uniform 59px with controls 16px off the right edge; idle-panel text at 6.79:1
+contrast in dark. At 375×812: donut labels clean in **both** Trade and Item Group scopes
+(27 and 24 text nodes, zero overlaps, zero clipped, zero ellipsised); card heights
+identical before and after selection on both cards; no horizontal scroll on any view.
+Insights, Activity, Safekeeping, Analytics, Reports, Floor Plan, Low Stock and Inventory
+Masterlist all audited for zero-width titles and overflowing controls — none found.
+Click-through exercised end to end on both cards, including the Others bucket. No console
+errors. `npm run build` passes.
+
+**Measurement caveat:** the browser pane does not composite while hidden, so
+`ResizeObserver` and recharts' `ResponsiveContainer` do not re-measure on a viewport
+resize — the donut kept a 780px viewBox scaled down to 324px and reported the desktop
+tier. Every mobile figure above was taken after a **full page reload** at that width, not
+after a resize. Screenshots remain unavailable for the same reason.

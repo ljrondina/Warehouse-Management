@@ -1,19 +1,18 @@
-import { lazy, memo, Suspense, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   KPIS, byTradeL1, byTradeL2, movementCombinedSeries, PERIODS,
   topQuantity, fastMoving, lowStock, highValue, nonMoving, items,
   agingAnalysis, ledgerActivity,
 } from '../../data/insights'
-import { Card, Segmented } from '../../components/ui'
+import { Card, Segmented, Toggle } from '../../components/ui'
 import InventoryComposition from '../../components/InventoryComposition'
+import { CardListPanel } from '../../components/MaterialList'
 import { AgingBars, DistributionDonut, MovementComposed, NetChangeChart } from '../../components/charts'
 import { num, peso, fmtDate } from '../../lib/format'
 import { seriesFor } from '../../lib/colors'
 import { useTheme } from '../../context/ThemeContext'
 import Icon from '../../lib/icons'
-
-const KpiListModal = lazy(() => import('../../components/KpiListModal'))
 
 // Three sub-views over the same inventory. Overview answers "what do we hold and what
 // is it worth", Insights answers "which materials need attention", Activity answers
@@ -221,7 +220,11 @@ export default function InventoryTab({ pool, qtyUnit }) {
   const [agingMetric, setAgingMetric] = useState('value')
   const [flowMetric, setFlowMetric] = useState('qty')
   const [compMetric, setCompMetric] = useState('qty')
-  const [kpiModal, setKpiModal] = useState(null)
+  // Overview selections. These used to open a full-screen sliding drawer; the list
+  // now lives in the right-hand panel of the card that was clicked, so the selection
+  // is per-card state rather than one modal shared by both.
+  const [compSel, setCompSel] = useState(null)
+  const [donutSel, setDonutSel] = useState(null)
 
   const INSIGHT_ROWS = useMemo(buildInsightRows, [items.length])
   const k = useMemo(() => KPIS(pool), [pool])
@@ -230,7 +233,30 @@ export default function InventoryTab({ pool, qtyUnit }) {
   const activity = useMemo(() => ledgerActivity(pool, period), [pool, period])
   const periodOpts = PERIODS.map((p) => ({ value: p.key, label: p.label }))
 
-  const donutData = rollup(donutScope === 'l1' ? byTradeL1(pool) : byTradeL2(pool, 'all'))
+  const donutData = useMemo(
+    () => rollup(donutScope === 'l1' ? byTradeL1(pool) : byTradeL2(pool, 'all')),
+    [pool, donutScope],
+  )
+
+  // The materials behind a clicked composition tile — the same set the drawer used to
+  // list, ranked by the tile's own quantity column.
+  const compRows = useMemo(() => {
+    if (!compSel) return []
+    return pool.filter((i) => (i[compSel.field] || 0) > 0).sort((a, b) => b[compSel.field] - a[compSel.field])
+  }, [compSel, pool])
+
+  // The materials behind a clicked slice. "Others" is the rollup bucket, not a real
+  // category, so it resolves to everything NOT in one of the named slices rather than
+  // to a category literally called Others — which would list nothing.
+  const donutRows = useMemo(() => {
+    if (!donutSel) return []
+    const field = donutScope === 'l1' ? 'tradeL1' : 'tradeL2'
+    const named = new Set(donutData.filter((d) => d.name !== 'Others').map((d) => d.name))
+    const match = donutSel.name === 'Others'
+      ? (i) => !named.has(i[field])
+      : (i) => i[field] === donutSel.name
+    return pool.filter(match).sort((a, b) => b.totalQty - a.totalQty)
+  }, [donutSel, donutScope, donutData, pool])
 
   const selectView = (key) => {
     const next = new URLSearchParams(params)
@@ -252,31 +278,52 @@ export default function InventoryTab({ pool, qtyUnit }) {
       </div>
 
       {/* ---------------------------------------------------------------- Overview
-          Composition and Distribution sit side by side on a full desktop and stack
-          below 1200px. The three value KPI cards that used to head this view are
-          gone: Total Inventory Value and Reserved Value are the same two figures the
-          composition tiles now show in Value mode, and Average Value / SKU was
-          dropped with them. */}
+          Two full-width cards stacked, each split into a chart on the left and a
+          material list down its right-hand side. The list is the same one that used
+          to fly in as a full-screen drawer over the whole dashboard: keeping it
+          inside the card means the figure you clicked stays on screen next to the
+          rows it produced, instead of being covered by them. */}
       {view === 'overview' && (
-        <div className="mt overview-grid">
+        <div className="mt overview-stack">
           {/* The six quantity figures live INSIDE this card — see
               InventoryComposition. Each tile hovers for a description and clicks
-              through to the material list behind it. */}
+              through to the material list on the right. */}
           <Card title="Inventory Composition" icon="box" className="composition-card" data-tour="kpis"
-            right={<Segmented size="sm" options={metricOpts} value={compMetric} onChange={setCompMetric} />}>
-            <InventoryComposition k={k} unit={qtyUnit} metric={compMetric} series={S} onPick={setKpiModal} />
+            right={<Toggle size="sm" options={metricOpts} value={compMetric} onChange={setCompMetric} />}>
+            <div className="card-split">
+              <div className="card-split-main">
+                <InventoryComposition k={k} unit={qtyUnit} metric={compMetric} series={S}
+                  onPick={setCompSel} selectedKey={compSel?.key} />
+              </div>
+              <CardListPanel selection={compSel} rows={compRows} onClear={() => setCompSel(null)}
+                hint="Click any figure on the left to list the materials behind it." />
+            </div>
           </Card>
 
           <Card title="Inventory Distribution" icon="reports" className="distribution-card" data-tour="charts"
             right={
               <div className="chart-controls">
-                <Segmented size="sm" options={scopeOpts} value={donutScope} onChange={setDonutScope} />
-                <Segmented size="sm" options={metricOpts} value={donutMetric} onChange={setDonutMetric} />
+                {/* Changing the scope clears the selection: a Trade name is not an
+                    Item Group name, so the panel would otherwise keep a heading that
+                    no slice on the new ring corresponds to. */}
+                <Toggle size="sm" options={scopeOpts} value={donutScope}
+                  onChange={(v) => { setDonutScope(v); setDonutSel(null) }} />
+                <Toggle size="sm" options={metricOpts} value={donutMetric} onChange={setDonutMetric} />
               </div>
             }>
-            {donutData.length === 0
-              ? <NoData what="No inventory loaded" why="Nothing matches the current filter, or the inventory table is empty." />
-              : <DistributionDonut data={donutData} metric={donutMetric} leaderLines wide />}
+            <div className="card-split">
+              <div className="card-split-main">
+                {donutData.length === 0
+                  ? <NoData what="No inventory loaded" why="Nothing matches the current filter, or the inventory table is empty." />
+                  : <DistributionDonut data={donutData} metric={donutMetric} leaderLines wide
+                      onSliceClick={(d) => setDonutSel((s) => (s?.name === d.name ? null : { name: d.name }))}
+                      selectedName={donutSel?.name} />}
+              </div>
+              <CardListPanel
+                selection={donutSel ? { label: donutSel.name, field: 'totalQty' } : null}
+                rows={donutRows} onClear={() => setDonutSel(null)}
+                hint="Click a slice of the ring to list the materials in that category." />
+            </div>
           </Card>
         </div>
       )}
@@ -289,7 +336,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
         <div className="mt" data-tour="insights">
           <div className="grid grid-2 insight-grid">
             <Card title="High Stock Items" icon="box" iconColor={S.total}
-              right={<Segmented size="sm" options={metricOpts} value={highStockMetric} onChange={setHighStockMetric} />}>
+              right={<Toggle size="sm" options={metricOpts} value={highStockMetric} onChange={setHighStockMetric} />}>
               {/* The toggle swaps ONLY the headline figure. The ranking stays by quantity
                   (INSIGHT_ROWS.high is topQuantity) and `barValue` pins the bars to
                   quantity too — otherwise the bars would stop agreeing with the rank
@@ -329,7 +376,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
               right={
                 <div className="chart-controls">
                   <span className="chip">current filter</span>
-                  <Segmented size="sm" options={metricOpts} value={agingMetric} onChange={setAgingMetric} />
+                  <Toggle size="sm" options={metricOpts} value={agingMetric} onChange={setAgingMetric} />
                 </div>
               }>
               {!aging
@@ -403,7 +450,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
               </Card>
 
               <Card title="Net Inventory Change" icon="analytics" className="mt"
-                right={<Segmented size="sm" options={metricOpts} value={flowMetric} onChange={setFlowMetric} />}>
+                right={<Toggle size="sm" options={metricOpts} value={flowMetric} onChange={setFlowMetric} />}>
                 {activity.coveredBuckets === 0
                   ? <NoData what="No coverage in this period" why={`The ledger's newest movement is ${num(activity.ledgerLagDays)} days old, so none of the ${period} buckets shown fall inside it. Try a wider granularity.`} />
                   : <NetChangeChart data={activity.series} metric={flowMetric} />}
@@ -411,7 +458,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
 
               <div className="grid grid-2 insight-grid mt">
                 <Card title="Top Incoming Items" icon="incoming" iconColor={S.incoming}
-                  right={<Segmented size="sm" options={metricOpts} value={flowMetric} onChange={setFlowMetric} />}>
+                  right={<Toggle size="sm" options={metricOpts} value={flowMetric} onChange={setFlowMetric} />}>
                   <FlowList rows={activity.topIncoming} tone={S.incoming} metric={flowMetric} />
                 </Card>
                 <Card title="Top Outgoing Items" icon="outgoing" iconColor={S.outgoing}>
@@ -423,9 +470,6 @@ export default function InventoryTab({ pool, qtyUnit }) {
         </div>
       )}
 
-      <Suspense fallback={null}>
-        {kpiModal && <KpiListModal field={kpiModal.field} label={kpiModal.label} pool={pool} onClose={() => setKpiModal(null)} />}
-      </Suspense>
     </>
   )
 }
