@@ -15,6 +15,18 @@ const TRADE_BY_CATEGORY = {
   MEPF: 'MEPF',
 }
 
+// The Warehouse Schedule sheet records projects by an informal short name; these are the
+// proper project names from the project master list (public.projects), confirmed with
+// the procurement team. Applied at build time so the column, the filter dropdown and the
+// search box all read the proper name rather than the shorthand.
+const PROJECT_NAME_BY_CODE = {
+  AVESTA: 'Avesta Residences',
+  JABS: '4PH Jab Greenwoods Dasmariñas',
+  JENARA: '4PH Jenara Orchard Dasmarinas',
+  STREVI: '4PH Strevi Bacoor',
+  Southscape: 'Southscapes Trece Martires',
+}
+
 // Filled in place by rebuildDeliveryRows() so consumers keep a live reference
 // after src/lib/hydrate.js swaps in the rows from Postgres.
 export const deliveryRows = []
@@ -22,7 +34,11 @@ export const deliveryRows = []
 export function rebuildDeliveryRows() {
   deliveryRows.length = 0
   deliveryRows.push(
-    ...DELIVERY_TRACKER_ROWS.map((r) => ({ ...r, trade: TRADE_BY_CATEGORY[r.category] || r.category }))
+    ...DELIVERY_TRACKER_ROWS.map((r) => ({
+      ...r,
+      trade: TRADE_BY_CATEGORY[r.category] || r.category,
+      project: PROJECT_NAME_BY_CODE[r.project] || r.project,
+    }))
   )
 }
 

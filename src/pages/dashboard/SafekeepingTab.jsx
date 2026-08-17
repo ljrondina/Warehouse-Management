@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { soh, TRADES, SHEET_PROJECTS } from '../../data/safekeeping'
 import { KPIS, bySkScope, SK_SCOPES, SHEET_VIEWS } from '../../data/safekeepingInsights'
-import { deliveryRows, DELIVERY_STATUSES, deliveryStatusCounts } from '../../data/deliveryTracker'
 import { Card, KpiCard, Segmented, Toggle, NoData } from '../../components/ui'
 import { CardListPanel } from '../../components/MaterialList'
 import Select from '../../components/Select'
@@ -14,13 +13,13 @@ import { seriesFor } from '../../lib/colors'
 import { useTheme } from '../../context/ThemeContext'
 import Icon from '../../lib/icons'
 
-// Same three sub-views as the Warehouse tab, over Safekeeping's own dataset — Overview
-// (what's held and where), Insights (the source sheets, filterable), Activity (the
-// delivery schedule, which is literally movement in and out of the yard).
+// Two sub-views over Safekeeping's own dataset — Overview (what's held and where, plus
+// the delivery schedule at the bottom) and Masterlist (the source sheets in full,
+// filterable). The old separate Activity view is gone: the Delivery Tracker it held now
+// lives at the foot of Overview.
 const VIEWS = [
   { key: 'overview', label: 'Overview', icon: 'box' },
-  { key: 'insights', label: 'Insights', icon: 'analytics' },
-  { key: 'activity', label: 'Activity', icon: 'trend' },
+  { key: 'masterlist', label: 'Masterlist', icon: 'reports' },
 ]
 
 // Four cards, not five. "Total Line Items" counted SOH rows, not a warehouse fact
@@ -32,44 +31,6 @@ const SK_CARDS = [
   { key: 'totalIn', role: 'incoming', label: 'Incoming', icon: 'incoming', qty: true, tip: 'Quantity received into safekeeping, per the SOH sheet’s In column.' },
   { key: 'totalOut', role: 'outgoing', label: 'Outgoing', icon: 'outgoing', qty: true, tip: 'Quantity pulled out of safekeeping, per the SOH sheet’s Out column.' },
 ]
-
-// Same urgency→colour mapping DeliveryTracker.jsx uses for its own KPI row, borrowed
-// here so this widget and the full tracker never disagree about what a colour means.
-const DELIVERY_TONE_ROLE = { danger: 'outgoing', warn: 'damaged', info: 'incoming', neutral: 'reserved' }
-
-// A compressed read of the Delivery Tracker (the real "Warehouse Schedule" sheet),
-// for the Overview view — five numbers in one row rather than the full KPI grid +
-// data table DeliveryTracker itself renders. `onViewAll` jumps to the Activity
-// sub-view, where the full tracker (and its own filters) lives.
-function DeliveryInsight({ onViewAll }) {
-  const { theme } = useTheme()
-  const S = seriesFor(theme)
-  const counts = useMemo(() => deliveryStatusCounts(), [])
-  const chips = [
-    { label: 'Scheduled', value: deliveryRows.length, icon: 'truck', color: S.neutral },
-    ...DELIVERY_STATUSES.map((s) => ({ label: s.short, value: counts[s.key] || 0, icon: s.icon, color: S[DELIVERY_TONE_ROLE[s.tone]] || S.neutral })),
-  ]
-  return (
-    <Card title="Delivery Insight" icon="truck" iconColor={S.total}
-      right={
-        <button className="btn btn-sm" onClick={onViewAll}>
-          <span className="btn-text">View full tracker</span> <Icon name="chevronRight" size={13} />
-        </button>
-      }>
-      <div className="dins-strip">
-        {chips.map((c, i) => (
-          <div key={i} className="dins-item" style={{ '--di': c.color }}>
-            <span className="dins-icon"><Icon name={c.icon} size={15} /></span>
-            <span className="dins-body">
-              <span className="dins-val tabular">{num(c.value)}</span>
-              <span className="dins-lbl">{c.label}</span>
-            </span>
-          </div>
-        ))}
-      </div>
-    </Card>
-  )
-}
 
 // The donut folds everything past the 8th slice into "Others", which lands at index 8.
 const ROLLUP_N = 8
@@ -142,13 +103,15 @@ function SourceTables({ view }) {
   const reset = () => { setSearch(''); setTrade(''); setItemGroup(''); setProject('') }
 
   // In Full view the group path each row belongs to has no band to live in, so it rides
-  // under the description — the same trick the masterlist uses.
-  const columns = useMemo(
-    () => view.columns.map((c) => (c.desc
-      ? { ...c, sub: (r) => [r.detailedDescription, view.groupBy.map((g) => r[g.key] || '—').join(' · ')].filter(Boolean).join('  ·  ') }
-      : c)),
-    [view],
-  )
+  // under the description — the same trick the masterlist uses. `descKeys` names which
+  // fields fold into that secondary line (SOH shows trade · item group); it defaults to
+  // the sheet's Section grouping when a sheet does not set it.
+  const columns = useMemo(() => {
+    const descKeys = view.descKeys || view.groupBy.map((g) => g.key)
+    return view.columns.map((c) => (c.desc
+      ? { ...c, sub: (r) => [r.detailedDescription, descKeys.map((k) => r[k] || '—').join(' · ')].filter(Boolean).join('  ·  ') }
+      : c))
+  }, [view])
 
   return (
     <DataSheet
@@ -243,8 +206,6 @@ export default function SafekeepingTab({ pool, qtyUnit = 'units' }) {
             ))}
           </div>
 
-          <DeliveryInsight onViewAll={() => selectView('activity')} />
-
           {/* Same UI as the Warehouse tab's Inventory Distribution card: a donut on
               the left, leader-labelled, and the ranked list on the right — clicking a
               slice fills the panel with the safekeeping lines in that category. */}
@@ -269,31 +230,26 @@ export default function SafekeepingTab({ pool, qtyUnit = 'units' }) {
                 hint="Click a slice of the ring to list the safekeeping lines in that category." />
             </div>
           </Card>
+
+          {/* The Delivery Tracker sits at the foot of the Overview — the schedule of
+              movement in and out of the yard, sourced from the real Warehouse Schedule
+              sheet. It used to be its own Activity sub-view. */}
+          <DeliveryTracker />
         </div>
       )}
 
-      {/* ---------------------------------------------------------------- Insights
+      {/* --------------------------------------------------------------- Masterlist
           The three source sheets in full, with the same search + filter bar
-          convention as the Inventory Master List. This is the closest Safekeeping has
-          to the Warehouse tab's ranked lists — there is no unit price or movement
+          convention as the Inventory Master List. There is no unit price or movement
           history to compute aging or ABC analysis from, so browsing the real sheets
           IS the "which lines need attention" view. */}
-      {view === 'insights' && (
-        <div className="mt" data-tour="sk-insights">
+      {view === 'masterlist' && (
+        <div className="mt" data-tour="sk-masterlist">
           <Card pad={false}
-            title="Safekeeping Source Tables" icon="reports" iconColor={S.neutral}
+            title="Safekeeping Masterlist" icon="reports" iconColor={S.neutral}
             foot={<Segmented size="sm" options={SHEET_VIEWS} value={sheet} onChange={setSheet} />}>
             <SourceTables key={sheet} view={sheetView} />
           </Card>
-        </div>
-      )}
-
-      {/* ---------------------------------------------------------------- Activity
-          The Delivery Tracker — literally movement in and out of the yard, sourced
-          from the real Warehouse Schedule sheet, not seeded data. */}
-      {view === 'activity' && (
-        <div className="mt" data-tour="sk-activity">
-          <DeliveryTracker />
         </div>
       )}
     </>

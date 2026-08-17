@@ -1,8 +1,6 @@
 import {
-  RACKS, CANTILEVER, FLOOR_AREA, HV_SHELVING, BEAM_HEIGHTS, FRAME_HEIGHT,
-  RACK_TYPES, LS600_LEVELS, slotItems, AREA_BY_ID,
+  RACKS, CANTILEVER, FLOOR_AREA, BEAM_HEIGHTS, LS600_LEVELS, slotItems,
 } from '../../data/warehouseMap'
-import { num } from '../../lib/format'
 
 // Level 3 — RACKING (reference slide 15, "RACKING SYSTEM – FRONT VIEW").
 //
@@ -13,12 +11,10 @@ import { num } from '../../lib/format'
 const BAY_W = 92
 const PAD = { l: 62, r: 18, t: 26, b: 40 }
 
-const cellTone = (list) => {
-  if (!list.length) return 'empty'
-  if (list.some((i) => i.stockStatus === 'Out of Stock')) return 'out'
-  if (list.some((i) => i.stockStatus === 'Low')) return 'low'
-  return 'full'
-}
+// Two states only: a position either holds something (occupied, red) or it does not
+// (available, green). The finer low / out-of-stock shading was dropped — on the racking
+// view the question is physical occupancy, not stock health.
+const cellTone = (list) => (list.length ? 'occupied' : 'available')
 
 /* ------------------------------------------------------ selective pallet rack */
 
@@ -40,14 +36,13 @@ function PalletRack({ rack, selected, onSelect }) {
 
   return (
     <svg className="fp-elev" viewBox={`0 0 ${W} ${vbH}`} role="img" aria-label={`${rack.name} front elevation`}>
-      {/* height axis with the drawing's beam elevations */}
+      {/* level grid lines — the mm elevation labels are gone, so the axis just shows
+          the beam levels as structure. */}
       {BEAM_HEIGHTS.map((mm, i) => (
         <g key={mm} className="fp-axis">
           <line x1={PAD.l - 6} y1={yOf(i)} x2={W - PAD.r} y2={yOf(i)} />
-          <text x={PAD.l - 10} y={yOf(i) + 3} textAnchor="end">{mm === 0 ? 'FFL' : num(mm)}</text>
         </g>
       ))}
-      <text className="fp-axis-cap" x={PAD.l - 10} y={PAD.t - 10} textAnchor="end">mm</text>
 
       {/* bays x levels */}
       {Array.from({ length: rack.bays }, (_, b) =>
@@ -153,7 +148,7 @@ function CantileverRack({ selected, onSelect }) {
       {Array.from({ length: bays }, (_, b) => (
         <text key={b} className="fp-bay-n" x={PAD.l + b * BW + BW / 2} y={PAD.t + H + 18} textAnchor="middle">{b + 1}</text>
       ))}
-      <text className="fp-bay-cap" x={PAD.l + (bays * BW) / 2} y={PAD.t + H + 34} textAnchor="middle">BAY · 900 mm CENTRES</text>
+      <text className="fp-bay-cap" x={PAD.l + (bays * BW) / 2} y={PAD.t + H + 34} textAnchor="middle">BAY</text>
     </svg>
   )
 }
@@ -175,10 +170,8 @@ function ShelvingLine({ rack, selected, onSelect }) {
       {LS600_LEVELS.map((mm, i) => (
         <g key={mm} className="fp-axis">
           <line x1={PAD.l - 6} y1={PAD.t + H - i * lvlH} x2={W - PAD.r} y2={PAD.t + H - i * lvlH} />
-          <text x={PAD.l - 10} y={PAD.t + H - i * lvlH + 3} textAnchor="end">{i === 0 ? 'FFL' : num(LS600_LEVELS[i - 1])}</text>
         </g>
       ))}
-      <text className="fp-axis-cap" x={PAD.l - 10} y={PAD.t - 10} textAnchor="end">mm</text>
 
       {Array.from({ length: rack.bays }, (_, b) =>
         Array.from({ length: rack.levels }, (_, l) => {
@@ -251,58 +244,6 @@ export default function RackElevation({ rackId, selectedCell, onSelectCell, floo
   if (!rack) return null
   if (rack.kind === 'shelving') return <ShelvingLine rack={rack} selected={selectedCell} onSelect={onSelectCell} />
   return <PalletRack rack={rack} selected={selectedCell} onSelect={onSelectCell} />
-}
-
-// Specification strip under the elevation — every figure is off the reference drawing.
-export function RackSpec({ rackId }) {
-  if (rackId === 'FLOOR') {
-    return (
-      <div className="fp-spec">
-        <span><b>Storage</b> Block stacked</span>
-        <span><b>Area</b> Safekeeping open floor</span>
-        <span><b>Handling</b> Forklift / pallet truck</span>
-      </div>
-    )
-  }
-  if (rackId === 'CANT') {
-    return (
-      <div className="fp-spec">
-        <span><b>System</b> Cantilever</span>
-        <span><b>Upright</b> {num(CANTILEVER.upright)} mm</span>
-        <span><b>Bay centre</b> {num(CANTILEVER.bayCentre)} mm</span>
-        <span><b>Arm length</b> {num(CANTILEVER.armLength)} mm</span>
-        <span><b>Arm load</b> {num(CANTILEVER.armLoad)} kg</span>
-        <span><b>Positions</b> {num(CANTILEVER.positions)}</span>
-      </div>
-    )
-  }
-  const shelf = RACKS.find((r) => r.id === rackId && r.kind === 'shelving')
-  if (shelf) {
-    return (
-      <div className="fp-spec">
-        <span><b>System</b> LS600 boltless shelving</span>
-        <span><b>Frame</b> {num(HV_SHELVING.frameHeight)} mm</span>
-        <span><b>Bay</b> {num(HV_SHELVING.bayWidth)} mm</span>
-        <span><b>Layout</b> {shelf.bays} bays × {shelf.levels} levels</span>
-        <span><b>Positions</b> {num(shelf.positions)}</span>
-        <span><b>Area</b> {AREA_BY_ID[shelf.area].short}</span>
-      </div>
-    )
-  }
-  const rack = RACKS.find((r) => r.id === rackId)
-  if (!rack) return null
-  const t = RACK_TYPES[rack.type]
-  return (
-    <div className="fp-spec">
-      <span><b>System</b> Interlock 600 selective</span>
-      <span><b>Rack type</b> {t.label} · {num(t.bayCentre)} mm centres</span>
-      <span><b>Frame</b> {num(FRAME_HEIGHT)} mm</span>
-      <span><b>Bay load</b> {num(t.bayLoad)} kg</span>
-      <span><b>Layout</b> {rack.bays} bays × {rack.levels} levels</span>
-      <span><b>Positions</b> {num(rack.positions)}</span>
-      <span><b>Area</b> {AREA_BY_ID[rack.area].short}</span>
-    </div>
-  )
 }
 
 export { FLOOR_AREA }

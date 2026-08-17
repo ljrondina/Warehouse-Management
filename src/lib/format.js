@@ -43,13 +43,13 @@ const MONTH_ABBR = {
   january: 'Jan', february: 'Feb', march: 'Mar', april: 'Apr', may: 'May', june: 'Jun',
   july: 'Jul', august: 'Aug', september: 'Sep', october: 'Oct', november: 'Nov', december: 'Dec',
 }
-const WEEK_ORDINAL = { first: '1st', second: '2nd', third: '3rd', fourth: '4th', last: 'Last' }
+const WEEK_ORDINAL = { first: 'W1', second: 'W2', third: 'W3', fourth: 'W4', last: 'W5' }
 
 // Normalizes a free-text delivery estimate ("August, 2026", "First Week August 2026",
 // "Mid September 2026") into the tracker's compact shorthand — always year-first, so
 // it reads against the firm YYYY MMM DD dates in the same column without looking like
 // a different kind of value: a plain month becomes "<Year> <Mon>", a week-of-month
-// estimate becomes "<Year> <Mon> <Nth> Week", and a mid-month estimate becomes
+// estimate becomes "<Year> <Mon> W<N>", and a mid-month estimate becomes
 // "<Year> Mid <Mon>". Falls back to the source text verbatim when it doesn't match one
 // of the sheet's known phrasings.
 export const fmtTargetText = (text) => {
@@ -59,7 +59,7 @@ export const fmtTargetText = (text) => {
   let m = t.match(/^(first|second|third|fourth|last)\s+week\s+([a-z]+)\s+(\d{4})/i)
   if (m) {
     const mon = MONTH_ABBR[m[2].toLowerCase()]
-    if (mon) return `${m[3]} ${mon} ${WEEK_ORDINAL[m[1].toLowerCase()]} Week`
+    if (mon) return `${m[3]} ${mon} ${WEEK_ORDINAL[m[1].toLowerCase()]}`
   }
 
   m = t.match(/^mid\s+([a-z]+)\s+(\d{4})/i)
@@ -75,6 +75,24 @@ export const fmtTargetText = (text) => {
   }
 
   return t
+}
+
+// Standardises the Delivery Tracker's free-text tower/location strings into the
+// compact "T1, T2, T3" / "TA, TB, TC" form. The source mixes styles ("Tower 1 & 2",
+// "Tower A & B", "T2, T5 & T10", "Tower I, J, H & A"): tokens are split on commas and
+// ampersands, the word "Tower" is dropped, and any bare token (a number or letter with
+// no prefix) gets a "T" prepended, so every token ends up as T<id>. Blank stays blank.
+export const fmtTower = (loc) => {
+  if (!loc) return ''
+  const tokens = String(loc)
+    .split(/[,&]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((tok) => {
+      const t = tok.replace(/^tower\s+/i, '').trim()
+      return /^t/i.test(t) ? t.toUpperCase() : `T${t.toUpperCase()}`
+    })
+  return tokens.join(', ')
 }
 
 export const initials = (name = '') =>

@@ -3,7 +3,7 @@ import {
   RACKS, CANTILEVER, FLOOR_AREA,
 } from '../../data/warehouseMap'
 import PlanDefs from './planDefs'
-import PlanText, { PlanStack } from './planText'
+import PlanText from './planText'
 import Icon from '../../lib/icons'
 
 // Level 2 — WAREHOUSE PLAN, TOP VIEW (reference slide 9).
@@ -31,8 +31,6 @@ const inset = (r, d = 1) => ({ x: r.x + d, y: r.y + d, w: Math.max(0, r.w - d * 
 // has to contain them; the icon carries the identification and the wordmark stays
 // quiet beneath it. A run only one rack deep gets no icon at all — there is no room.
 const iconFor = (across) => (across < 46 ? 0 : clamp(across * 0.28, 0, 34))
-const fontFor = (across, vertical) =>
-  vertical ? clamp(across * 0.48, 7.5, 12.5) : clamp(across * 0.13, 7.5, 12)
 
 export default function WarehousePlan({
   selected, onSelect, onOpenRack, hovered, onHover, orient = 'portrait', showSections = true,
@@ -197,26 +195,19 @@ export default function WarehousePlan({
       {/* rack runs */}
       {RACKS.map((r) => <RackShape key={r.id} rack={r} />)}
 
-      {/* area labels last, so a rack never covers one */}
+      {/* area icons last, so a rack never covers one. Wordmarks were removed — the
+          legend beneath the plan carries the names now. A run only one rack deep is too
+          shallow for an icon, so it gets none (identified by hover and the legend). */}
       {showSections && WH_AREAS.map((a) => {
         const r = mr(a.hull[0])
-        // A tall narrow hull reads its label along its length. The threshold is 2.2 so
-        // the high-value room — barely oblong — keeps a horizontal label.
-        const vertical = r.h > r.w * 2.2
+        const across = Math.min(r.w, r.h)
+        const ic = iconFor(across)
+        if (ic <= 0) return null
         const cx = r.x + r.w / 2
         const cy = r.y + r.h / 2
-        const along = vertical ? r.h : r.w
-        const across = vertical ? r.w : r.h
-        const ic = iconFor(across)
-        const fs = fontFor(across, vertical)
         return (
-          <g key={a.id} transform={vertical ? `rotate(-90 ${cx} ${cy})` : undefined} pointerEvents="none">
-            <PlanStack
-              x={cx} y={cy}
-              text={a.name.toUpperCase()} maxW={along - 14} size={fs} lh={fs + 2}
-              icon={a.icon} iconSize={ic} Icon={Icon}
-              cls={`fp-area-t fp-t-${a.role}`} iconCls={`fp-t-${a.role}`}
-            />
+          <g key={a.id} className={`fp-t-${a.role}`} transform={`translate(${cx - ic / 2} ${cy - ic / 2})`} pointerEvents="none">
+            <Icon name={a.icon} size={ic} />
           </g>
         )
       })}

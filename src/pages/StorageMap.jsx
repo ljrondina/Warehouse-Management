@@ -7,7 +7,7 @@ import {
 } from '../data/warehouseMap'
 import SitePlan from '../components/floorplan/SitePlan'
 import WarehousePlan from '../components/floorplan/WarehousePlan'
-import RackElevation, { RackSpec } from '../components/floorplan/RackElevation'
+import RackElevation from '../components/floorplan/RackElevation'
 import LocationPanel from '../components/floorplan/LocationPanel'
 import { Card } from '../components/ui'
 import FacilityCapacityGauge from '../components/FacilityCapacityGauge'
@@ -34,6 +34,21 @@ const LEVELS = [
   { id: 'warehouse', label: 'Warehouse', icon: 'warehouse' },
   { id: 'rack', label: 'Racking', icon: 'layers' },
 ]
+
+// The plan blocks show only an icon now; this legend decodes the icon + colour for
+// each area. Used on the site and warehouse levels.
+function FpLegend({ areas }) {
+  return (
+    <div className="fp-legend fp-legend-areas">
+      {areas.map((a) => (
+        <span key={a.id} className="fp-legend-i">
+          <i className={`fp-swatch fp-sw-${a.role}`} />
+          <Icon name={a.icon} size={13} /> {a.name}
+        </span>
+      ))}
+    </div>
+  )
+}
 
 const rackLabel = (id) =>
   id === 'CANT' ? CANTILEVER.name
@@ -111,6 +126,7 @@ export default function StorageMap() {
               onDrill={() => go({ level: 'warehouse', area: null })}
             />
           </div>
+          <FpLegend areas={SITE_AREAS} />
         </Card>
 
         {sel ? (
@@ -207,6 +223,7 @@ export default function StorageMap() {
               onOpenRack={(id) => go({ level: 'rack', rack: id, area: id === 'CANT' || id === 'FLOOR' ? 'safekeeping' : RACKS.find((r) => r.id === id)?.area || area })}
             />
           </div>
+          <FpLegend areas={WH_AREAS} />
         </Card>
 
         {sel ? (
@@ -287,16 +304,9 @@ export default function StorageMap() {
         <div className="fp-stage fp-stage-elev">
           <RackElevation rackId={rid} selectedCell={cell} onSelectCell={setCell} floorCount={allInRack.length} />
         </div>
-        <RackSpec rackId={rid} />
         <div className="fp-legend fp-legend-cells">
-          <span className="fp-legend-i"><i className="fp-cellsw is-empty" />Empty position</span>
-          <span className="fp-legend-i"><i className="fp-cellsw is-full" />Occupied</span>
-          <span className="fp-legend-i"><i className="fp-cellsw is-low" />Holds low stock</span>
-          <span className="fp-legend-i"><i className="fp-cellsw is-out" />Holds an out-of-stock line</span>
-        </div>
-        <div className="card-note">
-          Bay counts, level heights and load ratings are off the reference racking drawing. Which material line sits in
-          which bay is modelled, not recorded — see the placement note on the panel.
+          <span className="fp-legend-i"><i className="fp-cellsw is-available" />Available</span>
+          <span className="fp-legend-i"><i className="fp-cellsw is-occupied" />Occupied</span>
         </div>
       </Card>
 
@@ -306,11 +316,6 @@ export default function StorageMap() {
         role={areaDef?.role}
         pool={cellItems ? cellItems.list : allInRack}
         capacity={!cellItems && occ ? { ...occ, unit: 'pallet positions' } : null}
-        note={
-          cellItems
-            ? null
-            : 'Lines are ordered by issue frequency and laid into the positions from ground level up, so fast-moving stock sits at pick height. The stock sheet does not record a physical bay.'
-        }
         emptyText={cellItems ? 'This position is empty.' : 'Nothing is held here.'}
         actions={cellItems && <button className="btn btn-sm btn-ghost" onClick={() => setCell(null)}>Show whole rack</button>}
       />

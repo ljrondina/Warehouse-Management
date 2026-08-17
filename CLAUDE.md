@@ -1590,3 +1590,82 @@ the LS600 spec. `npm run build` passes.
 files were staged from here. `--fp-highvalue` is now declared in both `index.css` (grey)
 and `floorplan.css` (purple) — the later file wins, which is the override pattern that
 split was made for.
+
+### 2026-08-17 — Session: Safekeeping tab restructure + delivery/masterlist formatting + floor-plan declutter
+
+Two clarifications settled first: the Delivery Tracker's five project short-codes map to
+their proper project names (AVESTA → Avesta Residences, JABS → 4PH Jab Greenwoods
+Dasmariñas, JENARA → 4PH Jenara Orchard Dasmarinas, STREVI → 4PH Strevi Bacoor,
+Southscape → Southscapes Trece Martires), and the Safekeeping masterlist keeps its
+Stock-on-Hand / Incoming / Outgoing sheet switcher.
+
+**Safekeeping tab (`SafekeepingTab.jsx`, `safekeepingInsights.js`, `index.css`).**
+- The sub-views went from three (Overview / Insights / Activity) to two
+  (**Overview / Masterlist**). Old `?view=insights|activity` URLs fall through to
+  Overview since they are no longer in `VIEWS`.
+- The compressed **Delivery Insight** card is gone (component + its `.dins-*` CSS
+  deleted). The **full Delivery Tracker now lives at the foot of the Overview**, below
+  the KPI row and the Distribution card — it used to be the separate Activity view.
+- **Insights → Masterlist**, and the card inside renamed *Safekeeping Source Tables* →
+  **Safekeeping Masterlist**.
+- The Stock-on-Hand sheet's columns are relabelled to the requested spec: **In →
+  Incoming**, **Out → Outgoing**, Description → *Material Description*. Its secondary
+  (2nd-line) description now folds in **trade · item group** via a new per-sheet
+  `descKeys` (defaulting to the sheet's Section grouping) — project was dropped from
+  that line because it already heads each Section band and reads as a holding location,
+  not a description. Incoming/Outgoing sheets are unchanged.
+
+**Delivery Tracker (`DeliveryTracker.jsx`, `deliveryTracker.js`, `lib/format.js`).**
+- Table rebuilt in the Inventory Master List's **Full format**, PIXEL column widths so
+  the table has a real intrinsic width and scrolls sideways: **Material Description
+  (trade · batch on line 2) · Project · Target Delivery · Qty · UOM · Location/Tower ·
+  DP · Remarks**. On a desktop everything up to DP is visible and **Remarks sits just
+  past the right edge**, reached by horizontal scroll.
+- **Projects** now render their proper names (mapping above), applied in
+  `rebuildDeliveryRows()` so the column, the filter dropdown and the search all use them.
+- **Target Delivery** week estimates changed from "2026 Aug 1st Week" to the requested
+  **"2026 Aug W1"** (`WEEK_ORDINAL` → W1–W5 in `fmtTargetText`). The other forms
+  (`2026 Jun 01`, `2026 Jun`, `2026 Mid Sep`) were already correct.
+- **Location / Tower** standardised through a new `fmtTower()`: "Tower 1 & 2" → "T1, T2",
+  "Tower A & B" → "TA, TB", "T2, T5 & T10" → "T2, T5, T10", "Tower I, J, H & A" → "TI, TJ,
+  TH, TA".
+- **Data-gap note (honest limitation):** the source "Warehouse Schedule" sheet has **no
+  item code, no detailed (2nd) description and no item group**, so those three requested
+  sub-fields have no data behind them and are not shown — trade and batch are the
+  qualifiers that exist. The **Status** column was also dropped to match the requested
+  column list; status still drives the KPI filter row above the table. (Both are easy to
+  restore/populate later if the source gains those fields.)
+
+**Warehouse floor plan.**
+- *General* — the coloured **material blocks now show only their icon**, no wordmark
+  (`SitePlan.jsx`, `WarehousePlan.jsx`); a **legend** under the plan (`FpLegend` in
+  `StorageMap.jsx`) decodes each area's colour swatch + icon → name, on both the Site and
+  Warehouse levels. Rooms, the open-floor label, rack numbers and the Open Stock Yard
+  label stay (context / identifiers, not the coloured area blocks). The one-rack-deep
+  runs (Structural, Architectural) get no icon — too shallow — and are read from the
+  legend and hover.
+- *Level 1 — Warehouse Capacity gauge* (`FacilityCapacityGauge.jsx`): the qty/value
+  toggle is gone; it now speaks only in **percentage of floor space**, printed both on
+  each band of the battery and in the legend. Segments still fill from the base up
+  (Warehouse → Safekeeping → Available). Dropped the orphaned `.cap-figure` CSS; added
+  `.cap-seg-pct` for the in-tube labels.
+- *Level 3 — Racking* (`RackElevation.jsx`, `StorageMap.jsx`, `index.css`): recoloured to
+  **red = occupied, green = available** (the finer low/out shading dropped); legend is now
+  just those two. **Measurements removed** — the mm beam-elevation axis labels, the "mm"
+  cap, the "900 mm CENTRES" caption and the whole `RackSpec` dimension strip are gone.
+  **Hint descriptions removed** — the "bay counts are modelled" card-note and the panel's
+  placement note.
+
+**Tooling.** `vite.config.js` now honours a `PORT` env var (falls back to 5173) and
+`.claude/launch.json` gained `"autoPort": true`, so the preview server can bind the port
+the harness assigns instead of colliding on 5173.
+
+**Verified** with `npm run build` (passes) and in the browser preview (demo login, so
+tables hydrate empty — real rows need a Supabase session): the Safekeeping Overview shows
+only Overview/Masterlist, KPIs → Distribution → Delivery Tracker with the exact new column
+header set; the Masterlist card is titled *Safekeeping Masterlist* with Item Code /
+Material Description / UOM / BOH / Incoming / Outgoing / SOH / Class and the SOH/In/Out
+switcher; the Site level renders the area legend with block wordmarks gone and the capacity
+gauge showing percentages and no toggle; the Racking level shows the Available/Occupied
+legend with no spec strip, mm labels or hint notes. No JS console errors (the lone 400 is
+the expected Supabase hydration call under the session-less demo login).

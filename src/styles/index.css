@@ -1250,6 +1250,10 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .cap-item svg { color: var(--seg); flex-shrink: 0; }
 .cap-lbl { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cap-pct { font-weight: 800; color: var(--text); font-size: 11.5px; }
+/* Percentage printed inside its own band on the tube. White with a soft shadow reads
+   on every segment fill in both themes. */
+.cap-seg { display: flex; align-items: center; justify-content: center; }
+.cap-seg-pct { font-size: 12px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.45); }
 
 /* ---------- Facility Capacity widget (Floor Plan module) ----------
    Standalone card-like block rather than a <Card> — it sits ABOVE a Card on the site
@@ -1264,7 +1268,6 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    label instead of stacking under it. */
 .cap-legend-wide { max-width: none; gap: 12px; }
 .cap-legend-wide .cap-item { font-size: 12.5px; gap: 10px; }
-.cap-legend-wide .cap-figure { font-weight: 700; color: var(--text); min-width: 92px; text-align: right; }
 .cap-legend-wide .cap-pct { min-width: 42px; text-align: right; }
 @media (max-width: 640px) {
   .cap-widget-body { flex-direction: column; align-items: stretch; gap: 16px; }
@@ -1602,7 +1605,6 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .fp-t-rebar { fill: var(--fp-rebar); color: var(--fp-rebar); }
 .fp-t-tiles { fill: var(--fp-tiles); color: var(--fp-tiles); }
 .fp-t-mrf { fill: var(--fp-mrf); color: var(--fp-mrf); }
-.fp-area-hint { font-size: 10.5px; font-weight: 600; letter-spacing: 0.3px; fill: var(--text-faint); }
 
 /* --- warehouse plan --- */
 .fp-shell { fill: url(#fpg-shell); stroke: var(--text); stroke-width: 2.4; }
@@ -1641,17 +1643,14 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .fp-cell { cursor: pointer; outline: none; }
 .fp-cell rect { stroke-width: 1.2; transition: fill 0.12s, stroke 0.12s; }
 .fp-cell text { font-size: 10.5px; font-weight: 700; fill: var(--text); }
-.fp-cell.is-empty rect { fill: var(--surface-2); stroke: var(--border); }
-.fp-cell.is-full rect { fill: color-mix(in srgb, var(--ok) 28%, transparent); stroke: var(--ok); }
-.fp-cell.is-low rect { fill: color-mix(in srgb, var(--warn) 32%, transparent); stroke: var(--warn); }
-.fp-cell.is-out rect { fill: color-mix(in srgb, var(--danger) 30%, transparent); stroke: var(--danger); }
+/* Racking cells: two states only. Green = available (empty position), red = occupied
+   (holds at least one line). The finer low / out-of-stock shading is gone. */
+.fp-cell.is-available rect { fill: color-mix(in srgb, var(--ok) 26%, transparent); stroke: var(--ok); }
+.fp-cell.is-occupied rect { fill: color-mix(in srgb, var(--danger) 30%, transparent); stroke: var(--danger); }
 .fp-cell:hover rect { stroke-width: 2.4; }
 .fp-cell.is-sel rect { stroke: var(--brand-red); stroke-width: 3; }
 .fp-cell:focus-visible rect { stroke: var(--brand-red); stroke-width: 3; }
 .fp-stack { fill: var(--fp-safekeeping); fill-opacity: 0.45; stroke: var(--fp-safekeeping); stroke-width: 1; }
-
-.fp-spec { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; font-size: 12px; color: var(--text-muted); }
-.fp-spec b { color: var(--text-faint); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; margin-right: 5px; }
 
 /* --- legends --- */
 .fp-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; font-size: 11.5px; color: var(--text-muted); }
@@ -1670,9 +1669,8 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .fp-sw-park { background: var(--ok-weak); border: 1px solid var(--ok); }
 .fp-sw-room { background: var(--surface); border: 1px solid var(--border-strong); }
 .fp-cellsw { width: 12px; height: 12px; border-radius: 3px; flex: none; display: inline-block; border: 1px solid var(--border); background: var(--surface-2); }
-.fp-cellsw.is-full { background: color-mix(in srgb, var(--ok) 28%, transparent); border-color: var(--ok); }
-.fp-cellsw.is-low { background: color-mix(in srgb, var(--warn) 32%, transparent); border-color: var(--warn); }
-.fp-cellsw.is-out { background: color-mix(in srgb, var(--danger) 30%, transparent); border-color: var(--danger); }
+.fp-cellsw.is-available { background: color-mix(in srgb, var(--ok) 26%, transparent); border-color: var(--ok); }
+.fp-cellsw.is-occupied { background: color-mix(in srgb, var(--danger) 30%, transparent); border-color: var(--danger); }
 
 /* --- side panel --- */
 .fp-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; max-height: calc(100vh - 150px); }
@@ -2035,22 +2033,6 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .as-item > div { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 .as-val { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
 .as-lbl { font-size: 10.5px; font-weight: 600; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* ---------- Delivery Insight strip (Safekeeping Overview) ----------
-   A compressed read of the full Delivery Tracker — five numbers in one row rather
-   than its own KPI grid + data table. */
-.dins-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-.dins-item {
-  display: flex; align-items: center; gap: 9px; min-width: 0;
-  padding: 10px 12px; border: 1px solid var(--border); border-left: 3px solid var(--di);
-  border-radius: var(--radius-sm); background: var(--surface);
-}
-.dins-icon { color: var(--di); flex-shrink: 0; }
-.dins-body { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
-.dins-val { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
-.dins-lbl { font-size: 10px; font-weight: 600; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 900px) { .dins-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .dins-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 @media (max-width: 1100px) {
   .activity-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }

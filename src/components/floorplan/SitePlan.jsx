@@ -1,6 +1,6 @@
 import { SITE_VB, SITE_BOUNDARY, SITE_AREAS, SITE_YARD } from '../../data/warehouseMap'
 import PlanDefs from './planDefs'
-import PlanText, { PlanStack } from './planText'
+import PlanText from './planText'
 import Icon from '../../lib/icons'
 
 // Level 1 — the stockyard: the property, the shed, and the outdoor material areas
@@ -18,7 +18,6 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 // that is what has to contain them. The icon carries the identification, so it takes
 // the larger share and the wordmark stays quiet beneath it.
 const iconFor = (across) => clamp(across * 0.24, 0, 42)
-const fontFor = (across) => clamp(across * 0.09, 7.5, 13)
 const pts = (p) => p.map((q) => q.join(',')).join(' ')
 
 // Slide inches -> viewBox units, for the one area the plan draws at an angle (MRF).
@@ -76,23 +75,15 @@ export default function SitePlan({ selected, onSelect, onDrill, hovered, onHover
               const c = toVB(rot.cx, rot.cy)
               const rw = rot.w * K
               const rh = rot.h * K
-              // Everything here is laid out in the block's OWN rotated frame, so the
-              // fit can be reasoned about directly against rw/rh. Checking it in screen
-              // coordinates is what hid the earlier overflow: a rotated rectangle's
-              // axis-aligned bounding box is larger than the rectangle itself, so a
-              // label can sit inside the box and still hang off the shape.
+              // Icon only, no wordmark — the legend beneath the plan names the area.
               const ic = iconFor(rh)
-              const fs = fontFor(rh)
               return (
                 <g transform={`translate(${c.x} ${c.y}) rotate(${rot.rot})`}>
                   <rect x={-rw / 2} y={-rh / 2} width={rw} height={rh} rx="5" />
                   <rect x={-rw / 2} y={-rh / 2} width={rw} height={rh} rx="5" className="fp-tex" fill={`url(#fpt-${a.role})`} />
-                  <PlanStack
-                    x={0} y={0}
-                    text={a.name.toUpperCase()} maxW={rw - 16} size={fs} lh={fs + 1.5}
-                    icon={a.icon} iconSize={ic} Icon={Icon}
-                    cls="fp-area-t fp-t-mrf" iconCls="fp-t-mrf"
-                  />
+                  <g className="fp-t-mrf" transform={`translate(${-ic / 2} ${-ic / 2})`} pointerEvents="none">
+                    <Icon name={a.icon} size={ic} />
+                  </g>
                 </g>
               )
             })()}
@@ -100,28 +91,15 @@ export default function SitePlan({ selected, onSelect, onDrill, hovered, onHover
         )
       })}
 
-      {/* icons and labels last, so no fill ever lands on top of one */}
+      {/* icons last, so no fill ever lands on top of one. Labels were removed — the
+          legend beneath the plan carries the names now. */}
       {SITE_AREAS.filter((a) => !a.rotRect).map((a) => {
         const c = centreOf(a.label)
         const across = Math.min(a.label.w, a.label.h)
         const ic = iconFor(across)
-        const fs = fontFor(across)
         return (
-          <g key={a.id} className={`fp-t-${a.role}`} pointerEvents="none">
-            <PlanStack
-              x={c.cx} y={c.cy}
-              text={a.name.toUpperCase()}
-              maxW={Math.min(a.label.w - 14, 190)}
-              size={fs} lh={fs + 2}
-              icon={a.icon} iconSize={ic} Icon={Icon}
-              cls={`fp-area-t fp-t-${a.role}`} iconCls={`fp-t-${a.role}`}
-            />
-            {a.drill && (
-              <text
-                x={c.cx} y={c.cy + ic / 2 + fs * 1.9} textAnchor="middle" dominantBaseline="middle"
-                className="fp-area-hint" style={{ fontSize: Math.max(7.5, fs * 0.78) }} pointerEvents="none"
-              >click to enter →</text>
-            )}
+          <g key={a.id} className={`fp-t-${a.role}`} transform={`translate(${c.cx - ic / 2} ${c.cy - ic / 2})`} pointerEvents="none">
+            <Icon name={a.icon} size={ic} />
           </g>
         )
       })}

@@ -101,13 +101,17 @@ export const SHEET_VIEWS = [
     rows: () => soh,
     note: 'Complete "Safekeeping SOH" sheet.',
     groupBy: SOH_GROUP,
+    // The description's secondary line carries the detailed description plus trade and
+    // item group (not project — project already heads each Section band, and it reads
+    // as the location a line is held for rather than a description of the material).
+    descKeys: ['trade', 'itemGroup'],
     columns: [
       { key: 'itemCode', label: 'Item Code', width: W_SOH.code, mono: true },
-      { key: 'description', label: 'Description', width: W_SOH.desc, desc: true },
+      { key: 'description', label: 'Material Description', width: W_SOH.desc, desc: true },
       { key: 'uom', label: 'UOM', width: W_SOH.uom },
       { key: 'boh', label: 'BOH', width: W_SOH.qtySm, num: true },
-      { key: 'in', label: 'In', width: W_SOH.qtySm, num: true },
-      { key: 'out', label: 'Out', width: W_SOH.qtySm, num: true },
+      { key: 'in', label: 'Incoming', width: W_SOH.qtySm, num: true },
+      { key: 'out', label: 'Outgoing', width: W_SOH.qtySm, num: true },
       { key: 'soh', label: 'SOH', width: W_SOH.qty, num: true, strong: true },
       { key: 'class', label: 'Class', width: W_SOH.cls },
       // No Remarks column: the SOH sheet's Remarks holds exactly two boilerplate values

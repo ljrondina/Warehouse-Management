@@ -12,5 +12,7 @@ const base = process.env.BASE_PATH ?? (process.env.NODE_ENV === 'production' ? '
 export default defineConfig({
   base,
   plugins: [react()],
-  server: { port: 5173, open: true },
+  // Honour a PORT from the environment when one is set (preview tooling assigns one),
+  // otherwise default to 5173 for a normal local `npm run dev`.
+  server: { port: process.env.PORT ? Number(process.env.PORT) : 5173, open: true },
 })
