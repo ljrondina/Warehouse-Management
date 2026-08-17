@@ -87,7 +87,9 @@
    the map's stage grows to fill whatever height the right-hand card sets. */
 .fp-layout { align-items: stretch; }
 .fp-map-card { display: flex; flex-direction: column; }
-.fp-map-card > .card-pad { flex: 1; display: flex; min-height: 0; }
+/* Column, so the legend added beneath the plan stacks under it rather than sitting
+   beside it as a second flex-row child (which squeezed the map to a sliver). */
+.fp-map-card > .card-pad { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .fp-map-card .fp-stage { flex: 1; display: flex; align-items: center; justify-content: center; }
 .fp-map-card .fp-svg { max-height: 100%; }
 .fp-side-card { display: flex; flex-direction: column; }
