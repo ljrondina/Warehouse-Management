@@ -1455,7 +1455,7 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   --fp-structural: #ee3124;
   --fp-architectural: #b85f13;
   --fp-safekeeping: #a8770f;
-  --fp-highvalue: #2b2c2b;
+  --fp-highvalue: #4d4b4b;
   --fp-building: #ee3124;
   --fp-rebar: #b85f13;
   --fp-tiles: #a8770f;
@@ -1470,7 +1470,7 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   --fp-structural: #f4695d;
   --fp-architectural: #dd9950;
   --fp-safekeeping: #c9962a;
-  --fp-highvalue: #a8a7a7;
+  --fp-highvalue: #c4c3c3;
   --fp-building: #f4695d;
   --fp-rebar: #dd9950;
   --fp-tiles: #c9962a;
@@ -1517,6 +1517,9 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .fp-elev { display: block; width: 100%; min-width: 620px; height: auto; }
 /* The warehouse plan is portrait, so sizing it by width would run it far past the
    fold. Height leads instead and the width follows the intrinsic ratio. */
+.fp-stage-wide { display: block; }
+.fp-map-tools { display: flex; gap: 6px; flex-wrap: wrap; }
+.fp-map-tools .btn { gap: 5px; }
 .fp-stage-portrait { display: flex; justify-content: center; }
 .fp-stage-portrait .fp-svg { width: auto; max-width: 100%; height: auto; max-height: 78vh; min-width: 0; }
 @media (max-width: 900px) { .fp-stage-portrait .fp-svg { width: 100%; max-height: none; min-width: 380px; } }
@@ -1525,12 +1528,14 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .fp-property { fill: var(--surface-2); stroke: var(--brand-red); stroke-width: 2; stroke-dasharray: 9 5; opacity: 0.95; }
 .fp-yard rect { fill: url(#fpg-yard); stroke: var(--border-strong); stroke-width: 1.2; stroke-dasharray: 6 4; }
 .fp-yard-t { font-size: 11px; font-weight: 700; fill: var(--text-faint); letter-spacing: 0.7px; }
+.fp-gate rect { fill: var(--warn); opacity: 0.9; }
+.fp-gate-t { font-size: 9px; font-weight: 800; letter-spacing: 0.7px; fill: var(--text-muted); }
 
 /* --- clickable material areas, both plans ---
    Fills are diagonal gradients (see planDefs.jsx) so an area reads as a surface with
    depth rather than a flat swatch. `fill-opacity` stays free to carry hover and
    selection on top of the gradient's own stops. */
-.fp-area, .fp-hull, .fp-rack, .fp-floorarea { cursor: pointer; outline: none; }
+.fp-area, .fp-hull, .fp-rack, .fp-floorarea { cursor: pointer; outline: none; color: var(--c); }
 .fp-area rect, .fp-area polygon, .fp-hull rect, .fp-hull polygon {
   transition: fill-opacity 0.15s, stroke-width 0.15s, filter 0.15s;
 }
@@ -1551,49 +1556,53 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .fp-rack:focus-visible > rect { stroke: var(--brand-red); stroke-width: 3; }
 .fp-secure-fill { color: var(--c); stroke: none; fill-opacity: 1; }
 
-.fp-mepfs { --c: var(--fp-mepfs); --g: url(#fpg-mepfs); }
-.fp-structural { --c: var(--fp-structural); --g: url(#fpg-structural); }
-.fp-architectural { --c: var(--fp-architectural); --g: url(#fpg-architectural); }
-.fp-safekeeping { --c: var(--fp-safekeeping); --g: url(#fpg-safekeeping); }
-.fp-highvalue { --c: var(--fp-highvalue); --g: url(#fpg-highvalue); }
-.fp-building { --c: var(--fp-building); --g: url(#fpg-building); }
-.fp-rebar { --c: var(--fp-rebar); --g: url(#fpg-rebar); }
-.fp-tiles { --c: var(--fp-tiles); --g: url(#fpg-tiles); }
-.fp-mrf { --c: var(--fp-mrf); --g: url(#fpg-mrf); }
+.fp-tex { stroke: none; pointer-events: none; }
+.fp-mepfs { --c: var(--fp-mepfs); --g: url(#fpg-mepfs); --gs: url(#fpg-solid-mepfs); }
+.fp-structural { --c: var(--fp-structural); --g: url(#fpg-structural); --gs: url(#fpg-solid-structural); }
+.fp-architectural { --c: var(--fp-architectural); --g: url(#fpg-architectural); --gs: url(#fpg-solid-architectural); }
+.fp-safekeeping { --c: var(--fp-safekeeping); --g: url(#fpg-safekeeping); --gs: url(#fpg-solid-safekeeping); }
+.fp-highvalue { --c: var(--fp-highvalue); --g: url(#fpg-highvalue); --gs: url(#fpg-solid-highvalue); }
+.fp-building { --c: var(--fp-building); --g: url(#fpg-building); --gs: url(#fpg-solid-building); }
+.fp-rebar { --c: var(--fp-rebar); --g: url(#fpg-rebar); --gs: url(#fpg-solid-rebar); }
+.fp-tiles { --c: var(--fp-tiles); --g: url(#fpg-tiles); --gs: url(#fpg-solid-tiles); }
+.fp-mrf { --c: var(--fp-mrf); --g: url(#fpg-mrf); --gs: url(#fpg-solid-mrf); }
 
 .fp-area-t { font-size: 15px; font-weight: 800; letter-spacing: 0.6px; fill: var(--text); }
-.fp-t-mepfs { fill: var(--fp-mepfs); }
-.fp-t-structural { fill: var(--fp-structural); }
-.fp-t-architectural { fill: var(--fp-architectural); }
-.fp-t-safekeeping { fill: var(--fp-safekeeping); }
-.fp-t-highvalue { fill: var(--fp-highvalue); }
-.fp-t-building { fill: var(--fp-building); }
-.fp-t-rebar { fill: var(--fp-rebar); }
-.fp-t-tiles { fill: var(--fp-tiles); }
-.fp-t-mrf { fill: var(--fp-mrf); }
+.fp-t-mepfs { fill: var(--fp-mepfs); color: var(--fp-mepfs); }
+.fp-t-structural { fill: var(--fp-structural); color: var(--fp-structural); }
+.fp-t-architectural { fill: var(--fp-architectural); color: var(--fp-architectural); }
+.fp-t-safekeeping { fill: var(--fp-safekeeping); color: var(--fp-safekeeping); }
+.fp-t-highvalue { fill: var(--fp-highvalue); color: var(--fp-highvalue); }
+.fp-t-building { fill: var(--fp-building); color: var(--fp-building); }
+.fp-t-rebar { fill: var(--fp-rebar); color: var(--fp-rebar); }
+.fp-t-tiles { fill: var(--fp-tiles); color: var(--fp-tiles); }
+.fp-t-mrf { fill: var(--fp-mrf); color: var(--fp-mrf); }
 .fp-area-hint { font-size: 10.5px; font-weight: 600; letter-spacing: 0.3px; fill: var(--text-faint); }
 
 /* --- warehouse plan --- */
 .fp-shell { fill: url(#fpg-shell); stroke: var(--text); stroke-width: 2.4; }
 .fp-canopy { fill: none; stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 6 4; }
-.fp-open polygon { fill: url(#fpg-floor); stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 3; stroke-linejoin: round; }
+.fp-open { fill: url(#fpg-floor); stroke: none; }
 .fp-open-t { font-size: 11px; font-weight: 700; fill: var(--text-faint); letter-spacing: 0.5px; }
-.fp-rack > rect { fill: var(--c); fill-opacity: 0.6; stroke: var(--c); stroke-width: 1.2; transition: fill-opacity 0.15s; }
-.fp-rack:hover > rect { fill-opacity: 0.9; }
-.fp-rack.is-active > rect { fill-opacity: 0.95; }
-.fp-rack.is-dim > rect { fill-opacity: 0.22; }
+.fp-rack > rect { fill: var(--gs); fill-opacity: 0.92; stroke: var(--c); stroke-width: 1.3; transition: fill-opacity 0.15s, filter 0.15s; }
+.fp-rack:hover > rect { fill-opacity: 1; filter: brightness(1.08); }
+.fp-rack.is-active > rect { fill-opacity: 1; stroke-width: 2; }
+.fp-rack.is-dim > rect { fill-opacity: 0.4; }
 .fp-bay-div { stroke: var(--fp-paper); stroke-width: 0.9; opacity: 0.7; }
 /* The portrait plan renders about 0.76 viewBox units to the pixel, so a run's number
    needs to be set larger here than it looks in the source to stay readable. */
 .fp-rack-t { font-size: 13px; font-weight: 800; fill: #fff; paint-order: stroke; stroke: rgba(0, 0, 0, 0.45); stroke-width: 3; }
 .fp-cant > rect { fill-opacity: 0.45; }
-.fp-floorarea rect { fill: var(--fp-safekeeping); fill-opacity: 0.16; stroke: var(--fp-safekeeping); stroke-width: 1; stroke-dasharray: 4 3; }
-.fp-floorarea:hover rect { fill-opacity: 0.3; }
-.fp-floor-t { font-size: 11px; font-weight: 700; letter-spacing: 1px; fill: var(--fp-safekeeping); }
+.fp-floorarea > rect { fill: url(#fpg-solid-safekeeping); fill-opacity: 0.6; stroke: var(--fp-safekeeping); stroke-width: 1.4; transition: fill-opacity 0.15s; }
+.fp-floorarea:hover > rect { fill-opacity: 0.85; }
+.fp-floorarea.is-active > rect { fill-opacity: 0.9; stroke-width: 2; }
+.fp-floor-t { font-size: 11px; font-weight: 800; letter-spacing: 0.6px; fill: var(--text); }
 .fp-hv-shelves rect { fill: var(--fp-highvalue); opacity: 0.55; }
-.fp-room rect { fill: var(--surface); stroke: var(--border-strong); stroke-width: 1.1; }
-.fp-room.is-accent rect { fill: var(--info-weak); stroke: var(--brand-gray-soft); }
-.fp-room-t { font-size: 10px; font-weight: 700; fill: var(--text-muted); }
+/* Unclickable context: a flat tint, no outline at all, so the eye goes straight to
+   the racks and areas that respond to a click. */
+.fp-room rect { fill: var(--fp-ink); fill-opacity: 0.07; stroke: none; }
+.fp-room.is-accent rect { fill-opacity: 0.13; }
+.fp-room-t { font-size: 10px; font-weight: 600; fill: var(--text-faint); }
 .fp-room-s { font-size: 9.5px; font-weight: 500; fill: var(--text-faint); }
 
 /* --- rack elevation --- */
@@ -1704,7 +1713,7 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .fp-tile.fp-t-rebar { --tc: var(--fp-rebar); }
 .fp-tile.fp-t-tiles { --tc: var(--fp-tiles); }
 .fp-tile.fp-t-mrf { --tc: var(--fp-mrf); }
-.fp-mrf {
+.fp-mrf-note {
   margin-top: 12px; padding: 11px 12px; border: 1px dashed var(--border-strong); border-radius: var(--radius-sm);
   font-size: 11px; color: var(--text-muted); line-height: 1.55;
 }

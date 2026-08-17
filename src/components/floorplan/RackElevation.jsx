@@ -107,8 +107,14 @@ function CantileverRack({ selected, onSelect }) {
   const vbH = PAD.t + H + PAD.b
   const armH = H / arms
 
+  // A 42-bay run scaled to fit the card lands at a third of natural size, where the
+  // bay numbers are three pixels wide. Give it a floor of ~26 px per bay and let the
+  // stage scroll instead — a long run is long, and shrinking it hides the detail the
+  // elevation exists to show.
+  const minPx = Math.max(620, bays * 26 + 110)
+
   return (
-    <svg className="fp-elev" viewBox={`0 0 ${W} ${vbH}`} role="img" aria-label="Cantilever run front elevation">
+    <svg className="fp-elev" viewBox={`0 0 ${W} ${vbH}`} style={{ minWidth: minPx }} role="img" aria-label="Cantilever run front elevation">
       {Array.from({ length: arms }, (_, a) => (
         <g key={a} className="fp-axis">
           <line x1={PAD.l - 6} y1={PAD.t + H - a * armH} x2={W - PAD.r} y2={PAD.t + H - a * armH} />

@@ -879,3 +879,73 @@ hull → panel, Rack 10 → 50-cell elevation, breadcrumb back up.
 page (38 px on /dashboard, 44 px on /inventory, 50 px here — it grows with the page
 title). Confirmed again this session that nothing inside `main` contributes to it; it is
 `Layout.jsx` and is being fixed separately.
+
+### 2026-08-17 — Session: floor plan polish — icons, textures, rotation, depth hierarchy
+
+**Level 1.** "Deformed Bar Area" → **Deformed Rebar Area**. The MRF label is now sized
+and wrapped to its own angled box at 9.5 px with the icon above it (it kept reading as
+too big because it was sized like the rectangular areas, which are three times wider).
+Entrance/exit signage is back, at the two places the deck marks it: the roll-up gate on
+the shed's west wall (slide 4's yellow strip, label set vertically beside it) and the
+site gate on the south access road where the EXIT/ENTRY arrows meet the property line —
+`SITE_GATES`. Each clickable area carries an icon drawn into the plan and a fine
+diagonal hatch over its fill, so a block reads as a stocked surface rather than a
+flat swatch.
+
+**Level 2 — rotation.** `WarehousePlan` takes `orient`, held in the URL as `?rot=l`.
+Geometry is still stored portrait; `mr()` and `mp()` map rects and outlines into
+whichever orientation is showing, so the rotation lives in exactly one place. Labels
+recompute their own wrap width, size and rotation from the MAPPED box, and the rack bay
+divisions pick their axis from whichever side of the run is longer — so both
+orientations lay out correctly rather than one being a rotated screenshot of the other.
+Portrait stays the default because it matches the shed on level 1; landscape is the
+deck's own presentation.
+
+**Level 2 — depth.** Three tiers now, and the difference is deliberate:
+- *Context* (rooms, circulation floor) — flat tint, **no outline at all**, muted text.
+- *Section areas* (MEPFS, Structural, …) — a soft gradient wash, dashed edge, and a
+  **Sections toggle** (`?sections=0`) that hides them entirely. With them off, the racks
+  and floor bays keep their own colours and the plan reads as pure racking.
+- *Clickable* (racks, cantilever, open flat area) — the strong gradient, textured,
+  outlined. `planDefs.jsx` now emits both a soft and a solid gradient per role.
+
+**Level 2 — geometry fixes against the reference.**
+- **The cantilever does not run wall to wall.** Scanning the raster for its arm ticks
+  puts the comb at iy 32–550, not 32–838: it stops at the green line about two-thirds
+  down. 518 px at ~76 mm/px is 39.4 m, which at the drawing's 900 mm bay centres is
+  **42 bays**, not the 22 previously assumed (126 arm positions, not 66).
+- **Floor Area → Open Flat Area**, and moved. The drawing's own
+  "OPEN FLAT AREA A = 262.84 m²" label sits at the bottom-right of the yellow
+  Safekeeping highlight, so the clickable block is now there (ix 410–604, iy 565–838)
+  rather than the strip beside run 6 where it had been placed.
+- The Safekeeping outline was re-measured off slide 13's highlight and the loading bay's
+  bottom edge is pinned to the building's own wall line.
+- Every unclickable region now clears every other region: audited context/context,
+  context/clickable and clickable/clickable — **zero overlaps**, where the EE cabinet and
+  security check had been clipping 1 px into the high-value room.
+
+**Two real bugs, both about colour inheritance.**
+- The plan icons rendered in the page's text colour, not their area's. The icon set
+  strokes with `currentColor`, but the role classes only set `fill` (which is what SVG
+  `<text>` needs). Both `fill` and `color` are now set, and `--c` cascades from the area
+  group so any icon inside picks it up.
+- **`.fp-mrf` was two different things**: the Material Recovery Facility's area-role
+  class on the map, and the explanatory note block in the site overview card. The note's
+  rule sits later in the stylesheet, so its `color: var(--text-muted)` silently won for
+  the MRF icon on the plan. The note block is now `.fp-mrf-note`.
+
+**High-value contrast fixed.** `--fp-highvalue` was near-black (#2b2c2b) in light mode,
+which gave the area no presence on white paper and made its own label barely readable.
+Now #4d4b4b light / #c4c3c3 dark — same neutral hue, real contrast: **8.3:1 in light and
+9.6:1 in dark** against the drawing surface. The padlock and diagonal hatch still carry
+"secure".
+
+**The 42-bay cantilever elevation needed a minimum width.** Scaled to fit the card it
+landed at 0.33 and its bay numbers were three pixels wide. It now sets a floor of ~26 px
+per bay and scrolls inside the stage instead: 1,202 px wide, 25.6 px cells, readable.
+
+**Verified**: 22 desktop view/theme combinations (site, site+MRF, warehouse in both
+orientations × sections on/off, high-value selected, and all four racking views, in light
+and dark) plus 5 at 375 px — zero labels clipped, zero label overlaps, nothing in `main`
+outside a scroll container. Rotate and Sections exercised by click; rack drill-down works
+in landscape with sections off. `npm run build` passes.

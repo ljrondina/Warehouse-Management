@@ -41,6 +41,11 @@ export default function StorageMap() {
   const [hovered, setHovered] = useState(null)
   const [cell, setCell] = useState(null)
 
+  // Both warehouse view options live in the query string so a view can be linked.
+  // Portrait and sections-on are the defaults, so only the non-default states appear.
+  const landscape = params.get('rot') === 'l'
+  const showSections = params.get('sections') !== '0'
+
   // Rebuilt when hydration swaps the rows in — the same trigger the dashboard's
   // insight lists use. Without it the map would stay frozen at the empty pre-login
   // dataset, which is the bug the Inventory tab had.
@@ -137,7 +142,7 @@ export default function StorageMap() {
                 )
               })}
             </div>
-            <div className="fp-mrf">
+            <div className="fp-mrf-note">
               The Material Recovery Facility count is a view, not a fourth bucket: damaged stock is flagged where it
               lies rather than moved, so it lists the {num(mrf.length)} lines carrying a damaged quantity —{' '}
               {num(mrf.reduce((a, b) => a + (b.damagedQty || 0), 0))} units awaiting disposition.
@@ -158,12 +163,36 @@ export default function StorageMap() {
 
     return (
       <Shell level={level} area={area} rack={rack} go={go}>
-        <Card title="Warehouse Plan — Top View" icon="warehouse" right={<span className="fp-scale">11 racks · single storey</span>}>
-          <div className="fp-stage fp-stage-portrait">
+        <Card
+          title="Warehouse Plan — Top View"
+          icon="warehouse"
+          right={
+            <div className="fp-map-tools">
+              <button
+                className={`btn btn-sm${showSections ? ' btn-primary' : ''}`}
+                onClick={() => go({ sections: showSections ? '0' : null })}
+                title={showSections ? 'Hide the section-area highlights' : 'Show the section-area highlights'}
+                aria-pressed={showSections}
+              >
+                <Icon name="layers" size={14} /> Sections
+              </button>
+              <button
+                className="btn btn-sm"
+                onClick={() => go({ rot: landscape ? null : 'l' })}
+                title={landscape ? 'Rotate to portrait — matches the site plan' : 'Rotate to landscape — the reference deck’s presentation'}
+              >
+                <Icon name="reorganize" size={14} /> Rotate
+              </button>
+            </div>
+          }
+        >
+          <div className={`fp-stage ${landscape ? 'fp-stage-wide' : 'fp-stage-portrait'}`}>
             <WarehousePlan
               selected={area}
               hovered={hovered}
               onHover={setHovered}
+              orient={landscape ? 'landscape' : 'portrait'}
+              showSections={showSections}
               onSelect={(id) => go({ area: area === id ? null : id })}
               onOpenRack={(id) => go({ level: 'rack', rack: id, area: id === 'CANT' || id === 'FLOOR' ? 'safekeeping' : RACKS.find((r) => r.id === id)?.area || area })}
             />

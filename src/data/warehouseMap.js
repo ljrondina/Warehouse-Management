@@ -72,6 +72,7 @@ export const SITE_AREAS = [
     id: 'warehouse',
     name: 'Central Warehouse',
     role: 'building',
+    icon: 'warehouse',
     drill: true,
     note: '2,520 m² enclosed shed. Five material areas inside — open it to go to the warehouse plan.',
     poly: SITE_BUILDING,
@@ -79,8 +80,9 @@ export const SITE_AREAS = [
   },
   {
     id: 'rebar',
-    name: 'Deformed Bar Area',
+    name: 'Deformed Rebar Area',
     role: 'rebar',
+    icon: 'layers',
     note: 'Open stockyard bay for reinforcing steel, kept outside the shed and reachable by truck.',
     rects: [sr(3.9675, 3.8635, 0.774, 1.291)],
   },
@@ -88,6 +90,7 @@ export const SITE_AREAS = [
     id: 'tiles',
     name: 'Tiles Area',
     role: 'tiles',
+    icon: 'copy',
     note: 'Covered tile stacking area on the open stockyard, beside the warehouse entrance road.',
     poly: SITE_TILES,
     label: sr(5.183, 3.847, 1.339, 0.836),
@@ -96,6 +99,7 @@ export const SITE_AREAS = [
     id: 'mrf',
     name: 'Material Recovery Facility',
     role: 'mrf',
+    icon: 'reorganize',
     note:
       'Segregation and recovery yard at the north-west corner of the site. Damaged stock is flagged where it lies ' +
       'rather than physically moved, so this lists every line carrying a damaged quantity — the units awaiting ' +
@@ -115,6 +119,15 @@ SITE_AREAS.forEach((a) => {
 // parking, queue bay, canopies, gate, guard posts, the ingress/egress arrows — is
 // vehicle logistics, not storage, and only competed with the areas that are.
 export const SITE_YARD = { id: 'yard', name: 'Open Stock Yard', rect: sr(3.9, 3.42, 2.7, 1.86) }
+
+// Entrance / exit signage, at the two places the deck marks it: the roll-up gate on
+// the shed's west wall (its yellow strip, with 'ENTRANCE/ EXIT' set vertically beside
+// it) and the site gate on the south access road, where the plan's EXIT and ENTRY
+// arrows meet the property line.
+export const SITE_GATES = [
+  { id: 'gate-shed', label: 'ENTRANCE / EXIT', rect: sr(6.568, 3.384, 0.145, 0.366), vertical: true, at: sp(6.64, 3.567) },
+  { id: 'gate-site', label: 'SITE ENTRY / EXIT', rect: sr(7.36, 5.44, 0.42, 0.1), vertical: false, at: sp(7.57, 5.49) },
+]
 
 /* ----------------------------------------------------------- warehouse level */
 
@@ -166,16 +179,21 @@ RACKS.forEach((r) => {
 export const CANTILEVER = {
   id: 'CANT', name: 'Cantilever', area: 'safekeeping', kind: 'cantilever',
   arms: 3, bayCentre: 900, armLength: 1000, armLoad: 300, upright: 3000,
-  bays: 22, levels: 3,
-  // Clamped to the wall line (iy 25..842): measured off the raster it read 30..850,
-  // which floated the run a few pixels outside the shed it is bolted to.
-  rect: pl(571, 32, 594, 838),
+  // The run does NOT reach the back wall: scanning the raster for its arm ticks puts
+  // the comb between iy 32 and iy 550, stopping at the green line the drawing marks
+  // there. 518 px at ~76 mm/px is 39.4 m, which at 900 mm bay centres is 42 bays.
+  bays: 42, levels: 3,
+  rect: pl(571, 32, 594, 550),
 }
 CANTILEVER.positions = CANTILEVER.bays * CANTILEVER.arms
 
+// Block-stacked floor storage inside the Safekeeping zone. The drawing's own
+// "OPEN FLAT AREA A = 262.84 m²" label sits in the middle of this block, at the
+// bottom-right of the yellow highlight — right of the loading bay, below the racks,
+// with the cantilever run ending just above it.
 export const FLOOR_AREA = {
-  id: 'FLOOR', name: 'Floor Area', area: 'safekeeping', kind: 'floor',
-  rect: pl(500, 40, 570, 820),
+  id: 'FLOOR', name: 'Open Flat Area', area: 'safekeeping', kind: 'floor',
+  rect: pl(410, 565, 604, 838),
 }
 
 // The High-Value / Fixed Assets room is fitted out with LS600 boltless shelving:
@@ -190,34 +208,35 @@ HV_SHELVING.positions = HV_SHELVING.runs * HV_SHELVING.bays * HV_SHELVING.levels
 // racks listed in `racks` are drawn individually on top of it.
 export const WH_AREAS = [
   {
-    id: 'mepfs', name: 'MEPFS Materials', short: 'MEPFS', role: 'mepfs',
+    id: 'mepfs', icon: 'settings', name: 'MEPFS Materials', short: 'MEPFS', role: 'mepfs',
     trades: ['Mechanical Works', 'Electrical and Auxiliary Works', 'Plumbing Works', 'Fire Protection Works'],
     hull: [pl(46, 28, 164, 490)],
     note: 'Mechanical, electrical, plumbing, fire-protection and auxiliary stock. Racks 1–3.',
   },
   {
-    id: 'structural', name: 'Structural Materials', short: 'Structural', role: 'structural',
+    id: 'structural', icon: 'excess', name: 'Structural Materials', short: 'Structural', role: 'structural',
     trades: ['Structural Works'],
     hull: [pl(206, 28, 227, 380)],
     note: 'Rebar accessories, formwork, concrete and structural steel. Rack 4.',
   },
   {
-    id: 'architectural', name: 'Architectural Materials', short: 'Architectural', role: 'architectural',
+    id: 'architectural', icon: 'grade', name: 'Architectural Materials', short: 'Architectural', role: 'architectural',
     trades: ['Architectural Works'],
     hull: [pl(223, 28, 244, 380)],
     note: 'Masonry, ceiling, doors, metals, paint and finishes. Rack 5.',
   },
   {
-    id: 'safekeeping', name: 'Safekeeping Materials', short: 'Safekeeping', role: 'safekeeping',
+    id: 'safekeeping', icon: 'vault', name: 'Safekeeping Materials', short: 'Safekeeping', role: 'safekeeping',
     trades: ['General Requirements', 'Site Works', 'Allied Services'],
     // Racks 6-11 plus the floor and cantilever beside them: one L-shaped outline
     // rather than two overlapping boxes, which left a seam down the middle.
     hull: [pl(288, 28, 600, 830)],
-    poly: pp([[288, 28], [600, 28], [600, 830], [400, 830], [400, 490], [288, 490]]),
+    // Re-measured off slide 13's yellow highlight, mapped back into raster pixels.
+    poly: pp([[288, 26], [604, 26], [604, 838], [406, 838], [406, 471], [288, 471]]),
     note: 'General requirements and project-held goods. Racks 6–11, plus the cantilever run and the open floor area.',
   },
   {
-    id: 'highvalue', name: 'High Value Materials / Fixed Assets', short: 'High Value', role: 'highvalue',
+    id: 'highvalue', icon: 'lock', name: 'High Value Materials / Fixed Assets', short: 'High Value', role: 'highvalue',
     trades: [],
     hull: [pl(91, 581, 210, 756)],
     secure: true,
@@ -233,20 +252,23 @@ export const WH_ROOMS = [
   // Rooms on the west wall start at ix 39, the inside face of that wall (the raster
   // measurement drifted a few pixels into the wall itself on two of them).
   { id: 'pantry', name: 'Pantry', rect: pl(39, 727, 80, 760) },
-  { id: 'ee', name: 'EE Cabinet', rect: pl(39, 644, 92, 678) },
-  { id: 'check', name: 'Security Check', rect: pl(39, 592, 92, 644) },
+  // Stop at ix 90 so neither clips the high-value room, whose west wall is ix 91.
+  { id: 'ee', name: 'EE Cabinet', rect: pl(39, 644, 90, 678) },
+  { id: 'check', name: 'Security Check', rect: pl(39, 592, 90, 644) },
   { id: 'sorting', name: 'Sorting Bay', rect: pl(214, 592, 404, 700), accent: true },
   { id: 'platform', name: 'Platform', rect: pl(223, 700, 364, 730) },
-  { id: 'loading', name: 'Loading & Unloading Bay', rect: pl(218, 730, 352, 845), accent: true },
+  // Bottom edge pinned to the building's own bottom wall (iy 842) rather than the
+  // raster's 845, so the bay sits flush inside the envelope.
+  { id: 'loading', name: 'Loading & Unloading Bay', rect: pl(218, 730, 352, 842), accent: true },
 ]
 
-// The open floor: one continuous L, not the drawing's two separately dimensioned
-// pockets. They are contiguous on the plan — the band below the racks runs into the
-// strip beside the loading bay — and two boxes only read as two rooms.
+// The circulation floor below the racks — the drawing's 628.63 m² open flat area. It
+// stops where the Safekeeping highlight begins so no unclickable region sits under a
+// clickable one, and it carries no label of its own: the clickable Open Flat Area
+// inside Safekeeping is the one that holds stock and gets the name.
 export const WH_OPEN = {
-  id: 'open', name: 'Open Flat Area',
-  poly: pp([[38, 382], [607, 382], [607, 800], [405, 800], [405, 568], [38, 568]]),
-  label: pl(38, 382, 400, 568),
+  id: 'open',
+  poly: pp([[38, 382], [288, 382], [288, 471], [406, 471], [406, 575], [38, 575]]),
 }
 
 export const AREA_BY_ID = Object.fromEntries(WH_AREAS.map((a) => [a.id, a]))
