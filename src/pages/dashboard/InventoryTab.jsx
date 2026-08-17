@@ -289,7 +289,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
               InventoryComposition. Each tile hovers for a description and clicks
               through to the material list on the right. */}
           <Card title="Inventory Composition" icon="box" className="composition-card" data-tour="kpis"
-            right={<Toggle size="sm" options={metricOpts} value={compMetric} onChange={setCompMetric} />}>
+            foot={<Toggle size="sm" options={metricOpts} value={compMetric} onChange={setCompMetric} />}>
             <div className="card-split">
               <div className="card-split-main">
                 <InventoryComposition k={k} unit={qtyUnit} metric={compMetric} series={S}
@@ -301,7 +301,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
           </Card>
 
           <Card title="Inventory Distribution" icon="reports" className="distribution-card" data-tour="charts"
-            right={
+            foot={
               <div className="chart-controls">
                 {/* Changing the scope clears the selection: a Trade name is not an
                     Item Group name, so the panel would otherwise keep a heading that
@@ -336,7 +336,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
         <div className="mt" data-tour="insights">
           <div className="grid grid-2 insight-grid">
             <Card title="High Stock Items" icon="box" iconColor={S.total}
-              right={<Toggle size="sm" options={metricOpts} value={highStockMetric} onChange={setHighStockMetric} />}>
+              foot={<Toggle size="sm" options={metricOpts} value={highStockMetric} onChange={setHighStockMetric} />}>
               {/* The toggle swaps ONLY the headline figure. The ranking stays by quantity
                   (INSIGHT_ROWS.high is topQuantity) and `barValue` pins the bars to
                   quantity too — otherwise the bars would stop agreeing with the rank
@@ -373,12 +373,8 @@ export default function InventoryTab({ pool, qtyUnit }) {
                 beside it reads the whole warehouse. The chip says so, since silently
                 mixing the two behaviours is what made the old layout confusing. */}
             <Card title="Aging Analysis" icon="clock" iconColor={S.damaged}
-              right={
-                <div className="chart-controls">
-                  <span className="chip">current filter</span>
-                  <Toggle size="sm" options={metricOpts} value={agingMetric} onChange={setAgingMetric} />
-                </div>
-              }>
+              right={<span className="chip">current filter</span>}
+              foot={<Toggle size="sm" options={metricOpts} value={agingMetric} onChange={setAgingMetric} />}>
               {!aging
                 ? <NoData what="No movement dates" why="No line in the current selection carries a last-movement date, so age cannot be computed." />
                 : (
@@ -437,7 +433,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
               </div>
 
               <Card title="Movement History" icon="trend" className="movement-card mt"
-                right={<Segmented size="sm" options={periodOpts} value={period} onChange={setPeriod} />}>
+                foot={<Segmented size="sm" options={periodOpts} value={period} onChange={setPeriod} />}>
                 {/* Always `wide`: the card spans the page, so the legend belongs in a
                     column beside the chart rather than in a strip underneath it. */}
                 <MovementComposed data={movementData} wide />
@@ -450,7 +446,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
               </Card>
 
               <Card title="Net Inventory Change" icon="analytics" className="mt"
-                right={<Toggle size="sm" options={metricOpts} value={flowMetric} onChange={setFlowMetric} />}>
+                foot={<Toggle size="sm" options={metricOpts} value={flowMetric} onChange={setFlowMetric} />}>
                 {activity.coveredBuckets === 0
                   ? <NoData what="No coverage in this period" why={`The ledger's newest movement is ${num(activity.ledgerLagDays)} days old, so none of the ${period} buckets shown fall inside it. Try a wider granularity.`} />
                   : <NetChangeChart data={activity.series} metric={flowMetric} />}
@@ -458,7 +454,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
 
               <div className="grid grid-2 insight-grid mt">
                 <Card title="Top Incoming Items" icon="incoming" iconColor={S.incoming}
-                  right={<Toggle size="sm" options={metricOpts} value={flowMetric} onChange={setFlowMetric} />}>
+                  foot={<Toggle size="sm" options={metricOpts} value={flowMetric} onChange={setFlowMetric} />}>
                   <FlowList rows={activity.topIncoming} tone={S.incoming} metric={flowMetric} />
                 </Card>
                 <Card title="Top Outgoing Items" icon="outgoing" iconColor={S.outgoing}>

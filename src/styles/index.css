@@ -361,6 +361,21 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
 /* ---------- Cards ---------- */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
 .card-pad { padding: 14px 16px; }
+/* The toggles that change what a card shows (Quantity/Value, Trade/Item Group, the
+   period picker) live down here now, not in the head — the head is identity (title,
+   icon, a count or scale note); this row is control. Right-aligned to match where
+   they used to sit, so the eye doesn't have to relearn a new anchor point. */
+.card-foot {
+  display: flex; justify-content: flex-end; align-items: center; gap: 8px;
+  padding: 10px 16px; border-top: 1px solid var(--border);
+}
+.card-foot .chart-controls { justify-content: flex-end; }
+@media (max-width: 620px) {
+  /* Same reasoning as the old card-head rule: two toggles plus the row's own edges
+     don't fit 375px as one line, so they stack rather than wrap or overflow. */
+  .card-foot { flex-wrap: wrap; }
+  .card-foot .chart-controls { flex-direction: column; align-items: flex-end; gap: 5px; }
+}
 /* justify-content:center + an auto right margin on the title block: on one line the
    auto margin eats the slack so the title sits left and the controls right; once the
    controls wrap to their own line there is no auto margin on it, so they centre. */
@@ -1367,17 +1382,19 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    toolbar and filter bar above them. The active tab is joined to the content below by
    an inset bottom border rather than a floating pill, so the strip reads as the top
    edge of the panel it controls. */
-/* The tab strip and the + New Transaction trigger share this row, the button
-   pinned to the right-most end and sitting on top of the strip's own border —
-   there is no separate toolbar row above the tabs any more. */
-.dash-tabs-row { display: flex; align-items: flex-end; gap: 12px; }
-.dash-tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--border); padding: 0 2px; overflow-x: auto; scrollbar-width: none; flex: 1 1 auto; min-width: 0; }
-.dash-tabs::-webkit-scrollbar { display: none; }
-.dash-tabs-row > .txn-wrap { flex-shrink: 0; margin-bottom: 8px; }
+/* Search bar + New Transaction share this row, ABOVE the tab strip now — "where do
+   I look" and "where do I act" both answered before the tabs say which module you're
+   in. The search bar takes the remaining width; the button holds the right end. */
+.dash-toolbar-row { display: flex; align-items: stretch; gap: 12px; }
+.dash-toolbar-row > .filter-search { flex: 1 1 auto; min-width: 0; }
+.dash-toolbar-row > .txn-wrap { flex-shrink: 0; }
+.dash-toolbar-row > .txn-wrap .txn-trigger { height: 100%; }
 @media (max-width: 760px) {
-  .dash-tabs-row { flex-wrap: wrap; justify-content: flex-end; }
-  .dash-tabs-row > .txn-wrap { margin-bottom: 0; order: -1; }
+  .dash-toolbar-row { flex-wrap: nowrap; }
 }
+
+.dash-tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--border); padding: 0 2px; overflow-x: auto; scrollbar-width: none; }
+.dash-tabs::-webkit-scrollbar { display: none; }
 .dash-tab {
   display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
   padding: 10px 16px 11px; margin-bottom: -1.5px;
@@ -2166,14 +2183,14 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    or a toggle is flipped — the list scrolls inside its own panel instead. This is the
    "card sizes are fixed" rule, and it is why .card-head is nowrap and why the list
    panel is always present rather than conditionally rendered. */
-.card-split { display: flex; align-items: stretch; gap: 18px; width: 100%; min-width: 0; height: var(--split-h, 420px); }
+.card-split { display: flex; align-items: stretch; gap: 18px; width: 100%; min-width: 0; height: var(--split-h, 460px); }
 .card-split-main { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; }
 /* The chart inside has no intrinsic width (recharts ResponsiveContainer is width:100%),
    so as a bare flex item it collapses to zero and renders nothing at all. */
 .card-split-main > * { width: 100%; min-width: 0; }
 
 .card-list-panel {
-  flex: 0 0 var(--clp-w, 320px); width: var(--clp-w, 320px); min-width: 0;
+  flex: 0 0 var(--clp-w, 420px); width: var(--clp-w, 420px); min-width: 0;
   display: flex; flex-direction: column;
   border-left: 1px solid var(--border); padding-left: 16px;
 }
@@ -2208,7 +2225,7 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .mat-list.dense .wpc-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; }
 .mat-list.dense .wpc-row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-@media (min-width: 1500px) { .card-split { --clp-w: 360px; --split-h: 440px; } }
+@media (min-width: 1500px) { .card-split { --clp-w: 480px; --split-h: 480px; } }
 @media (max-width: 1100px) {
   /* Below this the panel and a readable chart cannot share the row: the donut would
      drop under its leader-label minimum. The list moves beneath the chart instead.
@@ -2246,12 +2263,13 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    card and the only place using the display face at this size. */
 .comp-headline { margin-top: 14px; text-align: center; max-width: 240px; }
 .ch-figure { display: flex; align-items: baseline; justify-content: center; gap: 6px; flex-wrap: wrap; }
-.ch-avail {
-  font-family: var(--font-head); font-size: 30px; font-weight: 800; line-height: 1.05;
-  letter-spacing: -0.8px; color: var(--text);
+/* Total and Available are the same size and weight now — a plain "X / Y" ratio
+   rather than one figure emphasised over the other. */
+.ch-total, .ch-avail {
+  font-family: var(--font-head); font-size: 26px; font-weight: 800; line-height: 1.05;
+  letter-spacing: -0.6px; color: var(--text);
 }
-.ch-of { font-size: 12px; font-weight: 600; color: var(--text-faint); }
-.ch-total { font-size: 17px; font-weight: 700; color: var(--text-muted); letter-spacing: -0.3px; }
+.ch-of { font-size: 20px; font-weight: 600; color: var(--text-faint); }
 .ch-caption {
   margin-top: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px;
   text-transform: uppercase; color: var(--text-faint); line-height: 1.35;
@@ -2317,7 +2335,6 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   .comp-headline { text-align: center; }
   .comp-headline .ch-figure { justify-content: center; }
   .activity-summary { grid-template-columns: minmax(0, 1fr); }
-  .ch-avail { font-size: 26px; }
   /* The tooltip is wider than the tile it hangs off, so it is pinned to the card
      rather than centred on the tile, which would push it off-screen. */
   .comp-tip { left: 0; right: 0; width: auto; max-width: none; transform: translate(0, 4px); }
@@ -2362,7 +2379,6 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 }
 @media (max-width: 560px) {
   .card-head { padding-left: 12px; padding-right: 12px; gap: 7px; }
-  .card-head .card-icon { display: none; }
 }
 
 /* ---------- Overview: the composition card's own split layout ----------
@@ -2381,13 +2397,20 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .overview-stack .comp-headline .ch-figure { justify-content: center; }
 /* align-content:center, not stretch: with six tiles in two rows across a 420px column
    a stretched row is ~200px tall and each tile becomes a mostly-empty box. */
-.overview-stack .comp-stats { flex: 1 1 auto; align-content: center; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+/* One column at every width from tablet up — the tiles are full-width rows, not a
+   grid of tiles. Mobile (≤1100px, comp-wrap goes column) keeps the same single
+   column; only the row's own internal layout changes there (icon+label left,
+   figure right vs. stacked), not the column count. */
+.overview-stack .comp-stats { flex: 1 1 auto; align-content: center; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.overview-stack .comp-stat { justify-content: space-between; }
+.overview-stack .cs-body { flex-direction: row; align-items: baseline; justify-content: space-between; flex: 1 1 auto; gap: 10px; }
+.overview-stack .cs-val { order: 2; }
+.overview-stack .cs-lbl { order: 1; white-space: nowrap; overflow: visible; text-overflow: clip; }
 
 @media (min-width: 1101px) {
   /* Matched to the donut's ring at the widest leader tier: 150px radius = 300px across.
      This is the "battery as large as the donut" sizing. */
   .overview-stack .comp-gauge .battery-tube { width: 124px; height: 300px; }
-  .overview-stack .comp-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 1100px) {
   .overview-stack .comp-wrap { flex-direction: column; align-items: stretch; gap: 18px; }

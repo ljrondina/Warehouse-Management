@@ -1149,3 +1149,66 @@ donut. The Safekeeping donut is unreachable with this fixture (no safekeeping sh
 it), but it runs in legend mode where `rInner` is the fixed 62px prop, giving a 20px
 centre identical to the previous hard-coded value, and it never carried the max-width.
 `npm run build` passes.
+
+### 2026-08-17 — Session: toolbar reorder, footer toggles, single-column tiles, headline reformat
+
+Seven requests, all in `Dashboard.jsx`, `InventoryTab.jsx`, `SafekeepingTab.jsx`,
+`InventoryComposition.jsx`, `ui.jsx` and `index.css`.
+
+**1. Mobile card icons were missing — a regression from the toggle-relocation session.**
+A rule added then, `.card-head .card-icon { display: none }` below 560px, was meant to
+buy room for the toggles that used to crowd the head at that width. The toggles moved
+out of the head entirely this session (see #3), so the rule was deleted outright rather
+than carried forward unused.
+
+**2. The six composition tiles are one column, not a 3-across grid**, on every
+width from tablet up (mobile already stacked its own way). Each tile is now a
+full-width row — icon and label on the left, the figure on the right — instead of a
+square block, so the label is never the part fighting for space. Verified: 6 tiles,
+each exactly 834px wide at 900px viewport, 658px at 1440px, all sharing one x-position
+(no leftover grid columns).
+
+**3. Quantity/Value, Trade/Item Group and the period pickers all moved to a new
+`card-foot` row, under the card's content.** `Card` in `ui.jsx` gained a `foot` prop
+(rendered below `card-pad`, right-aligned, with its own top border) alongside the
+existing `right` — `right` stays for things that identify the card (a count chip, "current
+filter"), `foot` is for controls that change what the card is showing. Applied to both
+Overview cards, High Stock Items, Aging Analysis (its "current filter" chip stayed in the
+head, only the toggle moved down), Movement History, Net Inventory Change, Top Incoming
+Items, and both Safekeeping cards (scope switch, sheet switch) — every card that carried
+a display toggle. Mobile keeps the same "two toggles don't fit one row" stacking rule
+this footer now owns instead of the head.
+
+**4. New Transaction now sits beside the search bar, and that whole row moved above the
+tabs.** `Dashboard.jsx`'s first row is `.dash-toolbar-row` (search bar + button); the tab
+strip is its own row underneath. "Where do I look" and "where do I act" are both answered
+before the tabs even say which module you're in. `.dash-tabs-row` (search bar was never
+in it before) is gone; `.dash-toolbar-row` replaces it.
+
+**5. The composition and distribution cards' list panels are wider.** `--clp-w` went
+320→420px (360→480px above 1500px), and `--split-h` 420→460px (440→480px above 1500px)
+to match. The chart side gives up the room — its own 780px cap was never the binding
+constraint, so nothing else in the layout had to change.
+
+**6. Headline reformatted to Total / Available, both figures the same size.** Order
+flipped ("of" read right-to-left against how the ratio is usually said), the separator
+is now "/", and `.ch-avail`/`.ch-total` share one 26px/800-weight rule instead of a
+30px-vs-17px split that put visual weight on Available specifically — the gauge and
+caption already carry that emphasis, so the figures read as a plain ratio now. Caption
+text changed to "{unit} available of SOH" (CSS `text-transform: uppercase` renders it
+"UNITS AVAILABLE OF SOH" to match the composition tiles' own caption style). A stale
+mobile-only `.ch-avail { font-size: 26px }` override — dead weight now that both figures
+already render at 26px — was removed.
+
+**Verified** against a temporary local fixture (240 inventory lines, 700 ledger rows, 90
+safekeeping lines; deleted afterwards, `dist/` confirmed clean of it) at 1440×900, 900×900
+and 375×812:
+- Mobile: both card heads show their icon again (2/2); search bar + button sit above
+  the tab strip; no horizontal scroll; both Overview card titles render in full (171px,
+  172px) with their two footer toggles stacked and nothing overflowing.
+- 900px (tablet) and 1440px (desktop): composition tiles are a single column at every
+  width tested, list panel measures 420px, donut still centres on the ring with zero
+  label overlaps or clipping after the panel widened.
+- Headline renders "113,988/92,162" (Total/Available) at a uniform 26px in both spans;
+  caption reads "units available of SOH".
+No console errors on a clean tab. `npm run build` passes.

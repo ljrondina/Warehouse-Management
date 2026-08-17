@@ -172,7 +172,7 @@ export default function SafekeepingTab({ pool, qtyUnit = 'units' }) {
         </div>
 
         <Card title={`Safekeeping Distribution by ${scopeLabel}`} icon="reports" iconColor={S.total} className="sk-dist-card"
-          right={<Segmented size="sm" options={SK_SCOPES} value={scope} onChange={setScope} />}>
+          foot={<Segmented size="sm" options={SK_SCOPES} value={scope} onChange={setScope} />}>
           <div className="sk-dist compact">
             <ScopeList rows={scopeRows} palette={PALETTE} mixedLabel={qtyUnit} />
             <div className="sk-dist-chart">
@@ -197,7 +197,7 @@ export default function SafekeepingTab({ pool, qtyUnit = 'units' }) {
       <div className="mt">
         <Card pad={false}
           title="Safekeeping Source Tables" icon="reports" iconColor={S.neutral}
-          right={<Segmented size="sm" options={SHEET_VIEWS} value={sheet} onChange={setSheet} />}>
+          foot={<Segmented size="sm" options={SHEET_VIEWS} value={sheet} onChange={setSheet} />}>
           <SourceTables key={sheet} view={sheetView} />
         </Card>
       </div>

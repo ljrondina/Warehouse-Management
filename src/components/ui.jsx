@@ -107,7 +107,11 @@ export function Toggle({ options, value, onChange, size, className = '' }) {
 // Unrecognised props land on the root element, which is how callers attach
 // `data-tour` anchors (the guided tour finds its targets by that attribute) without
 // needing a wrapper div that would break the surrounding grid's row sizing.
-export function Card({ title, sub, right, icon, iconColor, children, pad = true, className = '', ...rest }) {
+// `right` still lands in the head for controls that identify the card (a count chip,
+// a legend, a scale note). `foot` is for the toggles that change what the card is
+// SHOWING (Quantity/Value, Trade/Item Group, the period picker) — those now render
+// below the content, in their own footer row, rather than crowding the title.
+export function Card({ title, sub, right, foot, icon, iconColor, children, pad = true, className = '', ...rest }) {
   return (
     <div className={`card ${className}`} {...rest}>
       {(title || right) && (
@@ -123,6 +127,7 @@ export function Card({ title, sub, right, icon, iconColor, children, pad = true,
         </div>
       )}
       <div className={pad ? 'card-pad' : ''}>{children}</div>
+      {foot && <div className="card-foot">{foot}</div>}
     </div>
   )
 }

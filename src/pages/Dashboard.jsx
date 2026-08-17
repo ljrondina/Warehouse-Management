@@ -89,27 +89,14 @@ export default function Dashboard() {
 
   return (
     <>
-      {/* Tab strip and the + New Transaction trigger share one row now — the button
-          sits at the row's right-most end, on top of the tab strip's own border
-          rather than in a separate toolbar row above it. */}
-      <div className="dash-tabs-row" data-tour="header">
-        <div className="dash-tabs" role="tablist" data-tour="dash-tabs">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              role="tab"
-              aria-selected={t.key === active}
-              className={`dash-tab ${t.key === active ? 'active' : ''} ${t.locked ? 'locked' : ''}`}
-              disabled={t.locked}
-              title={t.locked ? `${t.label} — coming in Phase 2` : `${t.label} dashboard`}
-              onClick={() => selectTab(t.key)}
-            >
-              <Icon name={t.icon} size={17} />
-              <span>{t.label}</span>
-              {t.locked && <span className="dash-tab-lock">🔒</span>}
-            </button>
-          ))}
-        </div>
+      {/* Search bar and the + New Transaction trigger share the FIRST row now, right
+          under the topbar — "where do I look" and "where do I act" both answered
+          before the tab strip even says which module you're in. The button sits at
+          the row's right-most end, beside the search bar rather than beside the
+          tabs. */}
+      <div className="dash-toolbar-row" data-tour="header">
+        <FilterSearch tokens={tokens} onChange={setTokens} resultCount={pool.length} uoms={uoms}
+          noun={active === 'safekeeping' ? 'line' : 'material'} />
         <NewTransactionMenu
           canCreate={allowedForms.length > 0}
           allowed={allowedForms}
@@ -117,9 +104,24 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="mt-sm">
-        <FilterSearch tokens={tokens} onChange={setTokens} resultCount={pool.length} uoms={uoms}
-          noun={active === 'safekeeping' ? 'line' : 'material'} />
+      {/* Tab strip. On its own row now that the toolbar above carries the search and
+          the New Transaction trigger. */}
+      <div className="dash-tabs mt-sm" role="tablist" data-tour="dash-tabs">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            role="tab"
+            aria-selected={t.key === active}
+            className={`dash-tab ${t.key === active ? 'active' : ''} ${t.locked ? 'locked' : ''}`}
+            disabled={t.locked}
+            title={t.locked ? `${t.label} — coming in Phase 2` : `${t.label} dashboard`}
+            onClick={() => selectTab(t.key)}
+          >
+            <Icon name={t.icon} size={17} />
+            <span>{t.label}</span>
+            {t.locked && <span className="dash-tab-lock">🔒</span>}
+          </button>
+        ))}
       </div>
 
       <div className="mt">

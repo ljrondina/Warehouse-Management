@@ -77,16 +77,21 @@ export default function InventoryComposition({ k, unit, metric = 'qty', series, 
             one sentence a warehouse manager reads first — how much of what we hold is
             actually free to issue. */}
         <div className="comp-headline">
+          {/* Total leads, Available follows — "of the total we hold, this much is
+              free" reads left to right in the order the sentence is said. Both
+              figures share one font size now; the old 30px/17px split emphasised
+              Available over Total, but the gauge and the caption already say which
+              one to focus on, so the figures themselves read as a plain ratio. */}
           <div className="ch-figure">
-            <span className="ch-avail tabular">{fmtBig(available)}</span>
-            <span className="ch-of">of</span>
             <span className="ch-total tabular">{fmtBig(base)}</span>
+            <span className="ch-of">/</span>
+            <span className="ch-avail tabular">{fmtBig(available)}</span>
           </div>
           {/* The Available/Reserved percentage chips that used to sit here are gone.
               The gauge draws that same split, and its own %-fill label prints the
               available share — three statements of one number in one card. */}
           <div className="ch-caption">
-            {money ? 'value' : unit} available of stock on hand
+            {money ? 'value' : unit} available of SOH
           </div>
         </div>
       </div>
