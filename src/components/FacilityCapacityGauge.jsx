@@ -19,7 +19,10 @@ const CAP_SEGMENTS = [
 ]
 const metricOpts = [{ value: 'qty', label: 'Quantity', icon: 'box' }, { value: 'value', label: 'Value', icon: 'receipt' }]
 
-export default function FacilityCapacityGauge() {
+// `bare` drops the widget's own frame and heading: on the floor plan it now sits inside
+// a "Warehouse Capacity" card that supplies both, and two headings stacked read as two
+// separate things rather than one.
+export default function FacilityCapacityGauge({ bare }) {
   const { theme } = useTheme()
   const series = seriesFor(theme)
   const [metric, setMetric] = useState('qty')
@@ -37,12 +40,16 @@ export default function FacilityCapacityGauge() {
   }
 
   return (
-    <div className="cap-widget">
+    <div className={bare ? 'cap-widget is-bare' : 'cap-widget'}>
       <div className="cap-widget-head">
-        <div>
-          <div className="card-title">Facility Capacity</div>
-          <div className="card-sub">{num(cap.positions)} pallet/shelf positions across the warehouse</div>
-        </div>
+        {bare
+          ? <div className="cap-widget-sub">{num(cap.positions)} pallet and shelf positions across the warehouse</div>
+          : (
+            <div>
+              <div className="card-title">Warehouse Capacity</div>
+              <div className="card-sub">{num(cap.positions)} pallet/shelf positions across the warehouse</div>
+            </div>
+          )}
         <Toggle size="sm" options={metricOpts} value={metric} onChange={setMetric} />
       </div>
       <div className="cap-widget-body">

@@ -37,6 +37,38 @@ export function fitSize(text, maxW, max, min = 6.5) {
   return s
 }
 
+// Icon above a wrapped label, centred as ONE stack.
+//
+// Both plans used to place the icon and the text independently, each guessing an offset
+// from the block's centre — which left the pair sitting high or low depending on how
+// many lines the label wrapped to. Measuring the whole stack and centring that is the
+// only way the gap between glyph and word stays constant.
+export function PlanStack({ x, y, text, maxW, size, icon, iconSize = 0, gap, lh, cls = '', iconCls = '', Icon }) {
+  const s = fitSize(text, maxW, size)
+  const lines = wrapLabel(text, maxW, s)
+  const step = lh || s + 2
+  const g = gap ?? Math.max(3, s * 0.45)
+  const textH = lines.length * step
+  const total = (iconSize > 0 ? iconSize + g : 0) + textH
+  const top = y - total / 2
+  const textTop = top + (iconSize > 0 ? iconSize + g : 0)
+  return (
+    <>
+      {iconSize > 0 && Icon && (
+        <g className={iconCls} transform={`translate(${x - iconSize / 2} ${top})`} pointerEvents="none">
+          <Icon name={icon} size={iconSize} />
+        </g>
+      )}
+      <text
+        x={x} y={textTop + step / 2} textAnchor="middle" dominantBaseline="middle"
+        className={cls} style={{ fontSize: s }} pointerEvents="none"
+      >
+        {lines.map((l, i) => <tspan key={i} x={x} dy={i === 0 ? 0 : step}>{l}</tspan>)}
+      </text>
+    </>
+  )
+}
+
 // Centred, wrapped label. `extra` lines are appended a step smaller beneath it.
 export default function PlanText({ x, y, text, maxW, size = 11, lh, cls = '', extra = [], extraCls = '' }) {
   const s = fitSize(text, maxW, size)

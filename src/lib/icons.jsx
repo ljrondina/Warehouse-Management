@@ -69,10 +69,12 @@ const paths = {
   scrap: <><path d="M5 7h14l-1.2 13.2a1.8 1.8 0 01-1.8 1.6H8a1.8 1.8 0 01-1.8-1.6L5 7z" /><path d="M3 7h18M9 7V4.6A1.6 1.6 0 0110.6 3h2.8A1.6 1.6 0 0115 4.6V7" /><path d="M10.5 10.5L13.5 17M13.5 10.5l-3 6.5" /></>,
   // Deformed reinforcing bar: three bars on the diagonal with their ribs showing,
   // which is what tells rebar apart from any other bundled long stock.
+  // Drawn to fill x 3..21 and y 3.4..20.9 so its INK is centred in the 24 box — an
+  // icon whose artwork sits off-centre throws off the gap to the label beneath it.
   rebar: <>
-    <path d="M3.2 8.4L17 3.4" /><path d="M5.6 6.1v4.6M8.6 5v4.6M11.6 3.9v4.6M14.6 2.8v4.6" />
-    <path d="M3.2 14.2L17 9.2" /><path d="M5.6 11.9v4.6M8.6 10.8v4.6M11.6 9.7v4.6M14.6 8.6v4.6" />
-    <path d="M3.2 20L17 15" /><path d="M5.6 17.7v4.6M8.6 16.6v4.6M11.6 15.5v4.6M14.6 14.4v4.6" />
+    <path d="M3 9L21 4.5" /><path d="M6.5 6.4v3.4M10.5 5.4v3.4M14.5 4.4v3.4M18.5 3.4v3.4" />
+    <path d="M3 14.5L21 10" /><path d="M6.5 11.9v3.4M10.5 10.9v3.4M14.5 9.9v3.4M18.5 8.9v3.4" />
+    <path d="M3 20L21 15.5" /><path d="M6.5 17.4v3.4M10.5 16.4v3.4M14.5 15.4v3.4M18.5 14.4v3.4" />
   </>,
 }
 

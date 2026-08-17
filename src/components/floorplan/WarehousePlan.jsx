@@ -1,9 +1,9 @@
 import {
   WH_VB, WH_BUILDING, WH_CANOPY, WH_AREAS, WH_ROOMS, WH_OPEN,
-  RACKS, CANTILEVER, FLOOR_AREA, HV_SHELVING,
+  RACKS, CANTILEVER, FLOOR_AREA,
 } from '../../data/warehouseMap'
 import PlanDefs from './planDefs'
-import PlanText from './planText'
+import PlanText, { PlanStack } from './planText'
 import Icon from '../../lib/icons'
 
 // Level 2 — WAREHOUSE PLAN, TOP VIEW (reference slide 9).
@@ -34,14 +34,6 @@ const iconFor = (across) => (across < 46 ? 0 : clamp(across * 0.28, 0, 34))
 const fontFor = (across, vertical) =>
   vertical ? clamp(across * 0.48, 7.5, 12.5) : clamp(across * 0.13, 7.5, 12)
 
-function PlanIcon({ name, x, y, size = 20 }) {
-  return (
-    <g transform={`translate(${x - size / 2} ${y - size / 2})`} pointerEvents="none">
-      <Icon name={name} size={size} />
-    </g>
-  )
-}
-
 export default function WarehousePlan({
   selected, onSelect, onOpenRack, hovered, onHover, orient = 'portrait', showSections = true,
 }) {
@@ -69,6 +61,7 @@ export default function WarehousePlan({
     // once the rotation is applied.
     const alongY = r.h >= r.w
     const step = (alongY ? r.h : r.w) / rack.bays
+    const depth = alongY ? r.w : r.h
     return (
       <g
         className={`fp-rack fp-${rack.area}${active ? ' is-active' : ''}${dim ? ' is-dim' : ''}`}
@@ -93,12 +86,18 @@ export default function WarehousePlan({
             titles are horizontal and run across the heads of the rack runs.
             The size is capped to the run's DEPTH too: back-to-back pairs are 17 units
             apart, and a 15 px glyph box does not fit between two of them. */}
-        <text
-          x={alongY ? r.x + r.w / 2 : r.x + r.w - 12}
-          y={alongY ? r.y + 11 : r.y + r.h / 2 + 0.5}
-          textAnchor="middle" dominantBaseline="middle" className="fp-rack-t"
-          style={{ fontSize: alongY ? 15 : clamp((alongY ? r.w : r.h) * 0.62, 9, 15) }}
-        >{rack.n}</text>
+        {/* Only if the run is deep enough to hold a numeral. The high-value shelving
+            lines are 8 units deep — a fifth of a rack run — so eight labels there just
+            sat on top of each other. Those are identified by hover, by the panel's jump
+            buttons, and by the elevation they open. */}
+        {depth >= 12 && (
+          <text
+            x={alongY ? r.x + r.w / 2 : r.x + r.w - 12}
+            y={alongY ? r.y + 11 : r.y + r.h / 2 + 0.5}
+            textAnchor="middle" dominantBaseline="middle" className="fp-rack-t"
+            style={{ fontSize: alongY ? 15 : clamp(depth * 0.62, 9, 15) }}
+          >{rack.n}</text>
+        )}
       </g>
     )
   }
@@ -107,7 +106,6 @@ export default function WarehousePlan({
   const cantAlongY = cant.h >= cant.w
   const cantStep = (cantAlongY ? cant.h : cant.w) / CANTILEVER.bays
   const floor = mr(FLOOR_AREA.rect)
-  const hv = mr(HV_AREA.hull[0])
 
   return (
     <svg className="fp-svg" viewBox={`0 0 ${vb.w} ${vb.h}`} role="img" aria-label="Central Warehouse Taytay warehouse plan, top view">
@@ -199,23 +197,6 @@ export default function WarehousePlan({
       {/* rack runs */}
       {RACKS.map((r) => <RackShape key={r.id} rack={r} />)}
 
-      {/* the high-value room's shelving runs */}
-      {(() => {
-        const pad = 10
-        const alongY = hv.h >= hv.w
-        const n = HV_SHELVING.runs
-        const span = (alongY ? hv.w : hv.h) - pad * 2
-        const runStep = span / n
-        return (
-          <g className="fp-hv-shelves" pointerEvents="none">
-            {Array.from({ length: n }, (_, i) => (alongY
-              ? <rect key={i} x={hv.x + pad + i * runStep + runStep * 0.18} y={hv.y + pad} width={runStep * 0.64} height={hv.h - pad * 2} rx="1.5" />
-              : <rect key={i} x={hv.x + pad} y={hv.y + pad + i * runStep + runStep * 0.18} width={hv.w - pad * 2} height={runStep * 0.64} rx="1.5" />
-            ))}
-          </g>
-        )
-      })()}
-
       {/* area labels last, so a rack never covers one */}
       {showSections && WH_AREAS.map((a) => {
         const r = mr(a.hull[0])
@@ -230,12 +211,11 @@ export default function WarehousePlan({
         const fs = fontFor(across, vertical)
         return (
           <g key={a.id} transform={vertical ? `rotate(-90 ${cx} ${cy})` : undefined} pointerEvents="none">
-            {ic > 0 && <g className={`fp-t-${a.role}`}><PlanIcon name={a.icon} x={cx} y={cy - fs * 1.5} size={ic} /></g>}
-            <PlanText
-              x={cx} y={ic > 0 ? cy + ic / 2 + fs * 0.5 : cy}
-              text={a.name.toUpperCase()}
-              maxW={along - 14} size={fs} lh={fs + 2}
-              cls={`fp-area-t fp-t-${a.role}`}
+            <PlanStack
+              x={cx} y={cy}
+              text={a.name.toUpperCase()} maxW={along - 14} size={fs} lh={fs + 2}
+              icon={a.icon} iconSize={ic} Icon={Icon}
+              cls={`fp-area-t fp-t-${a.role}`} iconCls={`fp-t-${a.role}`}
             />
           </g>
         )

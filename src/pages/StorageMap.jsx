@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { items } from '../data/insights'
 import {
-  SITE_AREAS, WH_AREAS, AREA_BY_ID, RACKS, CANTILEVER, FLOOR_AREA, HV_SHELVING,
+  SITE_AREAS, WH_AREAS, AREA_BY_ID, RACKS, CANTILEVER, FLOOR_AREA,
   areaCapacity, rackOccupancy, areaItems, siteItems, slotItems, placement,
 } from '../data/warehouseMap'
 import SitePlan from '../components/floorplan/SitePlan'
@@ -36,7 +36,10 @@ const LEVELS = [
 ]
 
 const rackLabel = (id) =>
-  id === 'CANT' ? CANTILEVER.name : id === 'FLOOR' ? FLOOR_AREA.name : id === 'HV' ? HV_SHELVING.name : `Rack ${id.slice(1)}`
+  id === 'CANT' ? CANTILEVER.name
+    : id === 'FLOOR' ? FLOOR_AREA.name
+    : id.startsWith('HV') ? `HV Line ${id.slice(2)}`
+    : `Rack ${id.slice(1)}`
 
 export default function StorageMap() {
   const [params, setParams] = useSearchParams()
@@ -69,24 +72,19 @@ export default function StorageMap() {
   // hook order between renders.
   const rid = rack || 'R1'
   const rk = RACKS.find((r) => r.id === rid)
-  const areaId = rk?.area || (rid === 'HV' ? 'highvalue' : 'safekeeping')
+  const areaId = rk?.area || 'safekeeping'
 
   const allInRack = useMemo(() => {
     if (rid === 'FLOOR') return slotItems('FLOOR', '', '')
     const out = []
     for (const [key, list] of Object.entries(plan.slots)) {
-      if (rid === 'HV' ? key.startsWith('HV') : key.startsWith(`${rid}|`)) out.push(...list)
+      if (key.startsWith(`${rid}|`)) out.push(...list)
     }
     return out
   }, [rid, plan])
 
   const cellItems = useMemo(() => {
     if (!cell) return null
-    if (rid === 'HV') {
-      const [run, rest] = cell.split(':')
-      const [bay, lvl] = rest.split('|')
-      return { list: slotItems(run, +bay, +lvl), label: `Run ${run.slice(2)} · Bay ${bay} · Level ${lvl}` }
-    }
     const [bay, lvl] = cell.split('|')
     return {
       list: slotItems(rid, +bay, +lvl),
@@ -103,11 +101,7 @@ export default function StorageMap() {
 
     return (
       <Shell level={level} area={area} rack={rack} go={go}>
-        {/* Whole-facility summary — shown only on the unselected overview, same as
-            the Site Overview tiles below, so it doesn't compete with a specific
-            area's own detail panel once one is picked. */}
-        {!sel && <FacilityCapacityGauge />}
-        <Card title="Stockyard" icon="map" right={<span className="fp-scale">Central Warehouse Taytay · scale MTS</span>}>
+        <Card title="Site" icon="map" className="fp-map-card" right={<span className="fp-scale">Central Warehouse Taytay · scale MTS</span>}>
           <div className="fp-stage">
             <SitePlan
               selected={area}
@@ -134,8 +128,15 @@ export default function StorageMap() {
             )}
           />
         ) : (
-          <Card title="Site Overview" icon="layers">
-            <div className="fp-pick">Pick an area on the plan to see what is stored there.</div>
+          /* One card on the right: the capacity read-out and its chart, then the site
+             areas. They were three separate blocks — the gauge above the map, the map,
+             and the overview beside it — which left the map boxed into a short cell. */
+          <Card title="Warehouse Capacity" icon="warehouse" className="fp-side-card">
+            <FacilityCapacityGauge bare />
+            <div className="fp-side-split">
+              <span>Site Areas</span>
+              <p>Pick an area, here or on the plan, to see what is stored there.</p>
+            </div>
             <div className="fp-tiles">
               {SITE_AREAS.map((a) => {
                 const p = a.id === 'warehouse'
@@ -143,7 +144,7 @@ export default function StorageMap() {
                   : siteItems(a.id)
                 return (
                   <button key={a.id} className={`fp-tile fp-t-${a.role}`} onClick={() => (a.drill ? go({ level: 'warehouse' }) : go({ area: a.id }))}>
-                    <i className={`fp-swatch fp-sw-${a.role}`} />
+                    <span className="fp-tile-ico"><Icon name={a.icon} size={16} /></span>
                     <span className="n">{a.name}</span>
                     <span className="v tabular">{num(p.length)}</span>
                     <span className="u">lines</span>
@@ -218,19 +219,13 @@ export default function StorageMap() {
             capacity={cap}
             actions={
               <div className="fp-rack-jump">
-                {sel.id === 'highvalue' ? (
-                  <button className="btn btn-sm" onClick={() => go({ level: 'rack', rack: 'HV' })}>Open shelving</button>
-                ) : (
+                {racksIn.map((r) => (
+                  <button key={r.id} className="btn btn-sm" onClick={() => go({ level: 'rack', rack: r.id })}>{r.n}</button>
+                ))}
+                {sel.id === 'safekeeping' && (
                   <>
-                    {racksIn.map((r) => (
-                      <button key={r.id} className="btn btn-sm" onClick={() => go({ level: 'rack', rack: r.id })}>{r.n}</button>
-                    ))}
-                    {sel.id === 'safekeeping' && (
-                      <>
-                        <button className="btn btn-sm" onClick={() => go({ level: 'rack', rack: 'CANT' })}>Cant.</button>
-                        <button className="btn btn-sm" onClick={() => go({ level: 'rack', rack: 'FLOOR' })}>Floor</button>
-                      </>
-                    )}
+                    <button className="btn btn-sm" onClick={() => go({ level: 'rack', rack: 'CANT' })}>Cant.</button>
+                    <button className="btn btn-sm" onClick={() => go({ level: 'rack', rack: 'FLOOR' })}>Floor</button>
                   </>
                 )}
               </div>

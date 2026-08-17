@@ -1530,3 +1530,63 @@ The cause was my own repeated toggling — each verification call clicked the sa
 again, and the tile is a toggle, so alternate calls were closing it. Confirmed by
 reading `classList.contains('active')` before and after a single dispatched click
 (false → true, table present). Not a defect.
+
+### 2026-08-17 — Session: site card consolidation, purple high value, eight HV lines
+
+**Level 1 — three blocks became two columns.** The site level was a capacity widget
+above the map, the map, and a Site Overview beside it — three grid children, which left
+the map sized by the shorter of the two columns. Now: **Site** (renamed from Stockyard)
+on the left at full row height, and one card on the right titled **Warehouse Capacity**
+(renamed from Facility Capacity) holding the gauge, its legend, and the site areas under
+a "Site Areas" divider. `FacilityCapacityGauge` gained a `bare` prop that drops its own
+frame and heading, because two headings stacked read as two separate widgets.
+`.fp-layout` stretches its children and the map's stage flexes to fill; measured 832×712
+and 536×712 at 1440×900 — equal height, which is what "full vertical" needed.
+
+**Icon and label spacing is computed once now.** Both plans placed the icon and the text
+independently, each guessing an offset from the block's centre, so the pair sat high or
+low depending on how many lines the label wrapped to. New `PlanStack` in `planText.jsx`
+measures icon + gap + wrapped text as ONE stack and centres that.
+
+**The rebar icon was the other half of that problem.** Its artwork spanned x 3.2–17 of a
+24-unit box, so the glyph's ink sat 2.6 units left of centre and its gap to the label
+read 3.4 units tighter than its neighbours'. Redrawn to fill x 3–21 and y 3.4–20.9:
+centre offset 2.62 → 0.28, gap 6.36 → 8.21 against 9.76 and 9.65 for the other two.
+
+**Level 2 — high value is purple.** The reference deck legends the area #7030A0 and
+nothing else on the plan is purple, so it is the colour that reads as "the locked room"
+instantly. Like the yellow used for Safekeeping this is a documented exception to the
+restricted palette, and the values are picked for contrast rather than copied raw:
+#6b3fa0 light (7:1 on the drawing surface), #b9a0e0 dark (7.9:1).
+
+**The high-value room has its real racking: eight lines, each clickable.** A single line
+against each end wall and three back-to-back pairs between them — five physical runs,
+laid out the way the rest of the shed is. Verified: gaps between consecutive lines run
+9.75, 0, 9.75, 0, 9.75, 0, 9.75, so the pairs touch and the singles stand alone, all
+eight inside the room with zero overlaps, 128 shelf positions.
+
+The eight lines are now entries in `RACKS` rather than a decorative overlay plus a
+separate `hvPositions()`. That deleted the whole `highvalue` special case from
+`placement()`, from `areaCapacity()` and from the panel's jump buttons — a shelving line
+is a rack, so every helper treats it as one, and `RackElevation` dispatches on
+`rack.kind` to draw it on the LS600 shelf elevations instead of the pallet beams.
+
+**Rack numbers are suppressed on runs too shallow to hold one.** The shelving lines are
+8 units deep against a rack run's 17, so eight numerals landed on top of each other.
+Below 12 units the number is dropped; those lines are identified by hover, by the H1–H8
+jump buttons and by the elevation they open.
+
+**Also:** the clickable Open Flat Area drops to 0.34 fill opacity (0.6 on hover) — still
+clearly clickable, but it is a big block and at rack strength it pulled the eye off the
+racks themselves.
+
+**Verified** at 1440×900 and 375×812 across twelve views — site, site with an area
+selected, warehouse in both orientations with sections on and off, high value selected,
+and the pallet / shelving / cantilever / floor elevations — zero labels clipped, zero
+overlaps, nothing outside a scroll container. HV Line 3 opens a 16-cell elevation with
+the LS600 spec. `npm run build` passes.
+
+**Concurrent session, resolved.** The second session has landed its work; only floor-plan
+files were staged from here. `--fp-highvalue` is now declared in both `index.css` (grey)
+and `floorplan.css` (purple) — the later file wins, which is the override pattern that
+split was made for.

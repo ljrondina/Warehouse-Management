@@ -160,65 +160,61 @@ function CantileverRack({ selected, onSelect }) {
 
 /* ------------------------------------------------------- LS600 shelving room */
 
-function ShelvingRoom({ selected, onSelect }) {
-  const { runs, bays, levels } = HV_SHELVING
-  const BW = 78
-  const runGap = 26
-  const runW = bays * BW
-  const W = PAD.l + runs * runW + (runs - 1) * runGap + PAD.r
-  const H = 190
-  const vbH = PAD.t + H + PAD.b + 12
-  const lvlH = H / levels
+// One shelving LINE, drawn like a pallet rack but on the LS600 shelf elevations. The
+// high-value room holds eight of these — a single against each end wall and three
+// back-to-back pairs between — and each is opened on its own, like Racks 1-11.
+function ShelvingLine({ rack, selected, onSelect }) {
+  const BW = 96
+  const W = PAD.l + rack.bays * BW + PAD.r
+  const H = 240
+  const vbH = PAD.t + H + PAD.b
+  const lvlH = H / rack.levels
 
   return (
-    <svg className="fp-elev" viewBox={`0 0 ${W} ${vbH}`} role="img" aria-label="LS600 shelving front elevation">
+    <svg className="fp-elev" viewBox={`0 0 ${W} ${vbH}`} role="img" aria-label={`${rack.name} front elevation`}>
       {LS600_LEVELS.map((mm, i) => (
         <g key={mm} className="fp-axis">
           <line x1={PAD.l - 6} y1={PAD.t + H - i * lvlH} x2={W - PAD.r} y2={PAD.t + H - i * lvlH} />
           <text x={PAD.l - 10} y={PAD.t + H - i * lvlH + 3} textAnchor="end">{i === 0 ? 'FFL' : num(LS600_LEVELS[i - 1])}</text>
         </g>
       ))}
-      {Array.from({ length: runs }, (_, r) => {
-        const x0 = PAD.l + r * (runW + runGap)
-        return (
-          <g key={r}>
-            {Array.from({ length: bays }, (_, b) =>
-              Array.from({ length: levels }, (_, l) => {
-                const bay = b + 1
-                const lvl = l + 1
-                const rid = `HV${r + 1}`
-                const list = slotItems(rid, bay, lvl)
-                const key = `${rid}:${bay}|${lvl}`
-                return (
-                  <g
-                    key={key}
-                    className={`fp-cell is-${cellTone(list)}${selected === key ? ' is-sel' : ''}`}
-                    role="button" tabIndex={0} aria-label={`Run ${r + 1} bay ${bay} level ${lvl}, ${list.length} line${list.length===1?'':'s'}`}
-                    onClick={() => onSelect(selected === key ? null : key)}
-                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelect(selected === key ? null : key))}
-                  >
-                    <title>{`Run ${r + 1} · Bay ${bay} · Level ${lvl} — ${list.length} line${list.length === 1 ? '' : 's'}`}</title>
-                    <rect x={x0 + b * BW + 2} y={PAD.t + H - lvl * lvlH} width={BW - 4} height={lvlH - 3} rx="2" />
-                    {list.length > 0 && (
-                      <text x={x0 + b * BW + BW / 2} y={PAD.t + H - lvl * lvlH + lvlH / 2} textAnchor="middle" dominantBaseline="middle">
-                        {list.length}
-                      </text>
-                    )}
-                  </g>
-                )
-              })
-            )}
-            {Array.from({ length: bays + 1 }, (_, i) => (
-              <rect key={i} className="fp-upright" x={x0 + i * BW - 2} y={PAD.t - 4} width="4" height={H + 4} rx="1" />
-            ))}
-            <text className="fp-bay-cap" x={x0 + runW / 2} y={PAD.t + H + 32} textAnchor="middle">RUN {r + 1}</text>
-            {Array.from({ length: bays }, (_, b) => (
-              <text key={b} className="fp-bay-n" x={x0 + b * BW + BW / 2} y={PAD.t + H + 17} textAnchor="middle">{b + 1}</text>
-            ))}
-          </g>
-        )
-      })}
+      <text className="fp-axis-cap" x={PAD.l - 10} y={PAD.t - 10} textAnchor="end">mm</text>
+
+      {Array.from({ length: rack.bays }, (_, b) =>
+        Array.from({ length: rack.levels }, (_, l) => {
+          const bay = b + 1
+          const lvl = l + 1
+          const list = slotItems(rack.id, bay, lvl)
+          const key = `${bay}|${lvl}`
+          return (
+            <g
+              key={key}
+              className={`fp-cell is-${cellTone(list)}${selected === key ? ' is-sel' : ''}`}
+              role="button" tabIndex={0}
+              aria-label={`Bay ${bay} level ${lvl}, ${list.length} material line${list.length === 1 ? '' : 's'}`}
+              onClick={() => onSelect(selected === key ? null : key)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelect(selected === key ? null : key))}
+            >
+              <title>{`Bay ${bay} · Level ${lvl} — ${list.length} line${list.length === 1 ? '' : 's'}`}</title>
+              <rect x={PAD.l + b * BW + 3} y={PAD.t + H - lvl * lvlH} width={BW - 6} height={lvlH - 3} rx="2" />
+              {list.length > 0 && (
+                <text x={PAD.l + b * BW + BW / 2} y={PAD.t + H - lvl * lvlH + lvlH / 2} textAnchor="middle" dominantBaseline="middle">
+                  {list.length}
+                </text>
+              )}
+            </g>
+          )
+        })
+      )}
+
+      {Array.from({ length: rack.bays + 1 }, (_, i) => (
+        <rect key={i} className="fp-upright" x={PAD.l + i * BW - 2.5} y={PAD.t - 4} width="5" height={H + 4} rx="1" />
+      ))}
       <line className="fp-floorline" x1={PAD.l - 14} y1={PAD.t + H} x2={W - PAD.r + 6} y2={PAD.t + H} />
+      {Array.from({ length: rack.bays }, (_, b) => (
+        <text key={b} className="fp-bay-n" x={PAD.l + b * BW + BW / 2} y={PAD.t + H + 18} textAnchor="middle">{b + 1}</text>
+      ))}
+      <text className="fp-bay-cap" x={PAD.l + (rack.bays * BW) / 2} y={PAD.t + H + 34} textAnchor="middle">BAY</text>
     </svg>
   )
 }
@@ -251,9 +247,9 @@ function FloorStack({ count }) {
 export default function RackElevation({ rackId, selectedCell, onSelectCell, floorCount }) {
   if (rackId === 'FLOOR') return <FloorStack count={floorCount} />
   if (rackId === 'CANT') return <CantileverRack selected={selectedCell} onSelect={onSelectCell} />
-  if (rackId === 'HV') return <ShelvingRoom selected={selectedCell} onSelect={onSelectCell} />
   const rack = RACKS.find((r) => r.id === rackId)
   if (!rack) return null
+  if (rack.kind === 'shelving') return <ShelvingLine rack={rack} selected={selectedCell} onSelect={onSelectCell} />
   return <PalletRack rack={rack} selected={selectedCell} onSelect={onSelectCell} />
 }
 
@@ -280,14 +276,16 @@ export function RackSpec({ rackId }) {
       </div>
     )
   }
-  if (rackId === 'HV') {
+  const shelf = RACKS.find((r) => r.id === rackId && r.kind === 'shelving')
+  if (shelf) {
     return (
       <div className="fp-spec">
         <span><b>System</b> LS600 boltless shelving</span>
         <span><b>Frame</b> {num(HV_SHELVING.frameHeight)} mm</span>
         <span><b>Bay</b> {num(HV_SHELVING.bayWidth)} mm</span>
-        <span><b>Layout</b> {HV_SHELVING.runs} runs × {HV_SHELVING.bays} bays × {HV_SHELVING.levels} levels</span>
-        <span><b>Positions</b> {num(HV_SHELVING.positions)}</span>
+        <span><b>Layout</b> {shelf.bays} bays × {shelf.levels} levels</span>
+        <span><b>Positions</b> {num(shelf.positions)}</span>
+        <span><b>Area</b> {AREA_BY_ID[shelf.area].short}</span>
       </div>
     )
   }

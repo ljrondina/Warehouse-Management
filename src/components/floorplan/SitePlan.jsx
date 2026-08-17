@@ -1,6 +1,6 @@
 import { SITE_VB, SITE_BOUNDARY, SITE_AREAS, SITE_YARD } from '../../data/warehouseMap'
 import PlanDefs from './planDefs'
-import PlanText from './planText'
+import PlanText, { PlanStack } from './planText'
 import Icon from '../../lib/icons'
 
 // Level 1 — the stockyard: the property, the shed, and the outdoor material areas
@@ -27,14 +27,6 @@ const toVB = (x, y) => ({ x: (x - 3.535) * K, y: (y - 1.292) * K })
 
 // An icon drawn into the plan, centred on a point. A nested <svg> starts a new
 // viewport at the group's origin, so the translate carries the placement.
-function PlanIcon({ name, x, y, size = 26 }) {
-  return (
-    <g transform={`translate(${x - size / 2} ${y - size / 2})`} pointerEvents="none">
-      <Icon name={name} size={size} />
-    </g>
-  )
-}
-
 export default function SitePlan({ selected, onSelect, onDrill, hovered, onHover }) {
   const { w, h } = SITE_VB
 
@@ -95,11 +87,11 @@ export default function SitePlan({ selected, onSelect, onDrill, hovered, onHover
                 <g transform={`translate(${c.x} ${c.y}) rotate(${rot.rot})`}>
                   <rect x={-rw / 2} y={-rh / 2} width={rw} height={rh} rx="5" />
                   <rect x={-rw / 2} y={-rh / 2} width={rw} height={rh} rx="5" className="fp-tex" fill={`url(#fpt-${a.role})`} />
-                  <PlanIcon name={a.icon} x={0} y={-rh / 2 + ic / 2 + 7} size={ic} />
-                  <PlanText
-                    x={0} y={rh / 2 - fs * 1.5 - 5}
+                  <PlanStack
+                    x={0} y={0}
                     text={a.name.toUpperCase()} maxW={rw - 16} size={fs} lh={fs + 1.5}
-                    cls="fp-area-t fp-t-mrf"
+                    icon={a.icon} iconSize={ic} Icon={Icon}
+                    cls="fp-area-t fp-t-mrf" iconCls="fp-t-mrf"
                   />
                 </g>
               )
@@ -116,16 +108,20 @@ export default function SitePlan({ selected, onSelect, onDrill, hovered, onHover
         const fs = fontFor(across)
         return (
           <g key={a.id} className={`fp-t-${a.role}`} pointerEvents="none">
-            <PlanIcon name={a.icon} x={c.cx} y={c.cy - fs * 1.6} size={ic} />
-            <PlanText
-              x={c.cx} y={c.cy + ic / 2 + fs * 0.6}
+            <PlanStack
+              x={c.cx} y={c.cy}
               text={a.name.toUpperCase()}
               maxW={Math.min(a.label.w - 14, 190)}
               size={fs} lh={fs + 2}
-              cls={`fp-area-t fp-t-${a.role}`}
-              extra={a.drill ? ['click to enter →'] : []}
-              extraCls="fp-area-hint"
+              icon={a.icon} iconSize={ic} Icon={Icon}
+              cls={`fp-area-t fp-t-${a.role}`} iconCls={`fp-t-${a.role}`}
             />
+            {a.drill && (
+              <text
+                x={c.cx} y={c.cy + ic / 2 + fs * 1.9} textAnchor="middle" dominantBaseline="middle"
+                className="fp-area-hint" style={{ fontSize: Math.max(7.5, fs * 0.78) }} pointerEvents="none"
+              >click to enter →</text>
+            )}
           </g>
         )
       })}

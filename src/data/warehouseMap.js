@@ -166,6 +166,48 @@ RACKS.forEach((r) => {
   r.positions = r.bays * r.levels
 })
 
+// The High-Value room's own racking: EIGHT lines of four bays and four shelf levels,
+// laid out the way the rest of the shed is — a single line against each end wall and
+// three back-to-back pairs between them, so five physical runs. Each line is its own
+// rack and is clickable, exactly like Racks 1-11.
+//
+// The room is ix 91..210 (119 wide) x iy 581..756. Lines are 8 units deep, so
+// 2 singles + 3 pairs = 64 units of shelving; the remaining width is shared equally
+// between the four aisles.
+const HV_ROOM = { x0: 91, y0: 581, x1: 210, y1: 756 }
+const HV_PAD = 8
+const HV_DEPTH = 8
+const HV_GROUPS = [1, 2, 2, 2, 1] // lines per physical run, end to end
+export const HV_RACKS = (() => {
+  const usable = HV_ROOM.x1 - HV_ROOM.x0 - HV_PAD * 2
+  const shelved = HV_GROUPS.reduce((a, g) => a + g * HV_DEPTH, 0)
+  const aisle = (usable - shelved) / (HV_GROUPS.length - 1)
+  const out = []
+  let x = HV_ROOM.x0 + HV_PAD
+  let n = 0
+  for (const g of HV_GROUPS) {
+    for (let i = 0; i < g; i++) {
+      n += 1
+      out.push({
+        id: `HV${n}`, n: `H${n}`, area: 'highvalue', kind: 'shelving',
+        bays: 4, levels: 4,
+        px: [x, x + HV_DEPTH], span: [HV_ROOM.y0 + 10, HV_ROOM.y1 - 10],
+      })
+      x += HV_DEPTH
+    }
+    x += aisle
+  }
+  return out
+})()
+HV_RACKS.forEach((r) => {
+  r.name = `HV Line ${r.n.slice(1)}`
+  r.rect = pl(r.px[0], r.span[0], r.px[1], r.span[1])
+  r.positions = r.bays * r.levels
+})
+// One list from here on: every downstream helper — placement, capacity, occupancy, the
+// area's jump buttons — treats a shelving line exactly like a pallet rack.
+RACKS.push(...HV_RACKS)
+
 // Two non-pallet storage forms inside the Safekeeping area, both named on slide 13.
 export const CANTILEVER = {
   id: 'CANT', name: 'Cantilever', area: 'safekeeping', kind: 'cantilever',
@@ -324,18 +366,9 @@ function positionsFor(rackList) {
   for (let lvl = 1; lvl <= maxLevels; lvl++) {
     for (const r of rackList) {
       if (lvl > r.levels) continue
-      for (let bay = 1; bay <= r.bays; bay++) out.push({ rack: r.id, bay, level: lvl })
+      for (let bay = 1; bay <= r.bays; bay++) out.push({ rack: r.id, bay, level: lvl, kind: r.kind || 'pallet' })
     }
   }
-  return out
-}
-
-function hvPositions() {
-  const out = []
-  for (let lvl = 1; lvl <= HV_SHELVING.levels; lvl++)
-    for (let run = 1; run <= HV_SHELVING.runs; run++)
-      for (let bay = 1; bay <= HV_SHELVING.bays; bay++)
-        out.push({ rack: `HV${run}`, bay, level: lvl })
   return out
 }
 
@@ -377,17 +410,6 @@ export function placement() {
   for (const area of WH_AREAS) {
     const pool = areas[area.id].slice().sort(byPickRate)
 
-    if (area.id === 'highvalue') {
-      const pos = hvPositions()
-      pool.forEach((it, i) => {
-        const p = pos[i % pos.length]
-        const loc = { level: 'rack', area: area.id, rack: p.rack, bay: p.bay, lvl: p.level, kind: 'shelving' }
-        byLine.set(it.id, loc)
-        put(`${p.rack}|${p.bay}|${p.level}`, it)
-      })
-      continue
-    }
-
     let racked = pool
     if (area.id === 'safekeeping') {
       // Long goods go on the cantilever run; bulky reusable kit is block-stacked on
@@ -413,7 +435,7 @@ export function placement() {
     if (!pos.length) continue
     racked.forEach((it, i) => {
       const p = pos[i % pos.length]
-      byLine.set(it.id, { level: 'rack', area: area.id, rack: p.rack, bay: p.bay, lvl: p.level, kind: 'pallet' })
+      byLine.set(it.id, { level: 'rack', area: area.id, rack: p.rack, bay: p.bay, lvl: p.level, kind: p.kind })
       put(`${p.rack}|${p.bay}|${p.level}`, it)
     })
   }
@@ -440,10 +462,6 @@ export const totals = (pool) => ({
 // nothing in the system records how full a pallet is.
 export function areaCapacity(areaId) {
   const { slots, areas } = placement()
-  if (areaId === 'highvalue') {
-    const used = Object.keys(slots).filter((k) => k.startsWith('HV')).length
-    return { positions: HV_SHELVING.positions, used, unit: 'shelf positions' }
-  }
   const rackList = RACKS.filter((r) => r.area === areaId)
   let positions = rackList.reduce((a, r) => a + r.positions, 0)
   let used = Object.keys(slots).filter((k) => rackList.some((r) => k.startsWith(`${r.id}|`))).length
@@ -451,7 +469,8 @@ export function areaCapacity(areaId) {
     positions += CANTILEVER.positions
     used += Object.keys(slots).filter((k) => k.startsWith('CANT|')).length
   }
-  return { positions, used, unit: 'pallet positions', lines: areas[areaId]?.length ?? 0 }
+  const unit = areaId === 'highvalue' ? 'shelf positions' : 'pallet positions'
+  return { positions, used, unit, lines: areas[areaId]?.length ?? 0 }
 }
 
 // Whole-facility capacity split into Warehouse-owned (mepfs, structural,
@@ -519,6 +538,6 @@ export function locationOf(item) {
   if (loc.rack === 'FLOOR') return { area: area.name, detail: 'Floor Area — block stacked', ...loc }
   if (loc.rack === 'CANT') return { area: area.name, detail: `Cantilever · Bay ${loc.bay} · Arm ${loc.lvl}`, ...loc }
   if (loc.kind === 'shelving')
-    return { area: area.name, detail: `Shelving run ${loc.rack.slice(2)} · Bay ${loc.bay} · Level ${loc.lvl}`, ...loc }
+    return { area: area.name, detail: `HV Line ${loc.rack.slice(2)} · Bay ${loc.bay} · Level ${loc.lvl}`, ...loc }
   return { area: area.name, detail: `Rack ${loc.rack.slice(1)} · Bay ${loc.bay} · Level ${loc.lvl}`, ...loc }
 }
