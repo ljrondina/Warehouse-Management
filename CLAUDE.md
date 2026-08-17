@@ -1472,3 +1472,61 @@ and 375×812, light and dark:
   not a widget bug); "View full tracker" correctly switches the sub-tab to Activity.
 - No console errors on a clean tab; both themes render the composition list and the
   capacity widget without incident. `npm run build` passes.
+
+### 2026-08-17 — Session: Delivery Tracker project column, Composition list as a masterlist table
+
+**1. The Delivery Tracker has a Project column, and project is out of the Item cell's
+subtitle.** Project is a field worth sorting and scanning down a column; buried in a
+subtitle beside trade and batch it could not be either. Trade and batch stay on the
+Item cell's second line — neither has a column, and both read as qualifiers of the
+item rather than as facts in their own right. All nine column widths were rebalanced
+to keep the percentage set summing to exactly 100 (26 + 10 + 10.5 + 6.5 + 5.5 + 11 +
+10 + 4 + 16.5), which is what guarantees every column stays visible at any container
+width — a pixel total only fits until the pane is narrower than it.
+
+**2. The Warehouse Overview composition list is now the Inventory Master List's own
+"Full" table.** The two-line `.comp-row` card from last session is gone; the expanded
+list is a real `<table class="data inv-table">` with a header row, reusing
+`.inv-item.full` / `.inv-desc` / `.inv-desc-sub` / `.inv-desc-path` wholesale so a row
+here lines up column-for-column with a row on the masterlist page. Columns: Item Code,
+Material Description (with the detailed description and the trade · item-group path
+stacked beneath it), Qty, UOM, Purchase Price, Condition.
+
+The quantity column's header is not fixed — it takes the clicked tile's own label, so
+the same table reads "Reserved" or "Incoming" depending on which figure opened it,
+and the number under it is that tile's column rather than a generic total.
+
+Three deliberate deviations from the shared `.inv-table` rules, all commented in the
+stylesheet: `min-width` is reset to 0 (the shared 948px floor exists to fit the
+masterlist's ten columns and would force a horizontal scrollbar on this six-column
+table); the header gets its own background, since the shared sticky-header rule leans
+on a `table.data` background the masterlist page overrides for itself; and there is no
+`.zero` dimming, because the peso column here is a plain figure rather than a value
+ramp. The header is otherwise non-interactive — no sort carets, no drag grips — since
+this list has one fixed order.
+
+**Verified against a temporary local fixture** (240 inventory lines with detailed
+descriptions, 700 ledger rows, 90 safekeeping lines, 60 delivery rows — the fixture
+was extended this session to cover `detailedDescription` and `deliveryTracker.js`,
+both of which earlier fixtures left empty; deleted afterwards, `dist/` confirmed clean
+of it) at 1440×900 and 375×812, light and dark:
+- Delivery Tracker header reads Item · Project · Target Delivery · Qty · UOM · Status ·
+  Location / Tower · DP · Remarks; the Project column populates per row; the Item
+  subtitle reads "Structural Works · Batch 2" with no project in it.
+- Composition table header reads Item Code · Material Description · **Reserved** ·
+  UOM · Purchase Price · Condition after clicking the Reserved tile, confirming the
+  dynamic quantity header. First row rendered all three description lines (name,
+  detailed description, trade path) and the right figures in each column.
+- Sticky header holds position while the list scrolls; no horizontal overflow at
+  desktop (table 1331px in a 1331px container). At 375px the table scrolls inside its
+  own container (446px in a 314px box) exactly as the masterlist does, and the PAGE
+  does not scroll horizontally.
+- Dark mode contrast measured on all four text roles in the new table: header 5.84,
+  body 6.79, detailed description 5.68, trade path 5.45 — all clear of 4.5:1.
+- No console errors on a clean tab. `npm run build` passes.
+
+**Measurement note.** Mid-session several checks reported "no table" after a click.
+The cause was my own repeated toggling — each verification call clicked the same tile
+again, and the tile is a toggle, so alternate calls were closing it. Confirmed by
+reading `classList.contains('active')` before and after a single dispatched click
+(false → true, table present). Not a defect.

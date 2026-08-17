@@ -46,25 +46,30 @@ export default function DeliveryTracker() {
   const filtersOn = Boolean(status || project || trade || search)
   const reset = () => { setStatus(''); setProject(''); setTrade(''); setSearch('') }
 
-  // Trade / project / batch ride on the Item cell's second line, so this needs eight
-  // columns instead of eleven. Widths are percentages summing to 100, which is what
-  // guarantees every column stays visible at ANY container width — a pixel total only
-  // fits until the pane is narrower than it. The split follows the content-priority
-  // order: item, target date, qty, status, location, remarks.
+  // Trade and batch ride on the Item cell's second line; project has its own column.
+  // Widths are percentages summing to 100, which is what guarantees every column stays
+  // visible at ANY container width — a pixel total only fits until the pane is narrower
+  // than it. The split follows the content-priority order: item, project, target date,
+  // qty, status, location, remarks.
   const columns = useMemo(() => [
     {
-      key: 'item', label: 'Item', width: '30%',
+      // Project moved OUT of this cell's second line into its own column below — it
+      // is a field worth sorting and scanning down, which a value buried in a
+      // subtitle cannot be. Trade and batch stay here: neither has a column, and
+      // both read as qualifiers of the item rather than as facts in their own right.
+      key: 'item', label: 'Item', width: '26%',
       render: (r) => (
         <span className="dtk-itemtext">
           <span className="inv-desc" title={r.item}>{r.item}</span>
-          <span className="inv-desc-sub" title={`${r.trade} · ${r.project} · ${r.batch}`}>
-            <span className="dtk-trade">{r.trade}</span> · {r.project}{r.batch && ` · ${r.batch}`}
+          <span className="inv-desc-sub" title={`${r.trade}${r.batch ? ` · ${r.batch}` : ''}`}>
+            <span className="dtk-trade">{r.trade}</span>{r.batch && ` · ${r.batch}`}
           </span>
         </span>
       ),
     },
+    { key: 'project', label: 'Project', width: '10%', blank: true },
     {
-      key: 'targetDate', label: 'Target Delivery', width: '11%',
+      key: 'targetDate', label: 'Target Delivery', width: '10.5%',
       // Every custom-`render` column below carries a `tooltip` too: once a column is
       // narrower than its content (the default fit, or after a manual resize), the
       // native title attribute is what still surfaces the full value on hover.
@@ -74,19 +79,19 @@ export default function DeliveryTracker() {
         : <span className="dtk-est">{fmtTargetText(r.targetText) || 'TBC'}</span>),
     },
     {
-      key: 'qty', label: 'Qty', width: '7%', num: true,
+      key: 'qty', label: 'Qty', width: '6.5%', num: true,
       // Rendered, not left to num(): the source keeps "TBC" and compound counts like
       // "207 * 7" in this column, and num() would turn both into NaN.
       tooltip: (r) => (r.qty === 'TBC' || !r.qty ? 'TBC' : String(r.qty)),
       render: (r) => (r.qty === 'TBC' || !r.qty ? <span className="faint">TBC</span> : r.qty),
     },
     {
-      key: 'uom', label: 'UOM', width: '6.5%',
+      key: 'uom', label: 'UOM', width: '5.5%',
       tooltip: (r) => (r.uom === 'TBC' || !r.uom ? '—' : r.uom),
       render: (r) => (r.uom === 'TBC' || !r.uom ? <span className="faint">—</span> : r.uom),
     },
     {
-      key: 'status', label: 'Status', width: '12%',
+      key: 'status', label: 'Status', width: '11%',
       // noDot: the status glyph already carries the meaning, so the badge's own dot would
       // be a second marker competing for the label's space. Columns are user-resizable
       // (see DataSheet's col-grip), so a long label like "Due in 31-90 Days" is a drag
@@ -98,16 +103,16 @@ export default function DeliveryTracker() {
         </Badge>
       ),
     },
-    { key: 'location', label: 'Location / Tower', width: '11.5%', blank: true },
+    { key: 'location', label: 'Location / Tower', width: '10%', blank: true },
     {
-      key: 'dpPayment', label: 'DP', width: '4.5%',
+      key: 'dpPayment', label: 'DP', width: '4%',
       tooltip: (r) => r.dpPayment || '',
       render: (r) => (r.dpPayment
         ? <span className={`dtk-note-tag ${r.dpPayment === 'PAID' ? 'ok' : 'warn'}`}>{r.dpPayment}</span>
         : ''),
     },
     {
-      key: 'opsRemarks', label: 'Remarks', width: '17.5%',
+      key: 'opsRemarks', label: 'Remarks', width: '16.5%',
       // Ops and PRC keep separate notes in the source; both are shown rather than one
       // being dropped, with PRC's on the second line and labelled so they stay distinct.
       render: (r) => (

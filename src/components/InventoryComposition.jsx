@@ -45,31 +45,25 @@ export const COMPOSITION_STATS = [
   },
 ]
 
-// One compact row per material — code + description on the first line, then the five
-// figures that matter (quantity, condition, purchase price, trade, item group) as a
-// single wrapping strip beneath it, instead of the old four-section card. This is
-// deliberately its own renderer rather than MaterialList's default: this list is now
-// full width, so it can afford one dense row per line instead of a stacked card.
-function CompRow({ r, field, label }) {
-  const nav = useNavigate()
-  return (
-    <div className="comp-row" onClick={() => nav(`/inventory/${r.id}`)}>
-      <div className="cr-main">
-        <span className="cr-code">{r.itemCode}</span>
-        <span className="cr-desc" title={r.description}>{r.description}</span>
-      </div>
-      <div className="cr-meta">
-        <span className="cr-chip"><small>{label}</small>{num(r[field])} {r.uom}</span>
-        <span className="cr-chip"><small>Condition</small>Class {r.conditionClass}</span>
-        <span className="cr-chip"><small>Price</small>{peso(r.unitPrice, { decimals: 2 })}</span>
-        <span className="cr-chip"><small>Trade</small>{r.tradeL1}</span>
-        <span className="cr-chip"><small>Item Group</small>{r.tradeL2}</span>
-      </div>
-    </div>
-  )
-}
+// Same table shape as the Inventory Master List's "Full" view — `.data.inv-table`
+// with a header row, `.inv-item.full` rows, and the description cell stacking the
+// detailed description and the trade path beneath the material name. Reusing those
+// classes (rather than a bespoke card) is what keeps the two lists reading as the
+// same object: a row here and a row there line up column for column.
+//
+// Only the quantity column is card-specific — its header takes the clicked tile's
+// own label, since "Reserved" and "Incoming" are different numbers off the same row.
+const COMP_COLUMNS = [
+  { key: 'itemCode', label: 'Item Code', width: 96 },
+  { key: 'description', label: 'Material Description', width: null },
+  { key: 'qty', label: 'Qty', width: 88, num: true },
+  { key: 'uom', label: 'UOM', width: 60 },
+  { key: 'unitPrice', label: 'Purchase Price', width: 118, num: true },
+  { key: 'conditionClass', label: 'Condition', width: 84 },
+]
 
 export default function InventoryComposition({ k, unit, metric = 'qty', series, pool }) {
+  const nav = useNavigate()
   const money = metric === 'value'
   const fmtTile = (v) => (money ? `₱${compact(v)}` : num(v))
   // Closed by default — no tile pre-selected. Clicking one expands its list beneath
@@ -108,10 +102,45 @@ export default function InventoryComposition({ k, unit, metric = 'qty', series, 
               <Icon name="close" size={16} />
             </button>
           </div>
-          <div className="comp-rows">
+          <div className="comp-rows inv-scroll">
             {rows.length === 0
               ? <div className="empty">No materials in this selection.</div>
-              : rows.map((r) => <CompRow key={r.id} r={r} field={sel.field} label={sel.label} />)}
+              : (
+                <table className="data inv-table comp-table">
+                  <colgroup>
+                    {COMP_COLUMNS.map((c) => <col key={c.key} style={c.width ? { width: c.width } : undefined} />)}
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      {COMP_COLUMNS.map((c) => (
+                        <th key={c.key} className={`no-sort ${c.num ? 'num' : ''}`}>
+                          <span className="th-label">{c.key === 'qty' ? sel.label : c.label}</span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r) => (
+                      <tr key={r.id} className="inv-item full" onClick={() => nav(`/inventory/${r.id}`)}>
+                        <td className="mono">{r.itemCode}</td>
+                        <td>
+                          <span className="inv-desc" title={r.description}>{r.description}</span>
+                          {r.detailedDescription && (
+                            <span className="inv-desc-sub" title={r.detailedDescription}>{r.detailedDescription}</span>
+                          )}
+                          <span className="inv-desc-path" title={`${r.tradeL1} · ${r.tradeL2}`}>
+                            {r.tradeL1.replace(/\s+Works$/, '')} · {r.tradeL2}
+                          </span>
+                        </td>
+                        <td className="num tabular">{num(r[sel.field])}</td>
+                        <td className="faint">{r.uom}</td>
+                        <td className="num tabular">{peso(r.unitPrice, { decimals: 2 })}</td>
+                        <td>Class {r.conditionClass}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
           </div>
         </div>
       )}
