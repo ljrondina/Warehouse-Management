@@ -1212,3 +1212,120 @@ and 375×812:
 - Headline renders "113,988/92,162" (Total/Available) at a uniform 26px in both spans;
   caption reads "units available of SOH".
 No console errors on a clean tab. `npm run build` passes.
+
+### 2026-08-17 — Session: Warehouse rename, facility capacity gauge, Safekeeping overhaul, Scrap tab
+
+Nine requests, touching `Dashboard.jsx`, `InventoryTab.jsx`, `SafekeepingTab.jsx`,
+`InventoryComposition.jsx`, `warehouseMap.js`, `insights.js`, `safekeepingInsights.js`,
+`ui.jsx`, `MaterialList.jsx`, `icons.jsx` and `index.css`.
+
+**1. The Inventory tab is now labelled Warehouse.** Only the label changed — the key
+stays `inventory` (it's the default tab and never appears in the URL) so every
+pool/filter variable downstream needed no renaming. Card titles inside the tab
+("Inventory Composition", "Inventory Distribution") are untouched; the rename is the
+tab itself, matching what it actually covers now that Safekeeping and Scrap exist
+alongside it.
+
+**2. Sub-tabs (Overview/Insights/Activity) now align with the main tabs above them.**
+`.dash-tabs` carried a `padding: 0 2px` inset that `.sub-tabs` never matched, so the
+sub-tab icons sat about 3px left of the main-tab icons — enough to read as two
+misaligned rows. `.sub-tabs` now carries the same inset.
+
+**3. The battery became a facility capacity gauge.** It used to show the
+Available/Reserved split of stock ON HAND (a quantity). It now shows real floor-space
+occupancy — Warehouse-owned racks (MEPFS, Structural, Architectural, High Value),
+Safekeeping's own area, and whatever pallet/shelf positions neither has filled — via
+a new `facilityCapacity()` in `warehouseMap.js` that reduces over the exact same
+`areaCapacity()` numbers the floor plan itself reports, so the two can never disagree.
+Three gradient-and-hatch segments (`.cap-seg`, using `color-mix` for the facets) stack
+in the tube, with a mini legend + percentage under each segment. This is a SPACE
+measurement, not a stock one — it does not and should not agree with the
+Available/Reserved headline that still sits beneath it, and a code comment says so.
+Warehouse/Safekeeping/Available reuse the `total`/`reserved`/`available` series
+colours respectively, so red still means "warehouse-side", gray "safekeeping-side",
+green "free" everywhere else in the app.
+
+**4. Safekeeping gained the same three sub-tabs** — Overview (KPI row + Distribution),
+Insights (the three source sheets, filterable — the closest thing Safekeeping has to
+Warehouse's ranked lists, since there's no unit price or movement history to compute
+aging/ABC from), Activity (the Delivery Tracker, which literally is movement in and
+out of the yard).
+
+**5. The Safekeeping Distribution card now matches the Warehouse Distribution card's
+UI exactly** — a leader-labelled donut on the left, a ranked list panel on the right,
+same `card-split`/`CardListPanel` markup. Getting there needed two things: `Toggle`
+generalised from a fixed 2-option control to any count (`--count` set from
+`options.length`, thumb width `calc((100% - 6px) / var(--count))` — translateX by one
+thumb-width per index still lands exactly on each column regardless of N), and
+`MaterialList`/`CardListPanel` gained an optional `renderRow` prop. The second part
+matters: Safekeeping's SOH lines carry no unit price, brand or stock-health status,
+and there's no material profile page to link to — reusing the inventory row renderer
+would have printed a false "₱0.00" purchase price and a dead click. The new
+`SkRenderRow` reuses the same `.wpc` visual language with fields that actually exist
+(Class as a plain badge, SOH/In/Out, Project › Trade), and the row carries a new
+`.wpc.static` modifier (no pointer cursor, no hover border) since there's nothing to
+open. Class is gone from the scope options — it's a condition grade, not a grouping
+dimension like the other three, so cutting the donut by it was answering a different
+question than Project/Trade/Item Group ask.
+
+**6. Safekeeping's KPI row is four cards, not five: Projects, Total SOH, Incoming,
+Outgoing.** "Total Line Items" counted SOH rows, a figure none of the other four
+depend on — dropping it left one coherent sentence about what's actually held.
+
+**7. Scrap joins Excess as a second locked main tab**, both reading "coming in a later
+phase" rather than the excess-specific "Phase 2" wording, and rotated the tour's
+"Three Dashboards" step into "Four Dashboards" to match. New purpose-drawn `scrap`
+icon (a bin with a crack down the lid) — tells apart from `excess`'s stacked-bars
+glyph at a glance.
+
+**8. The Warehouse tab's Composition and Distribution cards got a wider list panel**
+than the shared default — 460px against the base 420px (540px above 1500px against
+480px) — scoped to a new `.wh-overview` wrapper class rather than raising the shared
+default, so Safekeeping's Distribution card (same `card-split`/`card-list-panel`
+markup, shorter rows) keeps the narrower width its content actually needs.
+
+**9. The Warehouse Distribution card's scope toggle gained a third option: Class.**
+New `byClass()` in `insights.js` (same `groupBy()` helper the Trade/Item Group options
+already use, keyed on `conditionClass`), wired through the existing scope→field map
+so the panel's click-through and "Others" bucket logic needed no special-casing.
+
+**Housekeeping.** Removed the Available/Reserved-tube CSS the capacity gauge replaced,
+plus a large block of dead CSS this session's rewrite orphaned outright:
+`.sk-dist*`/`.skd-*` (the old compact scope list), `.dash-top`/`.dash-kpis`/`.sk-top`/
+`.sk-dist-card` (the old two-column KPI-beside-distribution layout), and
+`.battery-wrap`/`.battery-col`/`.flow-*`/`.battery-legend`/`.bl-*`/`.battery-stat*`
+(a "Stock Battery" design that predates the current Composition card and had zero
+remaining JSX references even before this session). `NoData` moved from a private
+function inside `InventoryTab.jsx` to a shared export in `ui.jsx`, since Safekeeping's
+Overview needed the same "source data is genuinely absent" treatment.
+
+**Verified against a temporary local fixture** (240 inventory lines, 700 ledger rows,
+90 safekeeping lines — deleted afterwards, `dist/` confirmed clean of it) at 1440×900
+and 375×812, light and dark:
+- Warehouse tab reads "Warehouse" in the tab strip; Scrap sits locked beside Excess;
+  sub-tab icons measure within 1px of the main-tab icons' x-position.
+- Capacity gauge renders 3 gradient/hatch segments with correct percentages (20% /
+  8% / 72% in the fixture) and a 3-row legend; tube+legend+headline fit the fixed
+  460px card-split height with zero overflow (a real 8px overflow was caught and
+  fixed by tightening `.comp-gauge`'s internal gap).
+- Class added to the Warehouse Distribution scope toggle (3 options); the sliding
+  thumb was measured on a **fresh page load** (not a click, per the standing
+  measurement caveat below) and lands exactly on the active button at every index.
+- Safekeeping Overview: 4 KPI cards in the specified order; Distribution card in
+  card-split layout with a working slice-click → `SkRenderRow` list, `.wpc.static`
+  confirmed non-interactive; scope toggle shows exactly Project/Trade/Item Group.
+  Insights shows the Source Tables card; Activity shows the Delivery Tracker.
+- Warehouse panel measured 460px, Safekeeping panel 420px, on the same build —
+  confirming the `.wh-overview` scoping works.
+- No horizontal scroll and no console errors on any view tested. `npm run build`
+  passes.
+
+**Measurement caveat, reconfirmed.** Clicking the new 3-option toggle mid-session and
+reading `getBoundingClientRect()`/`getComputedStyle()` immediately after showed the
+thumb NOT moving — even a manual `element.style.transform = 'translateX(300px)'` set
+directly from the console read back as `matrix(1,0,0,1,0,0)`. This is the browser
+pane's known non-compositing-while-hidden limitation (documented in earlier sessions
+for colour/style reads) extending to transform geometry, not a real bug: setting the
+same scope as the INITIAL state and reloading the page showed the thumb correctly
+positioned on the very first paint. Every geometry claim above involving a click was
+re-verified after a full page load rather than trusted from the click alone.

@@ -454,6 +454,33 @@ export function areaCapacity(areaId) {
   return { positions, used, unit: 'pallet positions', lines: areas[areaId]?.length ?? 0 }
 }
 
+// Whole-facility capacity split into Warehouse-owned (mepfs, structural,
+// architectural, highvalue) vs Safekeeping-owned (its own area), for the Overview
+// gauge. Positions/used come straight from areaCapacity() per area — this is a
+// reduction over the same real numbers the floor plan itself reports, not a second
+// measurement, so the two can never disagree.
+export function facilityCapacity() {
+  const SAFEKEEPING_IDS = ['safekeeping']
+  const sum = (ids) => ids.reduce((a, id) => {
+    const c = areaCapacity(id)
+    return { positions: a.positions + c.positions, used: a.used + c.used }
+  }, { positions: 0, used: 0 })
+  const warehouseIds = WH_AREAS.map((a) => a.id).filter((id) => !SAFEKEEPING_IDS.includes(id))
+  const warehouse = sum(warehouseIds)
+  const safekeeping = sum(SAFEKEEPING_IDS)
+  const positions = warehouse.positions + safekeeping.positions
+  const available = Math.max(0, positions - warehouse.used - safekeeping.used)
+  return {
+    positions,
+    warehouseUsed: warehouse.used,
+    safekeepingUsed: safekeeping.used,
+    available,
+    warehousePct: positions > 0 ? (warehouse.used / positions) * 100 : 0,
+    safekeepingPct: positions > 0 ? (safekeeping.used / positions) * 100 : 0,
+    availablePct: positions > 0 ? (available / positions) * 100 : 0,
+  }
+}
+
 export function rackOccupancy(rackId) {
   const { slots } = placement()
   const r = RACKS.find((x) => x.id === rackId)

@@ -102,6 +102,9 @@ const groupBy = (pool, key) => {
 export const byTradeL1 = (pool = items) => groupBy(pool, 'tradeL1')
 export const byTradeL2 = (pool = items, l1) =>
   groupBy(l1 && l1 !== 'all' ? pool.filter((i) => i.tradeL1 === l1) : pool, 'tradeL2')
+// Condition grade (A/B/C/D), not a trade grouping — the Distribution card's third
+// scope option, answering "how much of what we hold is in what condition".
+export const byClass = (pool = items) => groupBy(pool, 'conditionClass')
 
 export const topQuantity = (n = 10, pool = items) => [...pool].sort((a, b) => b.totalQty - a.totalQty).slice(0, n)
 // Ranked by UNIT price, not by the line's total value: the question this card answers

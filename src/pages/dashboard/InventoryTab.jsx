@@ -1,11 +1,11 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  KPIS, byTradeL1, byTradeL2, movementCombinedSeries, PERIODS,
+  KPIS, byTradeL1, byTradeL2, byClass, movementCombinedSeries, PERIODS,
   topQuantity, fastMoving, lowStock, highValue, nonMoving, items,
   agingAnalysis, ledgerActivity,
 } from '../../data/insights'
-import { Card, Segmented, Toggle } from '../../components/ui'
+import { Card, Segmented, Toggle, NoData } from '../../components/ui'
 import InventoryComposition from '../../components/InventoryComposition'
 import { CardListPanel } from '../../components/MaterialList'
 import { AgingBars, DistributionDonut, MovementComposed, NetChangeChart } from '../../components/charts'
@@ -28,7 +28,12 @@ const VIEWS = [
 // being split" (layers = the broad trade, tag = the finer item group) and "what is
 // being measured" (box = units on hand, receipt = pesos) at a glance, without the
 // labels having to be any longer.
-const scopeOpts = [{ value: 'l1', label: 'Trade', icon: 'layers' }, { value: 'l2', label: 'Item Group', icon: 'tag' }]
+const scopeOpts = [
+  { value: 'l1', label: 'Trade', icon: 'layers' },
+  { value: 'l2', label: 'Item Group', icon: 'tag' },
+  { value: 'class', label: 'Class', icon: 'grade' },
+]
+const SCOPE_FIELD = { l1: 'tradeL1', l2: 'tradeL2', class: 'conditionClass' }
 const metricOpts = [{ value: 'qty', label: 'Quantity', icon: 'box' }, { value: 'value', label: 'Value', icon: 'receipt' }]
 
 function rollup(data, n = 8) {
@@ -41,20 +46,6 @@ function rollup(data, n = 8) {
 // Bottom breathing room left below the expanded card, matching .content's own
 // bottom padding so the card doesn't butt flush against the viewport edge.
 const EXPAND_MARGIN = 24
-
-// Shown wherever a card's source data is genuinely absent, instead of drawing an
-// empty chart that reads as "everything is zero".
-function NoData({ what, why }) {
-  return (
-    <div className="nodata">
-      <Icon name="alert" size={20} />
-      <div>
-        <b>{what}</b>
-        <span>{why}</span>
-      </div>
-    </div>
-  )
-}
 
 // `main` drives the displayed headline value/unit; `barValue` (defaults to `main`)
 // drives the bar width — the two can differ, e.g. Dead Stock shows a date as the
@@ -233,10 +224,10 @@ export default function InventoryTab({ pool, qtyUnit }) {
   const activity = useMemo(() => ledgerActivity(pool, period), [pool, period])
   const periodOpts = PERIODS.map((p) => ({ value: p.key, label: p.label }))
 
-  const donutData = useMemo(
-    () => rollup(donutScope === 'l1' ? byTradeL1(pool) : byTradeL2(pool, 'all')),
-    [pool, donutScope],
-  )
+  const donutData = useMemo(() => {
+    if (donutScope === 'class') return rollup(byClass(pool))
+    return rollup(donutScope === 'l1' ? byTradeL1(pool) : byTradeL2(pool, 'all'))
+  }, [pool, donutScope])
 
   // The materials behind a clicked composition tile — the same set the drawer used to
   // list, ranked by the tile's own quantity column.
@@ -250,7 +241,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
   // to a category literally called Others — which would list nothing.
   const donutRows = useMemo(() => {
     if (!donutSel) return []
-    const field = donutScope === 'l1' ? 'tradeL1' : 'tradeL2'
+    const field = SCOPE_FIELD[donutScope]
     const named = new Set(donutData.filter((d) => d.name !== 'Others').map((d) => d.name))
     const match = donutSel.name === 'Others'
       ? (i) => !named.has(i[field])
@@ -284,7 +275,10 @@ export default function InventoryTab({ pool, qtyUnit }) {
           inside the card means the figure you clicked stays on screen next to the
           rows it produced, instead of being covered by them. */}
       {view === 'overview' && (
-        <div className="mt overview-stack">
+        // wh-overview scopes the wider list panels (see index.css) to just this tab —
+        // Safekeeping's Overview reuses .overview-stack/.distribution-card for the
+        // same visual language but keeps the narrower default width.
+        <div className="mt overview-stack wh-overview">
           {/* The six quantity figures live INSIDE this card — see
               InventoryComposition. Each tile hovers for a description and clicks
               through to the material list on the right. */}

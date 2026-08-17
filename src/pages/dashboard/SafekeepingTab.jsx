@@ -1,31 +1,39 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { soh, TRADES, SHEET_PROJECTS } from '../../data/safekeeping'
 import { KPIS, bySkScope, SK_SCOPES, SHEET_VIEWS } from '../../data/safekeepingInsights'
-import { Card, KpiCard, Segmented } from '../../components/ui'
+import { Card, KpiCard, Segmented, Toggle, NoData } from '../../components/ui'
+import { CardListPanel } from '../../components/MaterialList'
 import Select from '../../components/Select'
 import DataSheet from '../../components/DataSheet'
 import DeliveryTracker from '../../components/DeliveryTracker'
 import { DistributionDonut } from '../../components/charts'
 import { num } from '../../lib/format'
-import { seriesFor, categoricalFor } from '../../lib/colors'
+import { seriesFor } from '../../lib/colors'
 import { useTheme } from '../../context/ThemeContext'
 import Icon from '../../lib/icons'
 
-// `qty: true` cards take the dashboard's filter-aware unit label; the other two count
-// things that are not units of measure, so they carry their own noun.
+// Same three sub-views as the Warehouse tab, over Safekeeping's own dataset — Overview
+// (what's held and where), Insights (the source sheets, filterable), Activity (the
+// delivery schedule, which is literally movement in and out of the yard).
+const VIEWS = [
+  { key: 'overview', label: 'Overview', icon: 'box' },
+  { key: 'insights', label: 'Insights', icon: 'analytics' },
+  { key: 'activity', label: 'Activity', icon: 'trend' },
+]
+
+// Four cards, not five. "Total Line Items" counted SOH rows, not a warehouse fact
+// any of the other four cards' figures depend on — dropping it, Projects/Total
+// SOH/Incoming/Outgoing read as one coherent "what's in safekeeping" sentence.
 const SK_CARDS = [
-  { key: 'lineItems', role: 'total', label: 'Total Line Items', icon: 'doc', unit: 'line items', tip: 'Distinct project/item lines on the Safekeeping stock-on-hand sheet.' },
-  { key: 'totalSoh', role: 'available', label: 'Total Safekeeping SOH', icon: 'inventory', qty: true, tip: 'Total quantity currently held in safekeeping across every project.' },
   { key: 'distinctProjects', role: 'reserved', label: 'Projects in Safekeeping', icon: 'location', unit: 'projects', tip: 'Distinct projects with materials currently stored at the warehouse.' },
+  { key: 'totalSoh', role: 'available', label: 'Total Safekeeping SOH', icon: 'inventory', qty: true, tip: 'Total quantity currently held in safekeeping across every project.' },
   { key: 'totalIn', role: 'incoming', label: 'Incoming', icon: 'incoming', qty: true, tip: 'Quantity received into safekeeping, per the SOH sheet’s In column.' },
   { key: 'totalOut', role: 'outgoing', label: 'Outgoing', icon: 'outgoing', qty: true, tip: 'Quantity pulled out of safekeeping, per the SOH sheet’s Out column.' },
 ]
 
 // The donut folds everything past the 8th slice into "Others", which lands at index 8.
-// The list keeps every row, so rows from 8 on take the Others colour — that is the slice
-// they are actually inside, and it keeps bar colour and ring colour telling the same story.
 const ROLLUP_N = 8
-
 function rollup(data, n = ROLLUP_N) {
   if (data.length <= n) return data
   const top = data.slice(0, n)
@@ -34,33 +42,26 @@ function rollup(data, n = ROLLUP_N) {
   return [...top, { name: 'Others', label: `Others (${rest.length})`, ...agg, soh: agg.qty, value: 0, valueShare: 0, uom: '' }]
 }
 
-/* --------------------------------------------------------------- Distribution list --- */
-// Two tight lines per group: the label/value row, then a full-width bar beneath it. Giving
-// the bar the whole row width (rather than a 52px inline column) makes the comparison
-// actually readable, and the list scrolls to fill whatever height the card has.
-function ScopeList({ rows, palette, mixedLabel }) {
-  if (!rows.length) return <div className="empty">No safekeeping lines match the current filters.</div>
-  const max = Math.max(...rows.map((r) => r.qty), 1)
+// The Distribution card's own material-list row. Safekeeping lines carry no unit
+// price, brand or stock-health status, and there is no material profile page to link
+// to — using the inventory row renderer here would print a false "₱0.00" purchase
+// price and a dead click. This reuses the same `.wpc` visual language with fields
+// that actually exist on a safekeeping line: Class as a plain badge, SOH/In/Out as
+// the footer figures.
+function SkRenderRow(r) {
   return (
-    <div className="sk-dist-list dense">
-      {/* Inner wrapper exists purely so its auto margins can centre the rows in a taller
-          box — centring the scroll container itself would clip the top row on overflow. */}
-      <div className="skd-inner">
-        {rows.map((r, i) => {
-          const tone = palette[Math.min(i, ROLLUP_N) % palette.length]
-          return (
-            <div className="skd-row" key={r.name}>
-              <div className="skd-head">
-                <span className="sk-swatch" style={{ background: tone }} />
-                <span className="skd-name" title={r.label}>{r.label}</span>
-                <span className="skd-val tabular">{num(r.qty)}</span>
-                <span className="skd-uom faint">{r.uom || mixedLabel}</span>
-                <span className="skd-share tabular faint">{r.share.toFixed(1)}%</span>
-              </div>
-              <span className="skd-bar"><span style={{ width: `${(r.qty / max) * 100}%`, background: tone }} /></span>
-            </div>
-          )
-        })}
+    <div key={`${r.itemCode}-${r.project}`} className="wpc static">
+      <div className="wpc-top">
+        <span className="wpc-code">{r.itemCode}</span>
+        {r.class && <span className="wpc-badge" style={{ background: 'var(--surface-2)', color: 'var(--text-muted)' }}>Class {r.class}</span>}
+      </div>
+      <div className="wpc-desc">{r.description}</div>
+      <div className="wpc-meta">{r.project}{r.trade ? ` › ${r.trade}` : ''}</div>
+      <div className="wpc-row">
+        <span><small>SOH</small>{num(r.soh)} {r.uom}</span>
+        <span><small>In</small>{num(r.in)}</span>
+        <span><small>Out</small>{num(r.out)}</span>
+        <span><small>Item Group</small>{r.itemGroup || '—'}</span>
       </div>
     </div>
   )
@@ -150,57 +151,110 @@ function SourceTables({ view }) {
 export default function SafekeepingTab({ pool, qtyUnit = 'units' }) {
   const { theme } = useTheme()
   const S = seriesFor(theme)
-  const PALETTE = categoricalFor(theme)
+  const [params, setParams] = useSearchParams()
+  const requested = params.get('view')
+  const view = VIEWS.some((v) => v.key === requested) ? requested : 'overview'
+
   const [scope, setScope] = useState('project')
   const [sheet, setSheet] = useState('soh')
+  const [skSel, setSkSel] = useState(null)
 
   const k = useMemo(() => KPIS(pool), [pool])
+  const scopeField = SK_SCOPES.find((s) => s.value === scope)?.key || 'project'
   const scopeRows = useMemo(() => bySkScope(pool, scope, qtyUnit), [pool, scope, qtyUnit])
   const donutRows = useMemo(() => rollup(scopeRows), [scopeRows])
-  const scopeLabel = SK_SCOPES.find((s) => s.value === scope)?.label || 'Project'
   const sheetView = SHEET_VIEWS.find((v) => v.value === sheet) || SHEET_VIEWS[0]
+
+  // "Others" is the rollup bucket, not a real category — it resolves to every line
+  // NOT in one of the named slices, matching the same rule the Warehouse tab's
+  // distribution card uses.
+  const skRows = useMemo(() => {
+    if (!skSel) return []
+    const named = new Set(donutRows.filter((d) => d.name !== 'Others').map((d) => d.name))
+    const match = skSel.name === 'Others' ? (r) => !named.has(r[scopeField] || '—') : (r) => (r[scopeField] || '—') === skSel.name
+    return pool.filter(match).sort((a, b) => b.soh - a.soh)
+  }, [skSel, scopeField, donutRows, pool])
+
+  const selectView = (key) => {
+    const next = new URLSearchParams(params)
+    if (key === 'overview') next.delete('view')
+    else next.set('view', key)
+    setParams(next, { replace: true })
+  }
 
   return (
     <>
-      {/* Row 1 — the five headline figures beside the Distribution card. */}
-      <div className="dash-top sk-top">
-        <div className="dash-kpis">
-          {SK_CARDS.map((c) => (
-            <KpiCard key={c.key} label={c.label} value={num(k[c.key])}
-              unit={c.qty ? qtyUnit : c.unit} icon={c.icon} color={S[c.role]} tooltip={c.tip} />
-          ))}
-        </div>
+      <div className="sub-tabs" role="tablist" data-tour="sk-views">
+        {VIEWS.map((v) => (
+          <button key={v.key} role="tab" aria-selected={v.key === view}
+            className={`sub-tab ${v.key === view ? 'active' : ''}`} onClick={() => selectView(v.key)}>
+            <Icon name={v.icon} size={15} />
+            <span>{v.label}</span>
+          </button>
+        ))}
+      </div>
 
-        <Card title={`Safekeeping Distribution by ${scopeLabel}`} icon="reports" iconColor={S.total} className="sk-dist-card"
-          foot={<Segmented size="sm" options={SK_SCOPES} value={scope} onChange={setScope} />}>
-          <div className="sk-dist compact">
-            <ScopeList rows={scopeRows} palette={PALETTE} mixedLabel={qtyUnit} />
-            <div className="sk-dist-chart">
-              {/* 240 rather than the card's full height: the ring must not be what sets
-                  the row height, or a short list leaves slack beneath it. The list drives
-                  the height now; the ring is centred in whatever it gets. */}
-              <DistributionDonut data={donutRows} metric="qty" hideLegend showValue={false} unit={qtyUnit}
-                height={240} innerRadius={64} outerRadius={96} />
-            </div>
+      {/* ---------------------------------------------------------------- Overview */}
+      {view === 'overview' && (
+        <div className="mt overview-stack">
+          <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
+            {SK_CARDS.map((c) => (
+              <KpiCard key={c.key} label={c.label} value={num(k[c.key])}
+                unit={c.qty ? qtyUnit : c.unit} icon={c.icon} color={S[c.role]} tooltip={c.tip} />
+            ))}
           </div>
-        </Card>
-      </div>
 
-      {/* Row 2 — the Delivery Tracker, full width. Sourced entirely from the real
-          Warehouse Schedule sheet, not seeded data. */}
-      <div className="mt">
-        <DeliveryTracker />
-      </div>
+          {/* Same UI as the Warehouse tab's Inventory Distribution card: a donut on
+              the left, leader-labelled, and the ranked list on the right — clicking a
+              slice fills the panel with the safekeeping lines in that category. */}
+          <Card title="Safekeeping Distribution" icon="reports" className="distribution-card" data-tour="sk-dist"
+            foot={
+              <div className="chart-controls">
+                <Toggle size="sm" options={SK_SCOPES} value={scope}
+                  onChange={(v) => { setScope(v); setSkSel(null) }} />
+              </div>
+            }>
+            <div className="card-split">
+              <div className="card-split-main">
+                {donutRows.length === 0
+                  ? <NoData what="No safekeeping lines loaded" why="Nothing matches the current filter, or the safekeeping sheet is empty." />
+                  : <DistributionDonut data={donutRows} metric="qty" hideLegend={false} showValue={false} unit={qtyUnit} leaderLines wide
+                      onSliceClick={(d) => setSkSel((s) => (s?.name === d.name ? null : { name: d.name }))}
+                      selectedName={skSel?.name} />}
+              </div>
+              <CardListPanel
+                selection={skSel ? { label: skSel.name, field: 'soh' } : null}
+                rows={skRows} onClear={() => setSkSel(null)} renderRow={SkRenderRow} noun="line"
+                hint="Click a slice of the ring to list the safekeeping lines in that category." />
+            </div>
+          </Card>
+        </div>
+      )}
 
-      {/* Row 3 — the three source sheets in full, with the same search + filter bar
-          convention as the Inventory Master List. */}
-      <div className="mt">
-        <Card pad={false}
-          title="Safekeeping Source Tables" icon="reports" iconColor={S.neutral}
-          foot={<Segmented size="sm" options={SHEET_VIEWS} value={sheet} onChange={setSheet} />}>
-          <SourceTables key={sheet} view={sheetView} />
-        </Card>
-      </div>
+      {/* ---------------------------------------------------------------- Insights
+          The three source sheets in full, with the same search + filter bar
+          convention as the Inventory Master List. This is the closest Safekeeping has
+          to the Warehouse tab's ranked lists — there is no unit price or movement
+          history to compute aging or ABC analysis from, so browsing the real sheets
+          IS the "which lines need attention" view. */}
+      {view === 'insights' && (
+        <div className="mt" data-tour="sk-insights">
+          <Card pad={false}
+            title="Safekeeping Source Tables" icon="reports" iconColor={S.neutral}
+            foot={<Segmented size="sm" options={SHEET_VIEWS} value={sheet} onChange={setSheet} />}>
+            <SourceTables key={sheet} view={sheetView} />
+          </Card>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------------------- Activity
+          The Delivery Tracker — literally movement in and out of the yard, sourced
+          from the real Warehouse Schedule sheet, not seeded data. */}
+      {view === 'activity' && (
+        <div className="mt" data-tour="sk-activity">
+          <DeliveryTracker />
+        </div>
+      )}
     </>
   )
 }

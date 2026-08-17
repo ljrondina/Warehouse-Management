@@ -1,5 +1,18 @@
 import { num, peso, compact } from '../lib/format'
 import Icon from '../lib/icons'
+import { facilityCapacity } from '../data/warehouseMap'
+
+// The three segments of the capacity gauge below. Each maps to a real area on the
+// floor plan (see facilityCapacity() in warehouseMap.js) — Warehouse is every
+// warehouse-owned rack (MEPFS, Structural, Architectural, High Value), Safekeeping is
+// its own area, and Available is whatever pallet/shelf positions neither has filled.
+// This is a SPACE measurement (positions occupied), not a stock measurement — it will
+// not agree with the Available/Reserved split above it, and is not meant to.
+const CAP_SEGMENTS = [
+  { key: 'warehouse', role: 'total', icon: 'warehouse', label: 'Warehouse' },
+  { key: 'safekeeping', role: 'reserved', icon: 'vault', label: 'Safekeeping' },
+  { key: 'available', role: 'available', icon: 'box', label: 'Available' },
+]
 
 // The Inventory dashboard used to carry six quantity KPI cards in a grid ABOVE this
 // gauge, plus three value cards beside them — all describing the same stock the gauge
@@ -50,48 +63,69 @@ export default function InventoryComposition({ k, unit, metric = 'qty', series, 
   const available = money ? k.availableValue : k.available
   const reserved = money ? k.reservedValue : k.reserved
   const base = available + reserved
-  // The split is computed from whichever metric is showing, so the gauge always
-  // agrees with the two figures printed under it. Reserved stock is generally worth
-  // more or less per unit than available stock, so the value split is NOT the same
-  // percentage as the quantity split — showing one while labelling the other would
-  // be a quiet lie.
-  const availPct = base > 0 ? Math.round((available / base) * 100) : 0
-  const reservedPct = 100 - availPct
   const fmtBig = (v) => (money ? `₱${compact(v)}` : num(v))
   const fmtTile = (v) => (money ? `₱${compact(v)}` : num(v))
+
+  // Real floor-space occupancy, not a function of the pool or the Quantity/Value
+  // toggle — a pallet position is occupied or it isn't, regardless of which metric
+  // the rest of the card is showing. Cheap to call per render: it reduces over
+  // areaCapacity()'s own placement cache rather than recomputing placement itself.
+  const cap = facilityCapacity()
+  const capPct = { warehouse: cap.warehousePct, safekeeping: cap.safekeepingPct, available: cap.availablePct }
 
   return (
     <div className="comp-wrap">
       <div className="comp-gauge">
-        {/* column-reverse: the first child renders at the bottom, so Available fills
-            from the base up and Reserved caps it off on top. The two segments sum to
-            stock on hand by construction, which is the same identity the Movement
-            History chart enforces with its stacked areas. */}
-        <div className="battery-tube">
-          <div className="battery-seg seg-avail" style={{ height: `${availPct}%` }} />
-          <div className="battery-seg seg-res" style={{ height: `${reservedPct}%` }} />
-          <div className="battery-pct">{availPct}%</div>
+        {/* column-reverse: the first child renders at the bottom. Warehouse and
+            Safekeeping fill up from the base — real racked/shelved space in use —
+            and whatever is left rises as Available at the top, the way a tank's
+            headroom sits above its contents. */}
+        <div className="battery-tube cap-tube">
+          {CAP_SEGMENTS.map((s) => (
+            <div key={s.key} className="battery-seg cap-seg" style={{ height: `${capPct[s.key]}%`, '--seg': series[s.role] }} />
+          ))}
         </div>
 
-        {/* The headline readout. Deliberately the largest type in the card: it is the
-            one sentence a warehouse manager reads first — how much of what we hold is
-            actually free to issue. */}
-        <div className="comp-headline">
-          {/* Total leads, Available follows — "of the total we hold, this much is
-              free" reads left to right in the order the sentence is said. Both
-              figures share one font size now; the old 30px/17px split emphasised
-              Available over Total, but the gauge and the caption already say which
-              one to focus on, so the figures themselves read as a plain ratio. */}
-          <div className="ch-figure">
-            <span className="ch-total tabular">{fmtBig(base)}</span>
-            <span className="ch-of">/</span>
-            <span className="ch-avail tabular">{fmtBig(available)}</span>
+        {/* Legend and headline travel together as one block beside the tube — kept in
+            a single wrapper so the responsive rules only have to reflow the tube
+            against ONE sibling instead of juggling three. */}
+        <div className="comp-gauge-info">
+          {/* Mini legend + percentages, one row per segment, in the same top-to-bottom
+              order as the tube reads bottom-to-top (Warehouse first, Available last) —
+              reading down the legend matches reading up the tube. */}
+          <div className="cap-legend">
+            {CAP_SEGMENTS.map((s) => (
+              <span key={s.key} className="cap-item" style={{ '--seg': series[s.role] }}>
+                <i /><Icon name={s.icon} size={12} />
+                <span className="cap-lbl">{s.label}</span>
+                <span className="cap-pct tabular">{Math.round(capPct[s.key])}%</span>
+              </span>
+            ))}
           </div>
-          {/* The Available/Reserved percentage chips that used to sit here are gone.
-              The gauge draws that same split, and its own %-fill label prints the
-              available share — three statements of one number in one card. */}
-          <div className="ch-caption">
-            {money ? 'value' : unit} available of SOH
+
+          {/* The headline readout. Deliberately the largest type in the card: it is
+              the one sentence a warehouse manager reads first — how much of what we
+              hold is actually free to issue. This is a STOCK figure (Available/
+              Reserved), independent of the SPACE figures in the gauge and legend
+              above it — the two answer different questions and are not meant to
+              agree. */}
+          <div className="comp-headline">
+            {/* Total leads, Available follows — "of the total we hold, this much is
+                free" reads left to right in the order the sentence is said. Both
+                figures share one font size now; the old 30px/17px split emphasised
+                Available over Total, but the gauge and the caption already say which
+                one to focus on, so the figures themselves read as a plain ratio. */}
+            <div className="ch-figure">
+              <span className="ch-total tabular">{fmtBig(base)}</span>
+              <span className="ch-of">/</span>
+              <span className="ch-avail tabular">{fmtBig(available)}</span>
+            </div>
+            {/* The Available/Reserved percentage chips that used to sit here are gone.
+                The gauge draws that same split, and its own %-fill label prints the
+                available share — three statements of one number in one card. */}
+            <div className="ch-caption">
+              {money ? 'value' : unit} available of SOH
+            </div>
           </div>
         </div>
       </div>

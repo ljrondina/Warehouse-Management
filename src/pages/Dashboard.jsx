@@ -20,9 +20,13 @@ const AddMaterialModal = lazy(() => import('../components/AddMaterialModal'))
 const AddSafekeepingRequestModal = lazy(() => import('../components/AddSafekeepingRequestModal'))
 
 const TABS = [
-  { key: 'inventory', label: 'Inventory', icon: 'inventory', title: 'Inventory Insights' },
+  // The key stays `inventory` — it is the default tab and never appears in the URL,
+  // and every pool/filter variable downstream is already named after it. Only the
+  // label changes.
+  { key: 'inventory', label: 'Warehouse', icon: 'inventory', title: 'Inventory Insights' },
   { key: 'safekeeping', label: 'Safekeeping', icon: 'vault', title: 'Safekeeping Insights' },
   { key: 'excess', label: 'Excess', icon: 'excess', title: 'Excess Materials', locked: true },
+  { key: 'scrap', label: 'Scrap', icon: 'scrap', title: 'Scrap Materials', locked: true },
 ]
 
 // The three full sheets behind Safekeeping (~212 KB) have no business in the bundle a

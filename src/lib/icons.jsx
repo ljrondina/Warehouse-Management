@@ -64,6 +64,9 @@ const paths = {
   borrow: <><path d="M14 4h6v6" /><path d="M20 4l-8 8" /><path d="M10 6H4v14h14v-6" /></>,
   reorganize: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><path d="M14 6.5h5.5V12" /><path d="M17.5 9.5L19.5 12l2-2.5" /><path d="M10 17.5H4.5V12" /><path d="M6.5 14.5L4.5 12l-2 2.5" /></>,
   help: <><circle cx="12" cy="12" r="9" /><path d="M9.2 9.3a2.8 2.8 0 015.4.9c0 1.9-2.6 2-2.6 3.8" /><path d="M12 17.2v.01" /></>,
+  // Scrap: a bin with a crack down the lid — tells it apart from `excess` (stacked
+  // bars, a surplus-of-good-stock glyph) at a glance.
+  scrap: <><path d="M5 7h14l-1.2 13.2a1.8 1.8 0 01-1.8 1.6H8a1.8 1.8 0 01-1.8-1.6L5 7z" /><path d="M3 7h18M9 7V4.6A1.6 1.6 0 0110.6 3h2.8A1.6 1.6 0 0115 4.6V7" /><path d="M10.5 10.5L13.5 17M13.5 10.5l-3 6.5" /></>,
   // Deformed reinforcing bar: three bars on the diagonal with their ribs showing,
   // which is what tells rebar apart from any other bundled long stock.
   rebar: <>

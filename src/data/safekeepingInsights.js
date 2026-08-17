@@ -20,13 +20,15 @@ export const KPIS = (pool = soh) => ({
   movingLines: pool.filter((r) => r.in > 0 || r.out > 0).length,
 })
 
-// The four ways the SOH can be cut. One list and one donut share this control, so a
-// scope change re-cuts both halves at once.
+// The three ways the SOH can be cut for the Distribution card. Class used to be a
+// fourth option here; dropped because Class is a condition grade (A/B/C/D), not a
+// grouping dimension like the other three — cutting a donut by it answered "how much
+// of each condition" rather than "where does this stock belong", which is a
+// different question than Project/Trade/Item Group are asking.
 export const SK_SCOPES = [
   { value: 'project', label: 'Project', icon: 'location', key: 'project' },
   { value: 'trade', label: 'Trade', icon: 'layers', key: 'trade' },
   { value: 'group', label: 'Item Group', icon: 'tag', key: 'itemGroup' },
-  { value: 'class', label: 'Class', icon: 'grade', key: 'class' },
 ]
 
 // Rows carry both `qty` (what DistributionDonut reads) and `soh` (the domain name) so the

@@ -90,14 +90,6 @@
   --font: 'Montserrat', 'Gotham', 'Segoe UI', system-ui, sans-serif;
   --font-head: var(--font);
 
-  /* Composition flow badges — anchored on the same Incoming (orange) / Outgoing
-     (deep red) colours the movement bars and KPI cards use (see lib/colors.js
-     SERIES), so the concept is one colour everywhere it appears. */
-  --flow-in-1: #dd9950;
-  --flow-in-2: #b85f13;
-  --flow-out-1: #a3222a;
-  --flow-out-2: #7a1417;
-
   /* Categorical chart ramp — alternates red and gray shades so neighbouring
      series stay separable without reaching for another hue. */
   --c1: #ee3124;
@@ -143,11 +135,6 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.55);
-
-  --flow-in-1: #e8b47d;
-  --flow-in-2: #dd9950;
-  --flow-out-1: #fadad7;
-  --flow-out-2: #f7bdb9;
 
   --c1: #f4695d;
   --c2: #dcdbdb;
@@ -869,80 +856,9 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 :root[data-theme='dark'] .auto-pill { color: var(--accent); }
 .auto-hint { font-size: 10.5px; }
 
-/* ---------- Safekeeping distribution: ranked list beside its donut ---------- */
-/* Fixed overall height so the card does not resize when the scope changes from 22 item
-   groups to 3 classes: the list scrolls inside a constant box and the ring stays put. The
-   donut column is generous — a 148px-radius ring needs the room, and the list was taking
-   space it could not use. */
-.sk-dist { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 24px; height: 400px; }
-/* Compact variant: pairs with the KPI column instead of running full width. The list is
-   dense and scrolls (every group reachable, not truncated at five) and the ring gets the
-   wider fixed track — it is the half that cannot usefully shrink. */
-/* flex:1 + min-height:0 rather than a fixed height: the card is a flex column stretched by
-   .dash-top's grid to the KPI column's height, so the list takes whatever is left over and
-   scrolls — no fixed 300px box leaving dead space under a short list. min-height:0 is what
-   lets it shrink below its content instead of pushing the card taller.
-   Not align-items:center — the grid's default stretch is what gives the list a definite
-   height to scroll against; the donut is centred by .sk-dist-chart's own flex instead. */
-/* flex:1 + min-height:0 so the card's height comes from the KPI column beside it, NOT from
-   how many groups the current scope happens to have — 7 projects and 22 item groups now
-   give exactly the same card. min-height:0 is what lets it shrink below its content
-   instead of pushing the card taller. */
-.sk-dist.compact { grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; height: auto; flex: 1 1 0; min-height: 0; }
-.sk-dist.compact .sk-dist-list { height: auto; min-height: 0; }
-.sk-dist.compact .sk-dist-chart .donut-chart { max-width: 260px; }
-/* Stacked layout has no KPI column to take its height from, so it needs an explicit one —
-   again fixed, so switching scope never resizes the card. */
-@media (max-width: 1024px) {
-  .sk-dist.compact { flex: none; height: 420px; }
-}
-.sk-dist.compact .sk-dist-chart .donut-chart { max-width: 300px; }
-
-/* Label row, then a full-width bar under it. The old insight-row treatment (three stacked
-   lines plus its own inline bar column) cost ~70px a row; this is ~36px, so the breakdown
-   still scrolls inside the card but each bar is thick enough to compare at a glance. */
-.sk-dist-list.dense { display: flex; flex-direction: column; padding-right: 8px; }
-/* margin:auto centres the rows vertically when they don't fill the box, WITHOUT the
-   clipping that justify-content:center causes once they overflow — an auto margin
-   collapses to 0 when there is no free space, so the first row stays reachable. */
-.skd-inner { margin: auto 0; width: 100%; }
-.skd-row { padding: 5px 0; }
-.skd-row + .skd-row { border-top: 1px solid var(--border); }
-.skd-head { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto auto 40px; align-items: center; gap: 8px; font-size: 11.5px; }
-.skd-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-.skd-bar { display: block; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-top: 5px; }
-.skd-bar > span { display: block; height: 100%; border-radius: 3px; }
-.skd-val { font-weight: 700; text-align: right; }
-.skd-uom { font-size: 10px; min-width: 32px; }
-.skd-share { font-size: 10px; text-align: right; }
-.sk-swatch { width: 10px; height: 10px; }
-/* padding-right, not just scrollbar-gutter: the gutter reserves the track but the
-   right-aligned quantity still sat flush against it. */
-.sk-dist-list { height: 100%; overflow-y: auto; scrollbar-gutter: stable; min-width: 0; padding-right: 12px; }
-.sk-dist-list::-webkit-scrollbar { width: 6px; }
-.sk-dist-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
-.sk-dist-list::-webkit-scrollbar-track { background: transparent; }
-/* Vertically centred against the full card height rather than the list's content. */
-/* flex-direction: column (not row) so the default stretch cross-axis sizing applies to
-   the single child: a ROW flex with align-items:center sizes .donut-wrap to its content
-   instead of the container, and ResponsiveContainer's width:100% then has nothing
-   determinate to measure against — it silently renders 0 width, no SVG at all. Column +
-   stretch gives it the container's real width; justify-content:center still centres it
-   vertically along the column axis. */
-.sk-dist-chart { min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: center; }
-/* The shared donut caps itself at 320px for the dashboard's half-width card; here it has
-   a whole column and the cap would leave a ring floating in empty space. */
-.sk-dist-chart .donut-chart { max-width: 400px; }
 /* These rows are groups, not materials — nothing to open, so they must not advertise a
    click the way the Inventory insight rows do. */
 .insight-row.static { cursor: default; }
-/* Carries the donut slice's colour, so the list doubles as the ring's legend. */
-.sk-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-@media (max-width: 1100px) {
-  .sk-dist { grid-template-columns: minmax(0, 1fr); height: auto; }
-  .sk-dist-list { height: 340px; }
-  .sk-dist-chart { height: auto; }
-}
 
 /* ---------- Source-sheet table: fixed height, both axes scrolling ---------- */
 /* Vertical AND horizontal scrolling in one box, with the header pinned — the sheets are
@@ -1256,11 +1172,12 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    readable — the thumb slides behind the active one rather than the inactive option
    disappearing.
 
-   The two options are equal grid tracks, NOT text-sized, so the thumb is exactly half
-   the track at rest and stays that width as it slides. Text-sized columns would make
-   the thumb resize mid-slide, which reads as the control growing rather than
-   switching. `flex-shrink: 0` is what keeps it pinned in a card head: it must never
-   compress or wrap onto a second line as the window narrows. */
+   Works for two options or more (`--count`, set inline from options.length) — the
+   options are equal grid tracks, NOT text-sized, so the thumb is exactly one track
+   wide at rest and stays that width as it slides. Text-sized columns would make the
+   thumb resize mid-slide, which reads as the control growing rather than switching.
+   `flex-shrink: 0` is what keeps it pinned in a card head: it must never compress or
+   wrap onto a second line as the window narrows. */
 .toggle {
   position: relative; display: inline-grid; grid-auto-flow: column;
   grid-auto-columns: minmax(var(--tg-col, 84px), 1fr);
@@ -1268,7 +1185,8 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px;
 }
 .toggle-thumb {
-  position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px);
+  position: absolute; top: 3px; bottom: 3px; left: 3px;
+  width: calc((100% - 6px) / var(--count, 2));
   background: var(--brand-red); border-radius: 999px; transition: transform 0.18s ease;
   box-shadow: var(--shadow); pointer-events: none;
 }
@@ -1297,58 +1215,43 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    620px they stack vertically there rather than wrapping under the title. */
 .chart-controls { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; flex-shrink: 0; }
 
-/* ---------- Stock battery (compact: available/reserved tube + download/upload flow badges) ---------- */
-.battery-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; justify-content: center; padding: 4px 0; }
-.battery-col { display: flex; flex-direction: column; align-items: center; }
+/* ---------- Facility capacity tube ---------- */
 .battery-tube { position: relative; width: 92px; height: 200px; border: 2px solid var(--border-strong); border-radius: 16px; overflow: hidden; background: var(--surface-2); display: flex; flex-direction: column-reverse; flex-shrink: 0; }
 .battery-seg { width: 100%; min-height: 2px; }
-.seg-avail { background: linear-gradient(180deg, #4a9e78, #2f7d5a 55%, #245f45); }
-.seg-res { background: linear-gradient(180deg, #a8a7a7, #8a8988 55%, #7d7c7c); }
-.battery-pct {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  font-family: var(--font); font-size: 22px; font-weight: 800; color: #fff;
-  text-shadow: 0 0 3px rgba(0,0,0,.85), 0 0 6px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.9);
-  white-space: nowrap; pointer-events: none;
+
+/* ---------- Facility capacity gauge ----------
+   Three real floor-space segments (Warehouse / Safekeeping / Available — see
+   facilityCapacity() in warehouseMap.js), not the old two-segment Available/Reserved
+   STOCK split. Each segment takes its colour from `--seg` (set inline per role) and
+   gets a diagonal-facet gradient plus a fine hatch overlay, so the tube reads as a
+   filled physical container rather than a flat colour bar. */
+.cap-seg {
+  background-image:
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.10) 0 2px, transparent 2px 7px),
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--seg) 78%, white) 0%,
+      var(--seg) 45%,
+      color-mix(in srgb, var(--seg) 80%, black) 100%);
+  border-top: 1px solid color-mix(in srgb, var(--seg) 40%, white);
 }
-.battery-stats { margin-top: 12px; text-align: center; }
-.battery-stat-main { display: flex; align-items: baseline; justify-content: center; gap: 5px; font-weight: 800; letter-spacing: -0.2px; }
-.bs-avail { font-size: 17px; color: var(--ok); }
-.bs-sep { font-size: 14px; color: var(--text-faint); font-weight: 500; }
-.bs-total { font-size: 17px; color: var(--text); }
-.bs-unit { font-size: 11px; font-weight: 600; color: var(--text-faint); }
-.battery-stat-sub { font-size: 10.5px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-faint); margin-top: 3px; }
-
-/* Download/upload style flow badges (Incoming/Outgoing) */
-.flow-col { display: flex; flex-direction: column; gap: 10px; }
-.flow-badge { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); }
-.flow-icon { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; color: #fff; }
-/* Incoming/Outgoing badges carry the same two reds as the movement-history bars and
-   the KPI cards. The anchors are tokens so they follow the theme — hardcoding the
-   light values left the dark theme showing light-theme reds. The glyph flips to the
-   brand black on dark, where the badge fills are the pale end of the ramp. */
-.flow-in .flow-icon { background: linear-gradient(135deg, var(--flow-in-1), var(--flow-in-2)); }
-.flow-out .flow-icon { background: linear-gradient(135deg, var(--flow-out-1), var(--flow-out-2)); }
-:root[data-theme='dark'] .flow-icon { color: var(--brand-black); }
-.flow-info { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
-.flow-val { font-size: 15px; font-weight: 800; color: var(--text); }
-.flow-lbl { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
-
-.battery-legend { display: flex; flex-direction: column; gap: 6px; }
-.bl-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
-.bl-row b { color: var(--text); margin-left: 2px; }
-.bl-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-@media (max-width: 900px) { .battery-wrap { justify-content: flex-start; } }
-
-/* The composition card keeps the flow badges to the RIGHT of the tube; the badges
-   shrink to fit rather than dropping below it. */
-/* Badges ALWAYS sit to the right of the tube — the row never wraps. When the column
-   can no longer give them room, .dash-top drops to one column instead and the whole
-   composition card moves below the KPI cards (see the 1280px breakpoint). */
-.composition-card .battery-wrap { gap: 12px; width: 100%; justify-content: center; flex-wrap: nowrap; }
-.composition-card .battery-col { flex-shrink: 0; }
-.composition-card .flow-col { flex: 0 0 auto; }
-.composition-card .flow-lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
+:root[data-theme='dark'] .cap-seg {
+  background-image:
+    repeating-linear-gradient(135deg, rgba(0,0,0,0.14) 0 2px, transparent 2px 7px),
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--seg) 55%, white) 0%,
+      var(--seg) 50%,
+      color-mix(in srgb, var(--seg) 75%, black) 100%);
+}
+/* Legend + headline travel as one flex column so the tube only ever has ONE sibling
+   to lay out against — column at desktop (stacked under the tube), row at mobile
+   (beside the tube), and this inner block stays column either way. */
+.comp-gauge-info { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.cap-legend { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; width: 100%; max-width: 200px; }
+.cap-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
+.cap-item i { width: 8px; height: 8px; border-radius: 2px; background: var(--seg); flex-shrink: 0; }
+.cap-item svg { color: var(--seg); flex-shrink: 0; opacity: 0.85; }
+.cap-lbl { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cap-pct { font-weight: 800; color: var(--text); font-size: 11.5px; }
 /* ---------- Drawer (right-side sliding panel, vertical scroll — "work package status" pattern) ---------- */
 .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 300; display: flex; align-items: flex-start; justify-content: flex-end; }
 .drawer-panel { background: var(--surface); width: 100%; max-width: 560px; height: 100%; overflow-y: auto; box-shadow: -4px 0 32px rgba(0,0,0,0.18); display: flex; flex-direction: column; }
@@ -1363,6 +1266,10 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 /* Status card list — mirrors the reference site's work-package status cards (.wpc) */
 .wpc { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-sm); margin-bottom: 8px; padding: 11px 12px; border-left: 3px solid var(--border-strong); cursor: pointer; }
 .wpc:hover { border-color: var(--brand-red); }
+/* Safekeeping's list rows have no material profile to open, so they must not
+   advertise a click the inventory rows can actually follow through on. */
+.wpc.static { cursor: default; }
+.wpc.static:hover { border-color: var(--border); }
 .wpc-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 3px; }
 .wpc-code { font-family: 'Consolas', monospace; font-size: 12px; font-weight: 700; color: var(--brand-red); }
 .wpc-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9px; white-space: nowrap; }
@@ -1863,12 +1770,6 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .sidebar-scrim { position: fixed; inset: 0; background: rgba(35, 31, 32, 0.32); z-index: 39; }
 .page-loading { display: grid; place-items: center; min-height: 40vh; color: var(--text-muted); font-size: 13px; }
 
-/* ---------- Dashboard top row: KPI block beside the composition gauge ---------- */
-.dash-top { display: grid; gap: 12px; align-items: stretch; }
-/* All nine cards share one 3-column grid with equal-height rows, so no card is
-   shorter than its neighbours and the block stretches to the composition card. */
-.dash-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 12px; min-width: 0; }
-.dash-kpis > .kpi { height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
 .composition-card { display: flex; flex-direction: column; min-width: 0; }
 .composition-card > .card-pad { flex: 1; display: flex; align-items: center; justify-content: center; }
 
@@ -1970,38 +1871,11 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .cl-pct { font-size: 11px; font-weight: 600; color: var(--text-faint); min-width: 30px; text-align: right; flex-shrink: 0; }
 
 /* Responsive */
-/* The right column must stay wide enough for tube + badges side by side (~400px of
-   content plus card padding), otherwise the whole card drops below the KPIs. */
-.dash-top { grid-template-columns: minmax(0, 2fr) minmax(420px, 1fr); }
-@media (max-width: 1480px) {
-  .dash-top { grid-template-columns: minmax(0, 1.6fr) minmax(420px, 1fr); }
-}
-@media (max-width: 1280px) {
-  .dash-top { grid-template-columns: minmax(0, 1fr); }
-}
-/* Safekeeping reverses .dash-top's proportions AND which side is narrow: the five KPI
-   cards stack in a single narrow column on the LEFT (a fixed width is enough for one
-   figure per row), and the compressed Distribution card takes the wide side that
-   frees up. Declared after the base rule (and re-declared inside each breakpoint) so
-   it wins on specificity-equal, source-order grounds. */
-.dash-top.sk-top { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); }
-/* 1024, not the 1280 the Inventory row uses: this pair needs far less width than a KPI
-   grid beside a battery gauge (a 300px KPI column plus a ~520px distribution card fits
-   inside ~840px), and at 1280 the old breakpoint matched exactly — collapsing to one
-   column on a perfectly wide screen, which is what left the card sized to its content
-   with dead space under a short list. */
-@media (max-width: 1024px) {
-  .dash-top.sk-top { grid-template-columns: minmax(0, 1fr); }
-}
-/* Single column: one KPI per row instead of the Inventory tab's 3-wide grid. */
-.sk-top .dash-kpis { grid-template-columns: 1fr; grid-auto-rows: auto; gap: 8px; }
-.sk-dist-card { display: flex; flex-direction: column; min-width: 0; }
-.sk-dist-card > .card-pad { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } .grid-3 { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 900px) {
   .sidebar-scrim { background: rgba(35, 31, 32, 0.5); }
   .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr); }
-  .kpi-grid, .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .login-wrap { grid-template-columns: 1fr; }
   .login-hero { display: none; }
   .content { padding: 16px 14px 40px; }
@@ -2009,7 +1883,7 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   .section-title { font-size: 18px; }
 }
 @media (max-width: 560px) {
-  .kpi-grid, .kpi-grid[style], .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .kpi-grid, .kpi-grid[style] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .donut-legend { flex-basis: 100%; }
   .card-head { flex-wrap: wrap; gap: 10px; }
   .filters .field { min-width: 100%; }
@@ -2024,7 +1898,10 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 /* ---------- Sub-tabs (Overview / Insights / Activity) ----------
    Pills rather than the underline used by .dash-tab one level up: two underline
    strips stacked would read as one confused tab bar with no clear hierarchy. */
-.sub-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+/* padding: 0 2px matches .dash-tabs' own left inset — without it the sub-tab pills'
+   icons sat a few pixels left of where the main tabs' icons start, reading as
+   misaligned rows stacked directly on top of one another. */
+.sub-tabs { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 2px; }
 .sub-tab {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 7px 14px; border: 1px solid var(--border); border-radius: 999px;
@@ -2226,6 +2103,12 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .mat-list.dense .wpc-row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 @media (min-width: 1500px) { .card-split { --clp-w: 480px; --split-h: 480px; } }
+/* The Warehouse tab's two cards get an even wider list panel than the shared default
+   above — scoped to `.wh-overview` rather than raising the shared default, so
+   Safekeeping's Distribution card (same .card-split/.card-list-panel markup) keeps
+   the narrower width its shorter rows need. */
+@media (min-width: 1101px) { .wh-overview .card-split { --clp-w: 460px; } }
+@media (min-width: 1500px) { .wh-overview .card-split { --clp-w: 540px; } }
 @media (max-width: 1100px) {
   /* Below this the panel and a readable chart cannot share the row: the donut would
      drop under its leader-label minimum. The list moves beneath the chart instead.
@@ -2392,7 +2275,11 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    over — about 260px. Given its own column it can run the full height of the split,
    which is what makes it match the donut's 300px ring on the card below. */
 .overview-stack .comp-wrap { flex-direction: row; align-items: stretch; gap: 24px; flex-wrap: nowrap; height: 100%; }
-.overview-stack .comp-gauge { flex: 0 0 auto; flex-direction: column; justify-content: center; gap: 14px; }
+/* gap: 6px, not the 14px this used before the capacity legend existed — with the
+   legend added, tube + info together ran 8px past the fixed 460px card-split height
+   at the wider desktop tube size, and justify-content:center meant that overflow
+   was invisible until measured (4px bled off the top, 4px off the bottom). */
+.overview-stack .comp-gauge { flex: 0 0 auto; flex-direction: column; justify-content: center; gap: 6px; }
 .overview-stack .comp-headline { margin-top: 0; text-align: center; max-width: 220px; }
 .overview-stack .comp-headline .ch-figure { justify-content: center; }
 /* align-content:center, not stretch: with six tiles in two rows across a 420px column
@@ -2415,7 +2302,9 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 @media (max-width: 1100px) {
   .overview-stack .comp-wrap { flex-direction: column; align-items: stretch; gap: 18px; }
   .overview-stack .comp-gauge { flex-direction: row; align-items: center; gap: 22px; }
-  .overview-stack .comp-headline { text-align: left; max-width: none; flex: 1 1 auto; min-width: 0; }
+  .overview-stack .comp-gauge-info { align-items: flex-start; flex: 1 1 auto; min-width: 0; }
+  .overview-stack .comp-headline { text-align: left; max-width: none; }
   .overview-stack .comp-headline .ch-figure { justify-content: flex-start; }
+  .overview-stack .cap-legend { max-width: none; }
   .overview-stack .comp-gauge .battery-tube { width: 92px; height: 200px; }
 }

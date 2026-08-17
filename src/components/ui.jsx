@@ -81,10 +81,14 @@ export function Segmented({ options, value, onChange, size }) {
    the columns to the labels would make the thumb width change as it slid, which
    reads as the control resizing rather than switching. The whole thing is
    `flex-shrink: 0` in CSS: it must never wrap or compress out of a card head. */
+// Works for any option count, not just two: the thumb's CSS width is 1/N of the
+// track (see `--count` below), and `translateX(idx * 100%)` is relative to the
+// thumb's OWN width — so shifting by one thumb-width per index lands it exactly on
+// each column regardless of how many there are.
 export function Toggle({ options, value, onChange, size, className = '' }) {
   const idx = Math.max(0, options.findIndex((o) => o.value === value))
   return (
-    <div className={`toggle ${size === 'sm' ? 'toggle-sm' : ''} ${className}`} role="group">
+    <div className={`toggle ${size === 'sm' ? 'toggle-sm' : ''} ${className}`} role="group" style={{ '--count': options.length }}>
       <span className="toggle-thumb" style={{ transform: `translateX(${idx * 100}%)` }} aria-hidden="true" />
       {options.map((o) => (
         <button
@@ -133,6 +137,23 @@ export function Card({ title, sub, right, foot, icon, iconColor, children, pad =
 }
 
 /* ---------- Section header ---------- */
+/* ---------- No data ---------- */
+// Shown wherever a card's source data is genuinely absent, instead of drawing an
+// empty chart that reads as "everything is zero". Shared by the Inventory and
+// Safekeeping dashboards, which both hit this for the same reason: nothing reached
+// the browser for the current selection.
+export function NoData({ what, why }) {
+  return (
+    <div className="nodata">
+      <Icon name="alert" size={20} />
+      <div>
+        <b>{what}</b>
+        <span>{why}</span>
+      </div>
+    </div>
+  )
+}
+
 export function SectionHeader({ priority, title, note, icon }) {
   return (
     <div className="spread mt" style={{ alignItems: 'flex-end', marginBottom: 12 }}>
