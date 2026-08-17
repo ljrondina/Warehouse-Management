@@ -949,3 +949,62 @@ orientations × sections on/off, high-value selected, and all four racking views
 and dark) plus 5 at 375 px — zero labels clipped, zero label overlaps, nothing in `main`
 outside a scroll container. Rotate and Sections exercised by click; rack drill-down works
 in landscape with sections off. `npm run build` passes.
+
+### 2026-08-17 — Session: label sizing bug, stepper, rebar icon, HV racking
+
+**The label-size bug behind several complaints.** `PlanText` computed its wrap from the
+`size` prop but never applied it — the rendered size came from the CSS class. So a label
+asked to wrap at 9.5 px was drawn at 15 px and ran outside its own block. That is why the
+MRF text kept overflowing however small the number passed in got, and why "make the
+labels smaller" had no effect. `size` is now authoritative for both, `fitSize()` steps it
+down until the longest single word fits, and the estimate accounts for the 0.6 px
+letter-spacing the plan labels carry. The `.fp-*-t` classes must no longer set
+`font-size`; a comment in `floorplan.css` says so.
+
+**The MRF check was wrong too.** It compared screen-space bounding boxes, and a rotated
+rectangle's axis-aligned box is bigger than the rectangle — so a label could sit inside
+the box and still hang off the shape. It is now verified in the block's own rotated
+frame, where the icon and both text lines measure inside 160 × 90.
+
+**Labels and icons now scale with the block they sit in.** `iconFor`/`fontFor` take the
+block's shorter side, because that is what has to contain them; the icon carries the
+identification and the wordmark stays quiet beneath it. Site labels land at 8.1 / 11.1 /
+12.0 / 13 px with icons at 21.7 / 29.6 / 32 / 42; warehouse areas at 10.1–12.5 px, and a
+run only one rack deep gets no icon at all. Entrance/exit signage removed; a purpose-drawn
+`rebar` icon (three ribbed bars on the diagonal) replaces the generic layers glyph.
+
+**Level switcher is a stepper.** Numbered nodes joined by a rail, filled as you descend,
+with a tick on the levels behind you — the three levels are a drill-down, and three equal
+pills said nothing about that. Rack numerals moved to Barlow Condensed, already loaded
+for headings and the right face for a plan numeral.
+
+**Level 2.** The high-value room now carries **8 rack lines × 4 levels** (128 shelf
+positions, was 4 × 4 × 4 = 64) and the plan draws eight. The shelf-positions caption and
+the Platform area are gone. Context regions are inset 1 unit so two that touch show a
+hairline of floor between them rather than merging — they have no outlines any more.
+
+**A landscape-only collision, found by the sweep.** With the plan rotated, the rack
+number sat at the run's head at a fixed 15 px: back-to-back pairs are 17 units apart, so
+2/3, 4/5, 6/7, 8/9 and 10/11 overlapped, and Rack 10's number ran into the Safekeeping
+title. The number now sits at the far end in landscape (where the horizontal area titles
+do not reach) and its size is capped to the run's depth — 10.5 px in a 17-unit band.
+
+**Measurement caveat, worth remembering.** With the browser pane hidden, style
+recalculation is throttled: after a client-side navigation `getComputedStyle` returns
+values from *before* the class change, while `classList` and `getBoundingClientRect` are
+current. That produced a convincing phantom — the stepper appeared to colour its nodes by
+position rather than state, and every rule checked out on inspection. A hard reload
+showed it correct. Geometry checks are trustworthy after a soft navigation; colour checks
+need a real page load.
+
+**Concurrent session.** A second session is editing this same working tree (Layout,
+ui.jsx, charts, InventoryTab, index.css, plus a `__fixture.js` and `MaterialList.jsx`).
+To avoid committing its unfinished work, this session's CSS went into a new
+`src/styles/floorplan.css`, imported from `StorageMap.jsx` so it ships with the floor
+plan's lazy chunk. Only floor-plan files were staged; `index.css` was left alone. New
+floor-plan CSS belongs in the new file, and the old `.fp-*` block in `index.css` should
+migrate over.
+
+**Verified** on fresh page loads at 1440×900, light and dark: site, warehouse in both
+orientations with sections on and off, and all four racking views — zero labels clipped,
+zero overlaps, nothing outside a scroll container. `npm run build` passes.

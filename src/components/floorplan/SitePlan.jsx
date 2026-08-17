@@ -1,4 +1,4 @@
-import { SITE_VB, SITE_BOUNDARY, SITE_AREAS, SITE_YARD, SITE_GATES } from '../../data/warehouseMap'
+import { SITE_VB, SITE_BOUNDARY, SITE_AREAS, SITE_YARD } from '../../data/warehouseMap'
 import PlanDefs from './planDefs'
 import PlanText from './planText'
 import Icon from '../../lib/icons'
@@ -12,6 +12,13 @@ import Icon from '../../lib/icons'
 // level exists to show.
 
 const centreOf = (r) => ({ cx: r.x + r.w / 2, cy: r.y + r.h / 2 })
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
+
+// Icon and label scale with the block they sit in — the shorter side governs, since
+// that is what has to contain them. The icon carries the identification, so it takes
+// the larger share and the wordmark stays quiet beneath it.
+const iconFor = (across) => clamp(across * 0.24, 0, 42)
+const fontFor = (across) => clamp(across * 0.09, 7.5, 13)
 const pts = (p) => p.map((q) => q.join(',')).join(' ')
 
 // Slide inches -> viewBox units, for the one area the plan draws at an angle (MRF).
@@ -77,14 +84,23 @@ export default function SitePlan({ selected, onSelect, onDrill, hovered, onHover
               const c = toVB(rot.cx, rot.cy)
               const rw = rot.w * K
               const rh = rot.h * K
+              // Everything here is laid out in the block's OWN rotated frame, so the
+              // fit can be reasoned about directly against rw/rh. Checking it in screen
+              // coordinates is what hid the earlier overflow: a rotated rectangle's
+              // axis-aligned bounding box is larger than the rectangle itself, so a
+              // label can sit inside the box and still hang off the shape.
+              const ic = iconFor(rh)
+              const fs = fontFor(rh)
               return (
                 <g transform={`translate(${c.x} ${c.y}) rotate(${rot.rot})`}>
                   <rect x={-rw / 2} y={-rh / 2} width={rw} height={rh} rx="5" />
                   <rect x={-rw / 2} y={-rh / 2} width={rw} height={rh} rx="5" className="fp-tex" fill={`url(#fpt-${a.role})`} />
-                  {/* wrapped and sized to the box, not to the phrase: at heading size
-                      "MATERIAL RECOVERY" alone is wider than the bay it names. */}
-                  <PlanIcon name={a.icon} x={0} y={-rh / 2 + 17} size={19} />
-                  <PlanText x={0} y={5} text={a.name.toUpperCase()} maxW={rw - 20} size={9.5} lh={11} cls="fp-area-t fp-t-mrf" />
+                  <PlanIcon name={a.icon} x={0} y={-rh / 2 + ic / 2 + 7} size={ic} />
+                  <PlanText
+                    x={0} y={rh / 2 - fs * 1.5 - 5}
+                    text={a.name.toUpperCase()} maxW={rw - 16} size={fs} lh={fs + 1.5}
+                    cls="fp-area-t fp-t-mrf"
+                  />
                 </g>
               )
             })()}
@@ -92,30 +108,20 @@ export default function SitePlan({ selected, onSelect, onDrill, hovered, onHover
         )
       })}
 
-      {/* entrance / exit signage */}
-      {SITE_GATES.map((g) => (
-        <g key={g.id} className="fp-gate" pointerEvents="none">
-          <rect x={g.rect.x} y={g.rect.y} width={g.rect.w} height={g.rect.h} rx="2" />
-          <text
-            x={g.at[0]} y={g.at[1]} textAnchor="middle" dominantBaseline="middle" className="fp-gate-t"
-            transform={g.vertical ? `rotate(-90 ${g.at[0]} ${g.at[1]})` : undefined}
-          >{g.label}</text>
-        </g>
-      ))}
-
       {/* icons and labels last, so no fill ever lands on top of one */}
       {SITE_AREAS.filter((a) => !a.rotRect).map((a) => {
         const c = centreOf(a.label)
-        const lines = a.name.length > 16 ? 2 : 1
-        const iconY = c.cy - (lines === 2 ? 32 : 24)
+        const across = Math.min(a.label.w, a.label.h)
+        const ic = iconFor(across)
+        const fs = fontFor(across)
         return (
           <g key={a.id} className={`fp-t-${a.role}`} pointerEvents="none">
-            <PlanIcon name={a.icon} x={c.cx} y={iconY} size={a.id === 'warehouse' ? 30 : 24} />
+            <PlanIcon name={a.icon} x={c.cx} y={c.cy - fs * 1.6} size={ic} />
             <PlanText
-              x={c.cx} y={c.cy + 6}
+              x={c.cx} y={c.cy + ic / 2 + fs * 0.6}
               text={a.name.toUpperCase()}
-              maxW={Math.min(a.label.w - 12, 175)}
-              size={15} lh={18}
+              maxW={Math.min(a.label.w - 14, 190)}
+              size={fs} lh={fs + 2}
               cls={`fp-area-t fp-t-${a.role}`}
               extra={a.drill ? ['click to enter →'] : []}
               extraCls="fp-area-hint"

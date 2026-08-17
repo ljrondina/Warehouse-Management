@@ -12,6 +12,10 @@ import LocationPanel from '../components/floorplan/LocationPanel'
 import { Card } from '../components/ui'
 import { num } from '../lib/format'
 import Icon from '../lib/icons'
+// Imported here rather than from main.jsx so the floor plan's own styles ship with the
+// floor plan's lazy chunk — and so this module stops adding to an index.css that other
+// work is editing at the same time.
+import '../styles/floorplan.css'
 
 // ============================================================================
 // Warehouse Floor Plan — three levels, from the CW Taytay Warehouse Plan deck.
@@ -322,20 +326,26 @@ function Shell({ level, area, rack, go, children }) {
   return (
     <>
       <div className="fp-topbar" data-tour="floor">
-        <div className="fp-levels">
+        {/* A stepper rather than a tab strip: the three levels are a drill-down, and
+            numbered nodes joined by a rail say that better than three equal pills. */}
+        <div className="fp-steps" role="tablist" aria-label="Map level">
           {LEVELS.map((l, i) => {
-            const reachable = l.id === 'site' || (l.id === 'warehouse') || (l.id === 'rack' && !!rack)
+            const reachable = l.id === 'site' || l.id === 'warehouse' || (l.id === 'rack' && !!rack)
             const active = level === l.id
+            const done = LEVELS.findIndex((x) => x.id === level) > i
             return (
               <button
                 key={l.id}
-                className={`fp-level${active ? ' active' : ''}`}
+                role="tab"
+                aria-selected={active}
+                className={`fp-step${active ? ' is-on' : ''}${done ? ' is-done' : ''}`}
                 disabled={!reachable}
                 onClick={() => go(l.id === 'site' ? { level: null, area: null, rack: null } : l.id === 'warehouse' ? { level: 'warehouse', rack: null } : { level: 'rack' })}
               >
-                <span className="fp-level-n">{i + 1}</span>
-                <Icon name={l.icon} size={15} />
-                {l.label}
+                <span className="fp-step-dot">
+                  {done ? <Icon name="check" size={13} /> : <Icon name={l.icon} size={14} />}
+                </span>
+                <span className="fp-step-l">{l.label}</span>
               </button>
             )
           })}

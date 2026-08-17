@@ -1,0 +1,72 @@
+/* ============================================================
+   Floor plan — styles added after the module's first pass.
+
+   This file is imported AFTER index.css (see src/main.jsx), so what is here wins over
+   the `.fp-*` block that still lives there. It was split out because two sessions were
+   editing index.css at once and the floor plan had no business being tangled in that;
+   new floor-plan CSS belongs here, and the older block should migrate over in time.
+   ============================================================ */
+
+/* --- level switcher: a stepper, not a tab strip --------------------------- */
+
+.fp-steps { display: flex; align-items: stretch; gap: 0; }
+.fp-step {
+  position: relative;
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 18px 7px 7px;
+  border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text-faint);
+  transition: color 0.15s;
+}
+.fp-step + .fp-step { padding-left: 18px; }
+/* the rail between two nodes */
+.fp-step + .fp-step::before {
+  content: ''; position: absolute; left: -4px; top: 50%; width: 22px; height: 2px;
+  background: var(--border-strong); border-radius: 2px; transform: translateY(-50%);
+}
+.fp-step.is-on::before, .fp-step.is-done::before { background: var(--brand-red); }
+.fp-step-dot {
+  width: 28px; height: 28px; border-radius: 50%; flex: none;
+  display: grid; place-items: center;
+  background: var(--surface-2); color: var(--text-faint);
+  border: 1.5px solid var(--border-strong);
+  transition: background 0.16s, color 0.16s, border-color 0.16s, box-shadow 0.16s;
+}
+.fp-step-l { white-space: nowrap; }
+.fp-step:hover:not(:disabled) { color: var(--text); }
+.fp-step:hover:not(:disabled) .fp-step-dot { border-color: var(--brand-red); color: var(--brand-red); }
+.fp-step.is-done { color: var(--text-muted); }
+.fp-step.is-done .fp-step-dot { background: var(--accent-weak); border-color: var(--brand-red); color: var(--brand-red); }
+.fp-step.is-on { color: var(--text); font-weight: 800; }
+.fp-step.is-on .fp-step-dot {
+  background: var(--brand-red); border-color: var(--brand-red); color: #fff;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-red) 16%, transparent);
+}
+.fp-step:disabled { opacity: 0.45; cursor: not-allowed; }
+.fp-step:focus-visible { outline: 2px solid var(--brand-red); outline-offset: 3px; border-radius: var(--radius-xs); }
+
+/* --- rack numerals ------------------------------------------------------- */
+
+/* Barlow Condensed is already loaded for headings and is the right face for a plan
+   numeral: narrow enough to sit in a 17-unit-wide run, and unmistakably a number. */
+.fp-rack-t {
+  font-family: 'Barlow Condensed', var(--font);
+  font-size: 15px; font-weight: 700; letter-spacing: 0.4px;
+  fill: #fff; paint-order: stroke; stroke: rgba(0, 0, 0, 0.5); stroke-width: 3;
+}
+
+/* --- label weight -------------------------------------------------------- */
+
+/* Font size now comes from PlanText as an inline style, computed from the block it has
+   to fit in. These rules must not set font-size or they would override it. */
+.fp-area-t { font-weight: 800; letter-spacing: 0.5px; }
+.fp-room-t { font-weight: 600; letter-spacing: 0.2px; }
+.fp-open-t, .fp-yard-t { font-weight: 700; letter-spacing: 0.6px; }
+.fp-floor-t { font-weight: 800; letter-spacing: 0.5px; fill: var(--text); }
+
+@media (max-width: 560px) {
+  .fp-step { padding: 6px 12px 6px 5px; font-size: 11.5px; gap: 7px; }
+  .fp-step + .fp-step { padding-left: 13px; }
+  .fp-step + .fp-step::before { width: 14px; left: -2px; }
+  .fp-step-dot { width: 24px; height: 24px; }
+}

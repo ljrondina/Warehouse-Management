@@ -1,6 +1,6 @@
 import {
   WH_VB, WH_BUILDING, WH_CANOPY, WH_AREAS, WH_ROOMS, WH_OPEN,
-  RACKS, CANTILEVER, FLOOR_AREA, HV_SHELVING, areaCapacity,
+  RACKS, CANTILEVER, FLOOR_AREA, HV_SHELVING,
 } from '../../data/warehouseMap'
 import PlanDefs from './planDefs'
 import PlanText from './planText'
@@ -21,6 +21,18 @@ import Icon from '../../lib/icons'
 
 const HV_AREA = WH_AREAS.find((a) => a.id === 'highvalue')
 const pts = (p) => p.map((q) => q.join(',')).join(' ')
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
+
+// Context regions carry no outline any more, so two that touch would read as one
+// blob. A one-unit inset puts a hairline of floor between them instead of a border.
+const inset = (r, d = 1) => ({ x: r.x + d, y: r.y + d, w: Math.max(0, r.w - d * 2), h: Math.max(0, r.h - d * 2) })
+
+// Icon and label scale with the block. The shorter side governs, because that is what
+// has to contain them; the icon carries the identification and the wordmark stays
+// quiet beneath it. A run only one rack deep gets no icon at all — there is no room.
+const iconFor = (across) => (across < 46 ? 0 : clamp(across * 0.28, 0, 34))
+const fontFor = (across, vertical) =>
+  vertical ? clamp(across * 0.48, 7.5, 12.5) : clamp(across * 0.13, 7.5, 12)
 
 function PlanIcon({ name, x, y, size = 20 }) {
   return (
@@ -73,13 +85,19 @@ export default function WarehousePlan({
             ? <line key={i} x1={r.x} y1={r.y + (i + 1) * step} x2={r.x + r.w} y2={r.y + (i + 1) * step} className="fp-bay-div" />
             : <line key={i} x1={r.x + (i + 1) * step} y1={r.y} x2={r.x + (i + 1) * step} y2={r.y + r.h} className="fp-bay-div" />
         ))}
-        {/* The number sits at the run's head, not its middle: Structural and
+        {/* The number sits at one END of the run, never its middle: Structural and
             Architectural are each one rack deep, so their area label runs straight
-            through the centre of the very rack it names. */}
+            through the centre of the very rack it names.
+            Which end depends on the orientation. Portrait puts it at the top, where
+            nothing else sits. Landscape puts it at the far end, because there the area
+            titles are horizontal and run across the heads of the rack runs.
+            The size is capped to the run's DEPTH too: back-to-back pairs are 17 units
+            apart, and a 15 px glyph box does not fit between two of them. */}
         <text
-          x={alongY ? r.x + r.w / 2 : r.x + 11}
+          x={alongY ? r.x + r.w / 2 : r.x + r.w - 12}
           y={alongY ? r.y + 11 : r.y + r.h / 2 + 0.5}
           textAnchor="middle" dominantBaseline="middle" className="fp-rack-t"
+          style={{ fontSize: alongY ? 15 : clamp((alongY ? r.w : r.h) * 0.62, 9, 15) }}
         >{rack.n}</text>
       </g>
     )
@@ -110,7 +128,7 @@ export default function WarehousePlan({
 
       {/* rooms and working areas — context, no outline */}
       {WH_ROOMS.map((m) => {
-        const r = mr(m.rect)
+        const r = inset(mr(m.rect))
         return (
           <g key={m.id} className={`fp-room${m.accent ? ' is-accent' : ''}`}>
             <rect x={r.x} y={r.y} width={r.w} height={r.h} rx="3" />
@@ -139,8 +157,8 @@ export default function WarehousePlan({
             <title>{a.name}</title>
             {a.poly
               ? <polygon points={pts(mp(a.poly))} />
-              : a.hull.map((h, i) => { const r = mr(h); return <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} rx="4" /> })}
-            {a.secure && a.hull.map((h, i) => { const r = mr(h); return (
+              : a.hull.map((hh, i) => { const r = mr(hh); return <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} rx="4" /> })}
+            {a.secure && a.hull.map((hh, i) => { const r = mr(hh); return (
               <rect key={`s${i}`} x={r.x} y={r.y} width={r.w} height={r.h} rx="4" fill="url(#fp-secure)" className="fp-secure-fill" />
             ) })}
           </g>
@@ -201,7 +219,6 @@ export default function WarehousePlan({
       {/* area labels last, so a rack never covers one */}
       {showSections && WH_AREAS.map((a) => {
         const r = mr(a.hull[0])
-        const cap = areaCapacity(a.id)
         // A tall narrow hull reads its label along its length. The threshold is 2.2 so
         // the high-value room — barely oblong — keeps a horizontal label.
         const vertical = r.h > r.w * 2.2
@@ -209,19 +226,16 @@ export default function WarehousePlan({
         const cy = r.y + r.h / 2
         const along = vertical ? r.h : r.w
         const across = vertical ? r.w : r.h
-        // A hull one rack deep (~21 units across) must fit on one line inside the run.
-        const size = across < 40 ? 12 : vertical ? 15 : 13
-        const showIcon = across >= 70
+        const ic = iconFor(across)
+        const fs = fontFor(across, vertical)
         return (
           <g key={a.id} transform={vertical ? `rotate(-90 ${cx} ${cy})` : undefined} pointerEvents="none">
-            {showIcon && <g className={`fp-t-${a.role}`}><PlanIcon name={a.icon} x={cx} y={cy - 30} size={20} /></g>}
+            {ic > 0 && <g className={`fp-t-${a.role}`}><PlanIcon name={a.icon} x={cx} y={cy - fs * 1.5} size={ic} /></g>}
             <PlanText
-              x={cx} y={showIcon ? cy + 4 : cy}
+              x={cx} y={ic > 0 ? cy + ic / 2 + fs * 0.5 : cy}
               text={a.name.toUpperCase()}
-              maxW={along - 14} size={size} lh={size + 2}
+              maxW={along - 14} size={fs} lh={fs + 2}
               cls={`fp-area-t fp-t-${a.role}`}
-              extra={a.id === 'highvalue' ? [`🔒 ${cap.positions} shelf positions`] : []}
-              extraCls="fp-area-hint"
             />
           </g>
         )

@@ -64,6 +64,13 @@ const paths = {
   borrow: <><path d="M14 4h6v6" /><path d="M20 4l-8 8" /><path d="M10 6H4v14h14v-6" /></>,
   reorganize: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><path d="M14 6.5h5.5V12" /><path d="M17.5 9.5L19.5 12l2-2.5" /><path d="M10 17.5H4.5V12" /><path d="M6.5 14.5L4.5 12l-2 2.5" /></>,
   help: <><circle cx="12" cy="12" r="9" /><path d="M9.2 9.3a2.8 2.8 0 015.4.9c0 1.9-2.6 2-2.6 3.8" /><path d="M12 17.2v.01" /></>,
+  // Deformed reinforcing bar: three bars on the diagonal with their ribs showing,
+  // which is what tells rebar apart from any other bundled long stock.
+  rebar: <>
+    <path d="M3.2 8.4L17 3.4" /><path d="M5.6 6.1v4.6M8.6 5v4.6M11.6 3.9v4.6M14.6 2.8v4.6" />
+    <path d="M3.2 14.2L17 9.2" /><path d="M5.6 11.9v4.6M8.6 10.8v4.6M11.6 9.7v4.6M14.6 8.6v4.6" />
+    <path d="M3.2 20L17 15" /><path d="M5.6 17.7v4.6M8.6 16.6v4.6M11.6 15.5v4.6M14.6 14.4v4.6" />
+  </>,
 }
 
 export default function Icon({ name, size = 20, className = '', style }) {

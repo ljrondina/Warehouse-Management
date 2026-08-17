@@ -82,7 +82,7 @@ export const SITE_AREAS = [
     id: 'rebar',
     name: 'Deformed Rebar Area',
     role: 'rebar',
-    icon: 'layers',
+    icon: 'rebar',
     note: 'Open stockyard bay for reinforcing steel, kept outside the shed and reachable by truck.',
     rects: [sr(3.9675, 3.8635, 0.774, 1.291)],
   },
@@ -119,15 +119,6 @@ SITE_AREAS.forEach((a) => {
 // parking, queue bay, canopies, gate, guard posts, the ingress/egress arrows — is
 // vehicle logistics, not storage, and only competed with the areas that are.
 export const SITE_YARD = { id: 'yard', name: 'Open Stock Yard', rect: sr(3.9, 3.42, 2.7, 1.86) }
-
-// Entrance / exit signage, at the two places the deck marks it: the roll-up gate on
-// the shed's west wall (its yellow strip, with 'ENTRANCE/ EXIT' set vertically beside
-// it) and the site gate on the south access road, where the plan's EXIT and ENTRY
-// arrows meet the property line.
-export const SITE_GATES = [
-  { id: 'gate-shed', label: 'ENTRANCE / EXIT', rect: sr(6.568, 3.384, 0.145, 0.366), vertical: true, at: sp(6.64, 3.567) },
-  { id: 'gate-site', label: 'SITE ENTRY / EXIT', rect: sr(7.36, 5.44, 0.42, 0.1), vertical: false, at: sp(7.57, 5.49) },
-]
 
 /* ----------------------------------------------------------- warehouse level */
 
@@ -200,7 +191,8 @@ export const FLOOR_AREA = {
 // four runs of four bays, four shelf levels each (slide 15's LS600 elevation).
 export const HV_SHELVING = {
   id: 'HV', name: 'LS600 Shelving', area: 'highvalue', kind: 'shelving',
-  runs: 4, bays: 4, levels: 4, bayWidth: 1200, frameHeight: 2100,
+  // Eight rack lines of four bays, four shelf levels each.
+  runs: 8, bays: 4, levels: 4, bayWidth: 1200, frameHeight: 2100,
 }
 HV_SHELVING.positions = HV_SHELVING.runs * HV_SHELVING.bays * HV_SHELVING.levels
 
@@ -256,7 +248,6 @@ export const WH_ROOMS = [
   { id: 'ee', name: 'EE Cabinet', rect: pl(39, 644, 90, 678) },
   { id: 'check', name: 'Security Check', rect: pl(39, 592, 90, 644) },
   { id: 'sorting', name: 'Sorting Bay', rect: pl(214, 592, 404, 700), accent: true },
-  { id: 'platform', name: 'Platform', rect: pl(223, 700, 364, 730) },
   // Bottom edge pinned to the building's own bottom wall (iy 842) rather than the
   // raster's 845, so the bay sits flush inside the envelope.
   { id: 'loading', name: 'Loading & Unloading Bay', rect: pl(218, 730, 352, 842), accent: true },
