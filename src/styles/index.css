@@ -1242,10 +1242,7 @@ body.col-resizing { user-select: none; cursor: col-resize; }
       var(--seg) 50%,
       color-mix(in srgb, var(--seg) 75%, black) 100%);
 }
-/* Sits beside the tube — the single sibling the responsive rules reflow against
-   (column at desktop, row at mobile). */
-.comp-gauge-info { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; }
-.cap-legend { display: flex; flex-direction: column; gap: 7px; width: 100%; max-width: 200px; }
+.cap-legend { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 200px; }
 /* No colour swatch — each segment's own icon already carries its identity, so a
    second colour chip beside it repeated the same information. The icon itself takes
    the segment's colour instead. */
@@ -1253,6 +1250,27 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .cap-item svg { color: var(--seg); flex-shrink: 0; }
 .cap-lbl { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cap-pct { font-weight: 800; color: var(--text); font-size: 11.5px; }
+
+/* ---------- Facility Capacity widget (Floor Plan module) ----------
+   Standalone card-like block rather than a <Card> — it sits ABOVE a Card on the site
+   level rather than replacing one, so its own head/body borrow the same visual
+   language without nesting a card inside a card. */
+.cap-widget { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow-sm); margin-bottom: 12px; }
+.cap-widget-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.cap-widget-body { display: flex; align-items: center; gap: 28px; }
+.cap-widget .battery-tube { width: 108px; height: 220px; flex-shrink: 0; }
+/* Wider layout than the composition card's old legend — this widget has the whole
+   card width to itself, so the figure and percentage read on the same line as the
+   label instead of stacking under it. */
+.cap-legend-wide { max-width: none; gap: 12px; }
+.cap-legend-wide .cap-item { font-size: 12.5px; gap: 10px; }
+.cap-legend-wide .cap-figure { font-weight: 700; color: var(--text); min-width: 92px; text-align: right; }
+.cap-legend-wide .cap-pct { min-width: 42px; text-align: right; }
+@media (max-width: 640px) {
+  .cap-widget-body { flex-direction: column; align-items: stretch; gap: 16px; }
+  .cap-widget .battery-tube { align-self: center; }
+  .cap-legend-wide .cap-item { flex-wrap: wrap; }
+}
 /* ---------- Drawer (right-side sliding panel, vertical scroll — "work package status" pattern) ---------- */
 .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 300; display: flex; align-items: flex-start; justify-content: flex-end; }
 .drawer-panel { background: var(--surface); width: 100%; max-width: 560px; height: 100%; overflow-y: auto; box-shadow: -4px 0 32px rgba(0,0,0,0.18); display: flex; flex-direction: column; }
@@ -1925,57 +1943,34 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    inside the composition card. */
 .kpi-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
-/* ---------- Inventory Composition (gauge + the six quantity tiles) ---------- */
-.comp-wrap { display: flex; align-items: stretch; gap: 22px; flex-wrap: wrap; }
-.comp-gauge { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; }
-/* The tiles take the rest of the row and wrap to two columns before they get narrow
-   enough to truncate a figure. */
-.comp-stats { flex: 1 1 320px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-content: center; }
-/* Outlined, not filled — a flat --surface-2 fill on every tile read as one grey slab
-   repeated six times. No fill at rest lets each tile's own accent colour (border,
-   icon) be the thing that tells it apart from its neighbours. */
-.comp-stat {
-  position: relative; display: flex; align-items: center; gap: 10px; text-align: left;
-  padding: 11px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
-  background: transparent; cursor: pointer; min-width: 0;
-  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s, background 0.12s;
-}
-.comp-stat:hover {
-  transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--cs-color); z-index: 20;
-  background: color-mix(in srgb, var(--cs-color) 6%, transparent);
-}
-.comp-stat:focus-visible { outline: 2px solid var(--cs-color); outline-offset: 2px; }
-.cs-icon {
-  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0;
-  color: var(--cs-color); background: color-mix(in srgb, var(--cs-color) 14%, transparent);
-}
-.cs-body { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
-.cs-val { font-size: 17px; font-weight: 800; letter-spacing: -0.3px; color: var(--text); }
-/* The label is the part allowed to truncate — the figure never is, so it comes first
-   in the box and the label takes whatever width is left. */
-.cs-lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* ---------- Inventory Composition (six KpiCard tiles + an expandable list) ----------
+   The gauge that used to sit beside these tiles moved to the Floor Plan module (see
+   FacilityCapacityGauge.jsx) — it was a space reading, not a stock reading, and these
+   tiles now run the card's full width on their own, styled like the Safekeeping tab's
+   own KPI row (.kpi-grid/.kpi, not a bespoke tile). */
+.comp-wrap-v2 { display: flex; flex-direction: column; gap: 14px; width: 100%; }
+.kpi.active { border-color: var(--kpi-color); box-shadow: inset 0 0 0 1px var(--kpi-color), var(--shadow); }
+.kpi.active .kpi-expand { opacity: 1; color: var(--kpi-color); font-weight: 700; }
 
-/* Hover description. A real element rather than a title attribute so it can carry a
-   full sentence and appear immediately instead of after the browser's own delay. */
-.comp-tip {
-  position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translate(-50%, 4px);
-  width: max(220px, 100%); max-width: 300px; padding: 9px 11px; z-index: 40;
-  background: var(--surface); color: var(--text-muted); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); box-shadow: var(--shadow-lg);
-  font-size: 11.5px; font-weight: 500; line-height: 1.45; text-align: left;
-  opacity: 0; visibility: hidden; pointer-events: none;
-  transition: opacity 0.14s, transform 0.14s, visibility 0.14s;
-}
-.comp-tip em { display: block; margin-top: 5px; font-style: normal; font-weight: 700; color: var(--cs-color); }
-.comp-stat:hover .comp-tip, .comp-stat:focus-visible .comp-tip { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
-/* The clicked tile is the source of whatever the list panel is showing, so it holds a
-   visible selected state rather than reverting the moment the pointer leaves it. */
-.comp-stat.selected {
-  border-color: var(--cs-color);
-  box-shadow: inset 0 0 0 1px var(--cs-color), var(--shadow);
-  background: color-mix(in srgb, var(--cs-color) 9%, var(--surface));
-}
-.comp-stat.selected .cs-icon { background: var(--cs-color); color: #fff; }
+/* The expanded list sits below the whole tile row, full card width — there is no
+   chart beside it to share the row with any more. */
+.comp-expand { border-top: 1px solid var(--border); padding-top: 12px; }
+.comp-expand-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.comp-expand-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.comp-rows { max-height: 420px; overflow-y: auto; }
+
+/* One compact row per material: code + description on the first line, then a
+   wrapping strip of the five figures that matter. Deliberately not the `.wpc` card
+   used elsewhere — this list is full width, so a dense single row buys back the
+   vertical space a stacked card would spend on the same information. */
+.comp-row { padding: 8px 4px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.comp-row:hover { background: var(--surface-2); }
+.cr-main { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.cr-code { font-family: 'Consolas', monospace; font-size: 11.5px; font-weight: 700; color: var(--brand-red); flex-shrink: 0; }
+.cr-desc { font-size: 12.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cr-meta { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 4px; }
+.cr-chip { font-size: 11.5px; font-weight: 600; color: var(--text); }
+.cr-chip small { display: block; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-faint); line-height: 1.3; }
 
 /* ---------- Leader-line donut ----------
    No legend in this mode, so the ring gets the whole card width and the labels have
@@ -2038,15 +2033,27 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .as-val { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
 .as-lbl { font-size: 10.5px; font-weight: 600; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* ---------- Delivery Insight strip (Safekeeping Overview) ----------
+   A compressed read of the full Delivery Tracker — five numbers in one row rather
+   than its own KPI grid + data table. */
+.dins-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.dins-item {
+  display: flex; align-items: center; gap: 9px; min-width: 0;
+  padding: 10px 12px; border: 1px solid var(--border); border-left: 3px solid var(--di);
+  border-radius: var(--radius-sm); background: var(--surface);
+}
+.dins-icon { color: var(--di); flex-shrink: 0; }
+.dins-body { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.dins-val { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
+.dins-lbl { font-size: 10px; font-weight: 600; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 900px) { .dins-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .dins-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 @media (max-width: 1100px) {
-  .comp-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .activity-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
   .kpi-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .comp-wrap { gap: 16px; }
-  .comp-stats { flex-basis: 100%; }
-  .comp-tip { width: 240px; }
 }
 
 /* ==========================================================================
@@ -2187,12 +2194,6 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   .sub-tabs::-webkit-scrollbar { display: none; }
   .sub-tab { flex: 0 0 auto; }
 
-  /* Two tiles per row keeps the figures readable; three truncated them. */
-  .comp-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .comp-wrap { flex-direction: column; align-items: stretch; gap: 18px; }
-  .comp-gauge { flex-direction: row; align-items: center; justify-content: center; gap: 20px; }
-  .battery-tube { width: 74px; height: 150px; }
-
   .activity-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .band-row { gap: 9px; }
   .band-s { white-space: normal; }
@@ -2200,15 +2201,7 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 
 @media (max-width: 560px) {
   .content { padding: 14px 12px 36px; }
-  /* One tile per row below this: at 2-up a peso figure like ₱482.4M plus its label
-     no longer fits the tile without truncating one of them. */
-  .comp-stats { grid-template-columns: minmax(0, 1fr); }
-  .comp-gauge { flex-direction: column; gap: 12px; }
   .activity-summary { grid-template-columns: minmax(0, 1fr); }
-  /* The tooltip is wider than the tile it hangs off, so it is pinned to the card
-     rather than centred on the tile, which would push it off-screen. */
-  .comp-tip { left: 0; right: 0; width: auto; max-width: none; transform: translate(0, 4px); }
-  .comp-stat:hover .comp-tip, .comp-stat:focus-visible .comp-tip { transform: translate(0, 0); }
   .sub-tab { padding: 6px 12px; font-size: 12px; }
   .nodata { flex-direction: column; gap: 8px; padding: 14px; }
 }
@@ -2251,36 +2244,6 @@ body.col-resizing { user-select: none; cursor: col-resize; }
   .card-head { padding-left: 12px; padding-right: 12px; gap: 7px; }
 }
 
-/* ---------- Overview: the composition card's own split layout ----------
-   The gauge is now sized to match the donut beside it on the next card down — a 300px
-   tube against a 300px ring — so the two cards read as a matched pair rather than one
-   large chart and one small one. The tube stands to the left of its headline, with the
-   six tiles filling the width beneath. */
-/* The gauge stands in its own full-height column with the headline beneath it, and the
-   six tiles take the rest of the row. Stacking the gauge ABOVE the tiles (which is
-   what this did when the card was half-width) caps the tube at whatever height is left
-   over — about 260px. Given its own column it can run the full height of the split,
-   which is what makes it match the donut's 300px ring on the card below. */
-.overview-stack .comp-wrap { flex-direction: row; align-items: stretch; gap: 24px; flex-wrap: nowrap; height: 100%; }
-.overview-stack .comp-gauge { flex: 0 0 auto; flex-direction: column; justify-content: center; align-items: center; gap: 14px; }
-/* Two columns × three rows — real tiles, not the full-width row list this was for one
-   session. align-content:center (not stretch) so the block centres in the column's
-   height instead of the rows stretching to fill it and going mostly-empty. */
-.overview-stack .comp-stats { flex: 1 1 auto; align-content: center; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-
-@media (min-width: 1101px) {
-  /* Matched to the donut's ring at the widest leader tier: 150px radius = 300px across.
-     This is the "battery as large as the donut" sizing. */
-  .overview-stack .comp-gauge .battery-tube { width: 124px; height: 300px; }
-}
-@media (max-width: 1100px) {
-  .overview-stack .comp-wrap { flex-direction: column; align-items: stretch; gap: 18px; }
-  .overview-stack .comp-gauge { flex-direction: row; align-items: center; gap: 22px; }
-  .overview-stack .comp-gauge-info { flex: 0 0 auto; min-width: 0; }
-  .overview-stack .comp-gauge .battery-tube { width: 92px; height: 200px; }
-}
-@media (max-width: 560px) {
-  /* One tile per row on a phone — two 155px columns leave no room for a peso figure
-     like ₱482.4M beside its label without truncating one of them. */
-  .overview-stack .comp-stats { grid-template-columns: minmax(0, 1fr); }
-}
+/* Inventory Composition's tiles are plain .kpi-grid now — no card-specific column
+   overrides needed, the same responsive rules every other .kpi-grid page uses apply
+   here too. */

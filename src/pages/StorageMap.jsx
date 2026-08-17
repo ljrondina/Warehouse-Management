@@ -10,6 +10,7 @@ import WarehousePlan from '../components/floorplan/WarehousePlan'
 import RackElevation, { RackSpec } from '../components/floorplan/RackElevation'
 import LocationPanel from '../components/floorplan/LocationPanel'
 import { Card } from '../components/ui'
+import FacilityCapacityGauge from '../components/FacilityCapacityGauge'
 import { num } from '../lib/format'
 import Icon from '../lib/icons'
 // Imported here rather than from main.jsx so the floor plan's own styles ship with the
@@ -102,6 +103,10 @@ export default function StorageMap() {
 
     return (
       <Shell level={level} area={area} rack={rack} go={go}>
+        {/* Whole-facility summary — shown only on the unselected overview, same as
+            the Site Overview tiles below, so it doesn't compete with a specific
+            area's own detail panel once one is picked. */}
+        {!sel && <FacilityCapacityGauge />}
         <Card title="Stockyard" icon="map" right={<span className="fp-scale">Central Warehouse Taytay · scale MTS</span>}>
           <div className="fp-stage">
             <SitePlan

@@ -1393,3 +1393,82 @@ afterwards, `dist/` confirmed clean of it) at 1440×900 and 375×812:
   tab; a fresh tab against the same running server showed no error, confirming it
   was a dev-only HMR artifact, not a real bug — `npm run build` had already passed
   cleanly before this was investigated). `npm run build` passes.
+
+### 2026-08-17 — Session: Total Inventory rename, KpiCard tiles, capacity gauge moves to Floor Plan, Safekeeping delivery insight
+
+Seven requests. Two clarified before building: Value mode on the relocated capacity
+gauge shows the peso value of stock actually sitting in each area (not a relabelled
+copy of the same percentages), and only the Composition card changes shape this
+round — Distribution keeps its current donut + side-panel layout untouched.
+
+**1 & 2. "Total on Hand" is now "Total Inventory", and its formula changed to
+Available + Reserved + Incoming.** This could NOT be done by widening the existing
+`KPIS().total`/`totalValue` fields — Analytics' `resRatio`/`dmgRatio` and the Movement
+History back-cast both divide by that exact field, and silently widening its
+definition would have shifted ratios and a stock curve tuned against the narrower
+one. Added `totalInventory`/`totalInventoryValue` as new fields instead, leaving
+`total`/`totalValue` exactly as they were for every other consumer.
+
+**3 & 7. The six tiles moved to the top of the card and now look like Safekeeping's
+own KPI cards** (`KpiCard`, not the bespoke `.comp-stat` tile), and clicking one
+expands the material list beneath the WHOLE row rather than opening a side panel —
+`KpiCard` gained an `active` prop (highlighted border, the expand glyph swaps ⤢→× so
+it's clear a click will now close it, not open something else). Closed by default:
+no tile is pre-selected on mount, reversing what an earlier session in this same
+project had asked for — this request explicitly said "closed by default" and takes
+precedence as the later instruction. The list, tile and expand state are now all
+local to `InventoryComposition` itself; it no longer needs `InventoryTab` to lift
+`compSel`/`compRows` up to feed a side panel, since there is no side panel to feed.
+
+**4. The battery/capacity gauge moved from the Composition card to the Floor Plan
+module.** It was always a SPACE reading (pallet/shelf positions occupied), not a
+stock reading, and sitting inside a stock card never quite made sense. New
+`FacilityCapacityGauge.jsx`, shown on the Floor Plan's site level (only when nothing
+is selected, same as the Site Overview tiles below it it doesn't compete with). Its
+mini legend now carries both a quantity/value toggle and, per segment, the actual
+figure plus its percentage — where before it was percentage only. `facilityCapacity()`
+in `warehouseMap.js` gained `warehouseValue`/`safekeepingValue`: the peso value of
+inventory whose `warehouseAreaFor()` bucket lands in each group, summed straight from
+the item list the floor plan itself buckets — not a second measurement, so it cannot
+drift from the occupancy figures beside it. Available shows an em dash in Value mode
+rather than a false ₱0 — empty floor space has no value.
+
+**5. The expanded list's rows are compressed and carry different information.** The
+old `.wpc` card (four stacked sections: code+badge, description, trade path, a
+four-figure footer with Brand/Condition/Purchase Price) is NOT reused here — Warehouse's
+list is now full width with no side panel to be narrow for, so a new `CompRow`
+renderer lays out two lines per material instead of four: code + description, then a
+single wrapping strip of exactly the five figures asked for — quantity, condition,
+purchase price, trade, item group.
+
+**6. Safekeeping's Overview gained a compressed Delivery Insight strip.** New
+`DeliveryInsight` in `SafekeepingTab.jsx`, reusing `deliveryRows`/`DELIVERY_STATUSES`/
+`deliveryStatusCounts` from the SAME data module the full Delivery Tracker reads (and
+the same tone→colour mapping it uses), so the two can never disagree. Five compact
+stat chips in one row — Total Scheduled plus the four urgency buckets — with a "View
+full tracker" button that jumps straight to the Activity sub-view where the real
+tracker (with its own filters) lives.
+
+**Housekeeping.** Deleted the CSS this rewrite fully orphaned: the old `.comp-wrap`/
+`.comp-gauge`/`.comp-gauge-info`/`.comp-stats`/`.comp-stat`/`.cs-*`/`.comp-tip` rules
+(base and every `.overview-stack`-scoped override of them, across three separate media
+query blocks) — the tiles are plain `.kpi-grid`/`.kpi` now, which already carries its
+own responsive rules used by every other KPI row in the app.
+
+**Verified against a temporary local fixture** (240 inventory lines, 700 ledger rows,
+90 safekeeping lines; deleted afterwards, `dist/` confirmed clean of it) at 1440×900
+and 375×812, light and dark:
+- Composition tiles read Total Inventory/Available/Reserved/Incoming/Outgoing/Damaged;
+  measured 92,162 + 21,826 + 14,197 = 128,185 — Available+Reserved+Incoming matching
+  the displayed Total Inventory figure exactly.
+- List closed on load (`.comp-expand` absent); clicking a tile opens it with the
+  correct title, row count and active-tile highlight; clicking the same tile again
+  closes it. Two tile columns at 375px, no horizontal scroll.
+- Floor Plan's capacity widget renders with quantity ("164 pos. · 20%" etc.) and,
+  after the toggle, value ("₱422.4M · 20%", "₱94.7M · 8%", "— · 72%" for Available).
+  Stacks to a single column at 375px with no overflow.
+- Safekeeping Overview shows the "Delivery Insight" card with five chips (all reading
+  0 against this fixture, since it doesn't seed `deliveryTracker.js` — a fixture gap,
+  not a widget bug); "View full tracker" correctly switches the sub-tab to Activity.
+- No console errors on a clean tab; both themes render the composition list and the
+  capacity widget without incident. `npm run build` passes.

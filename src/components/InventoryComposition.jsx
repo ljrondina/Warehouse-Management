@@ -1,40 +1,27 @@
+import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { num, peso, compact } from '../lib/format'
 import Icon from '../lib/icons'
-import { facilityCapacity } from '../data/warehouseMap'
+import { KpiCard } from './ui'
 
-// The three segments of the capacity gauge below. Each maps to a real area on the
-// floor plan (see facilityCapacity() in warehouseMap.js) — Warehouse is every
-// warehouse-owned rack (MEPFS, Structural, Architectural, High Value), Safekeeping is
-// its own area, and Available is whatever pallet/shelf positions neither has filled.
-// This is a SPACE measurement (positions occupied), not a stock measurement — it will
-// not agree with the Available/Reserved split above it, and is not meant to.
-const CAP_SEGMENTS = [
-  { key: 'warehouse', role: 'total', icon: 'warehouse', label: 'Warehouse' },
-  { key: 'safekeeping', role: 'reserved', icon: 'vault', label: 'Safekeeping' },
-  { key: 'available', role: 'available', icon: 'box', label: 'Available' },
-]
-
-// The Inventory dashboard used to carry six quantity KPI cards in a grid ABOVE this
-// gauge, plus three value cards beside them — all describing the same stock the gauge
-// was already drawing. They are consolidated in here: the gauge shows the
-// Available/Reserved split of stock on hand, the six figures sit beside it as tiles
-// that hover for a description and click through to the matching material list, and
-// the card's own Quantity/Value toggle swaps every figure between units and pesos.
-// That toggle is what replaced the separate value cards; Average Value / SKU was
-// dropped with them.
+// The six quantity figures used to sit beside a stock-split gauge; the gauge moved to
+// the Floor Plan module (it was a SPACE reading, not a stock one — see
+// FacilityCapacityGauge.jsx) and these tiles now run the full width of the card on
+// their own, styled like the Safekeeping tab's own KPI row. Clicking a tile expands
+// the full material list beneath the whole row rather than opening a side panel,
+// since there is no chart beside them any more to share the row with.
 //
-// `field` is the inventory column the drawer filters and sorts on when a tile is
-// clicked (always the quantity column — the drawer lists materials, and "materials
-// with a reserved quantity" is the same set in either metric). `role` indexes the
-// shared per-theme series map so a concept keeps the same colour here, in the
-// movement chart and on the storage map.
+// `field` is the inventory column the expanded list filters and sorts on when a tile
+// is clicked. `role` indexes the shared per-theme series map so a concept keeps the
+// same colour here, in the movement chart and on the storage map.
 export const COMPOSITION_STATS = [
   {
-    // "Total on Hand" rather than "Total Inventory": it is the accurate name for what
-    // the figure counts, and it is the one label short enough to fit a third-width
-    // tile without truncating. The tooltip carries the full definition either way.
-    key: 'total', valueKey: 'totalValue', field: 'totalQty', role: 'total', icon: 'inventory', label: 'Total on Hand',
-    tip: 'Stock on hand across every material in the Central Warehouse — always equal to Available plus Reserved. Damaged units are flagged in place and counted here; incoming and outgoing are in transit and are not.',
+    // "Total Inventory" = Available + Reserved + Incoming — everything either on the
+    // shelf now or already committed to arrive, which is why it does NOT match
+    // totalQty (Available + Reserved only) the way it used to. See KPIS() in
+    // insights.js for the totalInventory/totalInventoryValue fields this reads.
+    key: 'totalInventory', valueKey: 'totalInventoryValue', field: 'totalQty', role: 'total', icon: 'inventory', label: 'Total Inventory',
+    tip: 'Available plus Reserved plus Incoming — every unit already on the shelf or already committed to arrive. Outgoing and Damaged are not counted here.',
   },
   {
     key: 'available', valueKey: 'availableValue', field: 'availableQty', role: 'available', icon: 'box', label: 'Available',
@@ -58,80 +45,76 @@ export const COMPOSITION_STATS = [
   },
 ]
 
-export default function InventoryComposition({ k, unit, metric = 'qty', series, onPick, selectedKey }) {
+// One compact row per material — code + description on the first line, then the five
+// figures that matter (quantity, condition, purchase price, trade, item group) as a
+// single wrapping strip beneath it, instead of the old four-section card. This is
+// deliberately its own renderer rather than MaterialList's default: this list is now
+// full width, so it can afford one dense row per line instead of a stacked card.
+function CompRow({ r, field, label }) {
+  const nav = useNavigate()
+  return (
+    <div className="comp-row" onClick={() => nav(`/inventory/${r.id}`)}>
+      <div className="cr-main">
+        <span className="cr-code">{r.itemCode}</span>
+        <span className="cr-desc" title={r.description}>{r.description}</span>
+      </div>
+      <div className="cr-meta">
+        <span className="cr-chip"><small>{label}</small>{num(r[field])} {r.uom}</span>
+        <span className="cr-chip"><small>Condition</small>Class {r.conditionClass}</span>
+        <span className="cr-chip"><small>Price</small>{peso(r.unitPrice, { decimals: 2 })}</span>
+        <span className="cr-chip"><small>Trade</small>{r.tradeL1}</span>
+        <span className="cr-chip"><small>Item Group</small>{r.tradeL2}</span>
+      </div>
+    </div>
+  )
+}
+
+export default function InventoryComposition({ k, unit, metric = 'qty', series, pool }) {
   const money = metric === 'value'
   const fmtTile = (v) => (money ? `₱${compact(v)}` : num(v))
+  // Closed by default — no tile pre-selected. Clicking one expands its list beneath
+  // the row; clicking the same tile again (or the close button) collapses it.
+  const [selKey, setSelKey] = useState(null)
+  const sel = COMPOSITION_STATS.find((s) => s.key === selKey)
 
-  // Real floor-space occupancy, not a function of the pool or the Quantity/Value
-  // toggle — a pallet position is occupied or it isn't, regardless of which metric
-  // the rest of the card is showing. Cheap to call per render: it reduces over
-  // areaCapacity()'s own placement cache rather than recomputing placement itself.
-  const cap = facilityCapacity()
-  const capPct = { warehouse: cap.warehousePct, safekeeping: cap.safekeepingPct, available: cap.availablePct }
+  const rows = useMemo(() => {
+    if (!sel) return []
+    return pool.filter((i) => (i[sel.field] || 0) > 0).sort((a, b) => b[sel.field] - a[sel.field])
+  }, [sel, pool])
 
   return (
-    <div className="comp-wrap">
-      <div className="comp-gauge">
-        {/* column-reverse: the first child renders at the bottom. Warehouse and
-            Safekeeping fill up from the base — real racked/shelved space in use —
-            and whatever is left rises as Available at the top, the way a tank's
-            headroom sits above its contents. */}
-        <div className="battery-tube cap-tube">
-          {CAP_SEGMENTS.map((s) => (
-            <div key={s.key} className="battery-seg cap-seg" style={{ height: `${capPct[s.key]}%`, '--seg': series[s.role] }} />
-          ))}
-        </div>
-
-        {/* Legend sits beside the tube — the Total/Available stock headline that used
-            to sit under it is gone; the gauge is now purely a space reading, and
-            printing a stock figure directly beneath it read as though the two
-            numbers were describing the same thing. */}
-        <div className="comp-gauge-info">
-          {/* Mini legend + percentages, one row per segment, in the same top-to-bottom
-              order as the tube reads bottom-to-top (Warehouse first, Available last) —
-              reading down the legend matches reading up the tube. No colour swatch:
-              each segment's own icon already carries its identity, so a second colour
-              chip beside it repeated the same information. */}
-          <div className="cap-legend">
-            {CAP_SEGMENTS.map((s) => (
-              <span key={s.key} className="cap-item" style={{ '--seg': series[s.role] }}>
-                <Icon name={s.icon} size={12} />
-                <span className="cap-lbl">{s.label}</span>
-                <span className="cap-pct tabular">{Math.round(capPct[s.key])}%</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="comp-stats">
+    <div className="comp-wrap-v2">
+      <div className="kpi-grid comp-kpis">
         {COMPOSITION_STATS.map((s) => (
-          <button
+          <KpiCard
             key={s.key}
-            type="button"
-            className={`comp-stat ${selectedKey === s.key ? 'selected' : ''}`}
-            aria-pressed={selectedKey === s.key}
-            style={{ '--cs-color': series[s.role] }}
-            onClick={() => onPick(selectedKey === s.key ? null : { key: s.key, field: s.field, label: s.label })}
-            // A real tooltip element rather than a title attribute so it can hold a
-            // full sentence and appear without the browser's ~1s delay.
-            aria-label={`${s.label}: ${s.tip}`}
-          >
-            <span className="cs-icon"><Icon name={s.icon} size={17} /></span>
-            <span className="cs-body">
-              {/* No per-tile unit chip. Printing "units" six times down the card cost
-                  the figures the width they needed to render without truncating, and
-                  the headline beside the gauge already names the unit once. The exact
-                  value and its unit are on the tile's own title attribute. */}
-              <span className="cs-val tabular" title={money ? peso(k[s.valueKey]) : `${num(k[s.key])} ${unit}`}>
-                {fmtTile(money ? k[s.valueKey] : k[s.key])}
-              </span>
-              <span className="cs-lbl">{s.label}</span>
-            </span>
-            <span className="comp-tip">{s.tip}<em>Click to list these materials</em></span>
-          </button>
+            label={s.label}
+            value={fmtTile(money ? k[s.valueKey] : k[s.key])}
+            unit={money ? 'value' : unit}
+            icon={s.icon}
+            color={series[s.role]}
+            tooltip={s.tip}
+            active={selKey === s.key}
+            onClick={() => setSelKey((cur) => (cur === s.key ? null : s.key))}
+          />
         ))}
       </div>
+
+      {sel && (
+        <div className="comp-expand">
+          <div className="comp-expand-head">
+            <span className="comp-expand-title">{sel.label} <span className="faint">· {rows.length} material{rows.length === 1 ? '' : 's'}</span></span>
+            <button className="clp-close" onClick={() => setSelKey(null)} aria-label="Close" title="Close">
+              <Icon name="close" size={16} />
+            </button>
+          </div>
+          <div className="comp-rows">
+            {rows.length === 0
+              ? <div className="empty">No materials in this selection.</div>
+              : rows.map((r) => <CompRow key={r.id} r={r} field={sel.field} label={sel.label} />)}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { soh, TRADES, SHEET_PROJECTS } from '../../data/safekeeping'
 import { KPIS, bySkScope, SK_SCOPES, SHEET_VIEWS } from '../../data/safekeepingInsights'
+import { deliveryRows, DELIVERY_STATUSES, deliveryStatusCounts } from '../../data/deliveryTracker'
 import { Card, KpiCard, Segmented, Toggle, NoData } from '../../components/ui'
 import { CardListPanel } from '../../components/MaterialList'
 import Select from '../../components/Select'
@@ -31,6 +32,44 @@ const SK_CARDS = [
   { key: 'totalIn', role: 'incoming', label: 'Incoming', icon: 'incoming', qty: true, tip: 'Quantity received into safekeeping, per the SOH sheet’s In column.' },
   { key: 'totalOut', role: 'outgoing', label: 'Outgoing', icon: 'outgoing', qty: true, tip: 'Quantity pulled out of safekeeping, per the SOH sheet’s Out column.' },
 ]
+
+// Same urgency→colour mapping DeliveryTracker.jsx uses for its own KPI row, borrowed
+// here so this widget and the full tracker never disagree about what a colour means.
+const DELIVERY_TONE_ROLE = { danger: 'outgoing', warn: 'damaged', info: 'incoming', neutral: 'reserved' }
+
+// A compressed read of the Delivery Tracker (the real "Warehouse Schedule" sheet),
+// for the Overview view — five numbers in one row rather than the full KPI grid +
+// data table DeliveryTracker itself renders. `onViewAll` jumps to the Activity
+// sub-view, where the full tracker (and its own filters) lives.
+function DeliveryInsight({ onViewAll }) {
+  const { theme } = useTheme()
+  const S = seriesFor(theme)
+  const counts = useMemo(() => deliveryStatusCounts(), [])
+  const chips = [
+    { label: 'Scheduled', value: deliveryRows.length, icon: 'truck', color: S.neutral },
+    ...DELIVERY_STATUSES.map((s) => ({ label: s.short, value: counts[s.key] || 0, icon: s.icon, color: S[DELIVERY_TONE_ROLE[s.tone]] || S.neutral })),
+  ]
+  return (
+    <Card title="Delivery Insight" icon="truck" iconColor={S.total}
+      right={
+        <button className="btn btn-sm" onClick={onViewAll}>
+          <span className="btn-text">View full tracker</span> <Icon name="chevronRight" size={13} />
+        </button>
+      }>
+      <div className="dins-strip">
+        {chips.map((c, i) => (
+          <div key={i} className="dins-item" style={{ '--di': c.color }}>
+            <span className="dins-icon"><Icon name={c.icon} size={15} /></span>
+            <span className="dins-body">
+              <span className="dins-val tabular">{num(c.value)}</span>
+              <span className="dins-lbl">{c.label}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  )
+}
 
 // The donut folds everything past the 8th slice into "Others", which lands at index 8.
 const ROLLUP_N = 8
@@ -203,6 +242,8 @@ export default function SafekeepingTab({ pool, qtyUnit = 'units' }) {
                 unit={c.qty ? qtyUnit : c.unit} icon={c.icon} color={S[c.role]} tooltip={c.tip} />
             ))}
           </div>
+
+          <DeliveryInsight onViewAll={() => selectView('activity')} />
 
           {/* Same UI as the Warehouse tab's Inventory Distribution card: a donut on
               the left, leader-labelled, and the ranked list on the right — clicking a

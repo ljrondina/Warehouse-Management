@@ -23,14 +23,18 @@ export function Badge({ children, tone, noDot }) {
 /* ---------- KPI card ----------
    `tooltip` shows a comprehensive one-sentence description on hover (replaces the
    old static unit sublabel). `icon` shows a recognizable glyph. */
-export function KpiCard({ label, value, unit, trend, color, tooltip, icon, onClick }) {
+// `active` marks the tile whose list is currently expanded below it — a highlighted
+// border and a swapped expand glyph (⤢ → ×) so it is obvious which tile a click will
+// collapse versus which ones will expand.
+export function KpiCard({ label, value, unit, trend, color, tooltip, icon, onClick, active }) {
   const up = (trend ?? 0) >= 0
   return (
     <div
-      className={`kpi ${tooltip ? 'has-tip' : ''} ${onClick ? 'clickable' : ''}`}
+      className={`kpi ${tooltip ? 'has-tip' : ''} ${onClick ? 'clickable' : ''} ${active ? 'active' : ''}`}
       style={{ '--kpi-color': color }}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
+      aria-pressed={onClick ? Boolean(active) : undefined}
     >
       <div className="kpi-top">
         <div className="kpi-label">{label}</div>
@@ -48,7 +52,7 @@ export function KpiCard({ label, value, unit, trend, color, tooltip, icon, onCli
           )}
         </div>
       )}
-      {onClick && <span className="kpi-expand" title="View materials">⤢</span>}
+      {onClick && <span className="kpi-expand" title={active ? 'Close' : 'View materials'}>{active ? '×' : '⤢'}</span>}
       {tooltip && <div className="kpi-tip">{tooltip}</div>}
     </div>
   )

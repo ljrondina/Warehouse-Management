@@ -55,11 +55,18 @@ export const KPIS = (pool = items) => {
   const priced = (field) => pool.reduce((a, b) => a + (b[field] || 0) * (b.unitPrice || 0), 0)
   const availableValue = priced('availableQty')
   const reservedValue = priced('reservedQty')
+  const incoming = sum(pool, 'incomingQty')
+  const incomingValue = priced('incomingQty')
   return {
+    // `total`/`totalValue` stay Available + Reserved ONLY — Analytics' resRatio/
+    // dmgRatio and the Movement History back-cast both divide by this field, and
+    // widening its definition would silently shift ratios and a stock curve that
+    // were tuned against the narrower one. The Composition card's headline tile
+    // reads `totalInventory`/`totalInventoryValue` below instead.
     total: sum(pool, 'availableQty') + sum(pool, 'reservedQty'),
     available: sum(pool, 'availableQty'),
     reserved: sum(pool, 'reservedQty'),
-    incoming: sum(pool, 'incomingQty'),
+    incoming,
     outgoing: sum(pool, 'outgoingQty'),
     damaged: sum(pool, 'damagedQty'),
     // Purchase-cost value of each quantity column. Every one is the column times the
@@ -70,11 +77,16 @@ export const KPIS = (pool = items) => {
     totalValue: availableValue + reservedValue,
     availableValue,
     reservedValue,
-    incomingValue: priced('incomingQty'),
+    incomingValue,
     outgoingValue: priced('outgoingQty'),
     damagedValue: priced('damagedQty'),
     value: sum(pool, 'inventoryValue'),
     skuCount: pool.length,
+    // "Total Inventory" for the Composition card's headline tile: everything either
+    // on the shelf now or already committed to arrive. Outgoing/Damaged are
+    // deliberately excluded — see the tile's own tooltip.
+    totalInventory: sum(pool, 'availableQty') + sum(pool, 'reservedQty') + incoming,
+    totalInventoryValue: availableValue + reservedValue + incomingValue,
   }
 }
 

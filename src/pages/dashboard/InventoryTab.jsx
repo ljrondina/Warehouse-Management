@@ -211,12 +211,10 @@ export default function InventoryTab({ pool, qtyUnit }) {
   const [agingMetric, setAgingMetric] = useState('value')
   const [flowMetric, setFlowMetric] = useState('qty')
   const [compMetric, setCompMetric] = useState('qty')
-  // Overview selections. These used to open a full-screen sliding drawer; the list
-  // now lives in the right-hand panel of the card that was clicked, so the selection
-  // is per-card state rather than one modal shared by both. Both default to "the
-  // whole pool" rather than nothing, so the panel has something to show the moment
-  // the card mounts instead of an idle "click a figure" placeholder.
-  const [compSel, setCompSel] = useState({ key: 'total', field: 'totalQty', label: 'Total on Hand' })
+  // The Distribution card's own selection. Composition's tile selection is now local
+  // state inside InventoryComposition itself — it owns its own expandable list, so it
+  // no longer needs to lift that state up here the way it did when the list lived in
+  // a side panel InventoryTab rendered.
   const [donutSel, setDonutSel] = useState({ name: 'All Items', all: true })
 
   const INSIGHT_ROWS = useMemo(buildInsightRows, [items.length])
@@ -230,13 +228,6 @@ export default function InventoryTab({ pool, qtyUnit }) {
     if (donutScope === 'class') return rollup(byClass(pool))
     return rollup(donutScope === 'l1' ? byTradeL1(pool) : byTradeL2(pool, 'all'))
   }, [pool, donutScope])
-
-  // The materials behind a clicked composition tile — the same set the drawer used to
-  // list, ranked by the tile's own quantity column.
-  const compRows = useMemo(() => {
-    if (!compSel) return []
-    return pool.filter((i) => (i[compSel.field] || 0) > 0).sort((a, b) => b[compSel.field] - a[compSel.field])
-  }, [compSel, pool])
 
   // The materials behind a clicked slice. "Others" is the rollup bucket, not a real
   // category, so it resolves to everything NOT in one of the named slices rather than
@@ -282,19 +273,12 @@ export default function InventoryTab({ pool, qtyUnit }) {
         // Safekeeping's Overview reuses .overview-stack/.distribution-card for the
         // same visual language but keeps the narrower default width.
         <div className="mt overview-stack wh-overview">
-          {/* The six quantity figures live INSIDE this card — see
-              InventoryComposition. Each tile hovers for a description and clicks
-              through to the material list on the right. */}
+          {/* The six quantity tiles live INSIDE this card — see InventoryComposition.
+              Each tile hovers for a description and, clicked, expands the full
+              material list beneath the whole row (closed by default). */}
           <Card title="Inventory Composition" icon="box" className="composition-card" data-tour="kpis"
             foot={<Toggle size="sm" options={metricOpts} value={compMetric} onChange={setCompMetric} />}>
-            <div className="card-split">
-              <div className="card-split-main">
-                <InventoryComposition k={k} unit={qtyUnit} metric={compMetric} series={S}
-                  onPick={setCompSel} selectedKey={compSel?.key} />
-              </div>
-              <CardListPanel selection={compSel} rows={compRows} onClear={() => setCompSel(null)}
-                hint="Click any figure on the left to list the materials behind it." />
-            </div>
+            <InventoryComposition k={k} unit={qtyUnit} metric={compMetric} series={S} pool={pool} />
           </Card>
 
           <Card title="Inventory Distribution" icon="reports" className="distribution-card" data-tour="charts"

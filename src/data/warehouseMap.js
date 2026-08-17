@@ -470,6 +470,18 @@ export function facilityCapacity() {
   const safekeeping = sum(SAFEKEEPING_IDS)
   const positions = warehouse.positions + safekeeping.positions
   const available = Math.max(0, positions - warehouse.used - safekeeping.used)
+
+  // Peso value of the inventory actually sitting in each bucket — the SAME
+  // warehouseAreaFor() bucketing the floor plan itself draws with, reduced over the
+  // current item list rather than measured a second way, so it cannot drift from the
+  // space figures above. Available has no value figure: empty positions hold nothing.
+  let warehouseValue = 0
+  let safekeepingValue = 0
+  for (const it of items) {
+    if (warehouseAreaFor(it) === 'safekeeping') safekeepingValue += it.inventoryValue || 0
+    else warehouseValue += it.inventoryValue || 0
+  }
+
   return {
     positions,
     warehouseUsed: warehouse.used,
@@ -478,6 +490,8 @@ export function facilityCapacity() {
     warehousePct: positions > 0 ? (warehouse.used / positions) * 100 : 0,
     safekeepingPct: positions > 0 ? (safekeeping.used / positions) * 100 : 0,
     availablePct: positions > 0 ? (available / positions) * 100 : 0,
+    warehouseValue,
+    safekeepingValue,
   }
 }
 
