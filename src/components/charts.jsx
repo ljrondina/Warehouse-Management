@@ -460,7 +460,12 @@ export function DistributionDonut({
             />
           </PieChart>
         </ResponsiveContainer>
-        <div className="donut-center" style={{ maxWidth: rInner * 1.72 }}>
+        {/* No max-width on this element, ever. It is `position: absolute; inset: 0`
+            and centres its text by flexbox, so any width cap shrinks the box away from
+            `right: 0` and pins it to the LEFT edge of the chart — which drags the total
+            clean out of the ring. The readout is kept inside the hole by scaling the
+            font off rInner (below), not by constraining this box. */}
+        <div className="donut-center">
           <span className="donut-center-lbl" style={{ fontSize: Math.max(8, centreVal * 0.46) }}>Total</span>
           <span className="donut-center-val tabular" style={{ fontSize: centreVal }}>
             {metric === 'value' ? `₱${compact(total)}` : compact(total)}

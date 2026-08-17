@@ -1122,3 +1122,30 @@ errors. `npm run build` passes.
 resize — the donut kept a 780px viewBox scaled down to 324px and reported the desktop
 tier. Every mobile figure above was taken after a **full page reload** at that width, not
 after a resize. Screenshots remain unavailable for the same reason.
+
+### 2026-08-17 — Fix: donut total pushed outside the ring
+
+Regression from the session above, introduced by the fix for the phone-sized centre
+readout. Scaling the font off `rInner` was correct; the `maxWidth: rInner * 1.72` added
+alongside it was not.
+
+`.donut-center` is `position: absolute; inset: 0` and centres its text with flexbox —
+it is deliberately the full size of the chart box. A `max-width` on it does not centre
+anything: the box shrinks away from `right: 0` and stays pinned to `left: 0`, so the
+readout was dragged out of the ring and towards the left edge of the chart. At desktop
+that meant a 179px box inside a 780px chart, i.e. the total sitting roughly 300px left
+of the hole it belongs in.
+
+Removed the cap outright rather than moving it onto the child. The font size is already
+derived from the inner radius, so the readout fits the hole by construction and the cap
+was never load-bearing — measured at 67px wide inside a 208px hole at desktop, and 69px
+inside a 92px hole on a phone in Value mode (`₱517.1M`, the widest string the card
+produces). A comment on the element now says why it must never carry a width cap.
+
+**Verified** against the temporary fixture (deleted again afterwards; `dist/` confirmed
+clean): the value's centre is horizontally **exactly** on the ring's centre — offset 0px
+— at 1440×900 and at 375×812, in both Quantity and Value mode, and on the Analytics
+donut. The Safekeeping donut is unreachable with this fixture (no safekeeping sheets in
+it), but it runs in legend mode where `rInner` is the fixed 62px prop, giving a 20px
+centre identical to the previous hard-coded value, and it never carried the max-width.
+`npm run build` passes.
