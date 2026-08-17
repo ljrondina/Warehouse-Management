@@ -60,10 +60,6 @@ export const COMPOSITION_STATS = [
 
 export default function InventoryComposition({ k, unit, metric = 'qty', series, onPick, selectedKey }) {
   const money = metric === 'value'
-  const available = money ? k.availableValue : k.available
-  const reserved = money ? k.reservedValue : k.reserved
-  const base = available + reserved
-  const fmtBig = (v) => (money ? `₱${compact(v)}` : num(v))
   const fmtTile = (v) => (money ? `₱${compact(v)}` : num(v))
 
   // Real floor-space occupancy, not a function of the pool or the Quantity/Value
@@ -86,46 +82,24 @@ export default function InventoryComposition({ k, unit, metric = 'qty', series, 
           ))}
         </div>
 
-        {/* Legend and headline travel together as one block beside the tube — kept in
-            a single wrapper so the responsive rules only have to reflow the tube
-            against ONE sibling instead of juggling three. */}
+        {/* Legend sits beside the tube — the Total/Available stock headline that used
+            to sit under it is gone; the gauge is now purely a space reading, and
+            printing a stock figure directly beneath it read as though the two
+            numbers were describing the same thing. */}
         <div className="comp-gauge-info">
           {/* Mini legend + percentages, one row per segment, in the same top-to-bottom
               order as the tube reads bottom-to-top (Warehouse first, Available last) —
-              reading down the legend matches reading up the tube. */}
+              reading down the legend matches reading up the tube. No colour swatch:
+              each segment's own icon already carries its identity, so a second colour
+              chip beside it repeated the same information. */}
           <div className="cap-legend">
             {CAP_SEGMENTS.map((s) => (
               <span key={s.key} className="cap-item" style={{ '--seg': series[s.role] }}>
-                <i /><Icon name={s.icon} size={12} />
+                <Icon name={s.icon} size={12} />
                 <span className="cap-lbl">{s.label}</span>
                 <span className="cap-pct tabular">{Math.round(capPct[s.key])}%</span>
               </span>
             ))}
-          </div>
-
-          {/* The headline readout. Deliberately the largest type in the card: it is
-              the one sentence a warehouse manager reads first — how much of what we
-              hold is actually free to issue. This is a STOCK figure (Available/
-              Reserved), independent of the SPACE figures in the gauge and legend
-              above it — the two answer different questions and are not meant to
-              agree. */}
-          <div className="comp-headline">
-            {/* Total leads, Available follows — "of the total we hold, this much is
-                free" reads left to right in the order the sentence is said. Both
-                figures share one font size now; the old 30px/17px split emphasised
-                Available over Total, but the gauge and the caption already say which
-                one to focus on, so the figures themselves read as a plain ratio. */}
-            <div className="ch-figure">
-              <span className="ch-total tabular">{fmtBig(base)}</span>
-              <span className="ch-of">/</span>
-              <span className="ch-avail tabular">{fmtBig(available)}</span>
-            </div>
-            {/* The Available/Reserved percentage chips that used to sit here are gone.
-                The gauge draws that same split, and its own %-fill label prints the
-                available share — three statements of one number in one card. */}
-            <div className="ch-caption">
-              {money ? 'value' : unit} available of SOH
-            </div>
           </div>
         </div>
       </div>

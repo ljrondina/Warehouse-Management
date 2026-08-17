@@ -1329,3 +1329,67 @@ for colour/style reads) extending to transform geometry, not a real bug: setting
 same scope as the INITIAL state and reloading the page showed the thumb correctly
 positioned on the very first paint. Every geometry claim above involving a click was
 re-verified after a full page load rather than trusted from the click alone.
+
+### 2026-08-17 — Session: capacity gauge cleanup, outlined tiles, default selections
+
+Five small requests, all in `InventoryComposition.jsx`, `InventoryTab.jsx` and
+`index.css`.
+
+**1. The Total/Available stock headline under the capacity tube is gone.** It was a
+STOCK figure (Available/Reserved) sitting directly under a SPACE gauge (Warehouse/
+Safekeeping/Available) — two different questions stacked so close together they read
+as one. Removing it also fixed the tube's own alignment: with the headline's 220px
+max-width no longer in the box, the legend (200px) now centres directly under the
+124px tube instead of the wider text block pulling the visual centre sideways.
+
+**2. The six quantity tiles are a 2×3 grid of tiles again**, not the single-column
+row list from two sessions ago. `.overview-stack .comp-stats` goes back to
+`repeat(2, minmax(0, 1fr))` (1 column only below 560px, where a tile can't fit a
+peso figure and its label side by side). The tiles are outlined now, not filled —
+`.comp-stat`'s flat `--surface-2` background read as one grey slab repeated six
+times; it's `background: transparent` at rest, with a soft `color-mix` tint only on
+hover and on the selected tile, so the accent colour is what tells tiles apart
+rather than a shared grey fill.
+
+**3. The mini legend's colour swatches are gone.** Each segment's icon already
+carries the segment's colour (`.cap-item svg { color: var(--seg) }`), so the square
+dot beside it repeated the same information for no reason.
+
+**4 & 5. Both Overview cards default to showing their full list, not an idle
+placeholder.** `compSel` now starts as `{ key: 'total', field: 'totalQty', label:
+'Total on Hand' }` — the Composition card's first tile, so it opens already selected
+and highlighted. `donutSel` starts as `{ name: 'All Items', all: true }`, a new
+"show everything" state `donutRows` recognises before falling through to its normal
+per-slice filtering; `selectedName` is passed as `undefined` in this state so no
+slice on the ring dims, since "All Items" isn't a real slice. Changing the
+Trade/Item Group/Class scope resets back to this same "All Items" default rather
+than clearing to idle, for the same reason a scope change already cleared a real
+selection — a Trade name isn't an Item Group name, but "All Items" is valid in
+every scope. The explicit clear (✕) button on either panel still returns to a true
+idle state; only the two cards' *initial* state changed.
+
+**Housekeeping.** Deleted the now-dead `.comp-headline`/`.ch-figure`/`.ch-total`/
+`.ch-avail`/`.ch-of`/`.ch-caption` rules (including two already-orphaned copies in
+old pre-`.overview-stack` media queries from an earlier session) and the `.cap-item i`
+swatch rule.
+
+**Verified against a temporary local fixture** (240 inventory lines; deleted
+afterwards, `dist/` confirmed clean of it) at 1440×900 and 375×812:
+- No `.comp-headline` in the DOM; zero `.cap-item i` swatch elements.
+- 6 tiles at 2 distinct x-positions / 3 distinct y-positions at desktop (true 2×3
+  grid), 1 column at 375px.
+- Resting tile background reads `rgba(0, 0, 0, 0)` (genuinely transparent) on every
+  tile except the one matching the default selection, which correctly carries the
+  selected-state tint — confirming the outline treatment applies everywhere it
+  should and the selected feedback still works.
+- On load, the Composition panel already reads "Total on Hand" / 240 materials and
+  the Distribution panel already reads "All Items" / 240 materials — no idle
+  "click a figure" state on first paint.
+- Clicking a real donut slice still dims the other eight slices and swaps the panel
+  to that slice's materials, confirming the new default didn't break the existing
+  click-through.
+- No horizontal scroll, no console errors on a clean tab (a `fmtBig is not defined`
+  error surfaced once from a stale Vite dev-server module cache in an already-open
+  tab; a fresh tab against the same running server showed no error, confirming it
+  was a dev-only HMR artifact, not a real bug — `npm run build` had already passed
+  cleanly before this was investigated). `npm run build` passes.

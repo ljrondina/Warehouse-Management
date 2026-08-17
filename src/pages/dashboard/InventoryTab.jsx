@@ -213,9 +213,11 @@ export default function InventoryTab({ pool, qtyUnit }) {
   const [compMetric, setCompMetric] = useState('qty')
   // Overview selections. These used to open a full-screen sliding drawer; the list
   // now lives in the right-hand panel of the card that was clicked, so the selection
-  // is per-card state rather than one modal shared by both.
-  const [compSel, setCompSel] = useState(null)
-  const [donutSel, setDonutSel] = useState(null)
+  // is per-card state rather than one modal shared by both. Both default to "the
+  // whole pool" rather than nothing, so the panel has something to show the moment
+  // the card mounts instead of an idle "click a figure" placeholder.
+  const [compSel, setCompSel] = useState({ key: 'total', field: 'totalQty', label: 'Total on Hand' })
+  const [donutSel, setDonutSel] = useState({ name: 'All Items', all: true })
 
   const INSIGHT_ROWS = useMemo(buildInsightRows, [items.length])
   const k = useMemo(() => KPIS(pool), [pool])
@@ -241,6 +243,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
   // to a category literally called Others — which would list nothing.
   const donutRows = useMemo(() => {
     if (!donutSel) return []
+    if (donutSel.all) return [...pool].sort((a, b) => b.totalQty - a.totalQty)
     const field = SCOPE_FIELD[donutScope]
     const named = new Set(donutData.filter((d) => d.name !== 'Others').map((d) => d.name))
     const match = donutSel.name === 'Others'
@@ -297,11 +300,12 @@ export default function InventoryTab({ pool, qtyUnit }) {
           <Card title="Inventory Distribution" icon="reports" className="distribution-card" data-tour="charts"
             foot={
               <div className="chart-controls">
-                {/* Changing the scope clears the selection: a Trade name is not an
-                    Item Group name, so the panel would otherwise keep a heading that
-                    no slice on the new ring corresponds to. */}
+                {/* Changing the scope resets to the "All Items" default rather than
+                    clearing outright: a Trade name is not an Item Group name, so the
+                    panel would otherwise keep a heading that no slice on the new ring
+                    corresponds to. */}
                 <Toggle size="sm" options={scopeOpts} value={donutScope}
-                  onChange={(v) => { setDonutScope(v); setDonutSel(null) }} />
+                  onChange={(v) => { setDonutScope(v); setDonutSel({ name: 'All Items', all: true }) }} />
                 <Toggle size="sm" options={metricOpts} value={donutMetric} onChange={setDonutMetric} />
               </div>
             }>
@@ -311,7 +315,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
                   ? <NoData what="No inventory loaded" why="Nothing matches the current filter, or the inventory table is empty." />
                   : <DistributionDonut data={donutData} metric={donutMetric} leaderLines wide
                       onSliceClick={(d) => setDonutSel((s) => (s?.name === d.name ? null : { name: d.name }))}
-                      selectedName={donutSel?.name} />}
+                      selectedName={donutSel?.all ? undefined : donutSel?.name} />}
               </div>
               <CardListPanel
                 selection={donutSel ? { label: donutSel.name, field: 'totalQty' } : null}
