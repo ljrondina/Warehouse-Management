@@ -76,6 +76,10 @@ const paths = {
     <path d="M3 14.5L21 10" /><path d="M6.5 11.9v3.4M10.5 10.9v3.4M14.5 9.9v3.4M18.5 8.9v3.4" />
     <path d="M3 20L21 15.5" /><path d="M6.5 17.4v3.4M10.5 16.4v3.4M14.5 15.4v3.4M18.5 14.4v3.4" />
   </>,
+  // Distribution toggle glyphs: a single ring vs two concentric rings (quantity inner,
+  // value outer) for the double-donut mode.
+  donutSingle: <><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.4" /></>,
+  donutDouble: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5.6" /><circle cx="12" cy="12" r="2.2" /></>,
 }
 
 export default function Icon({ name, size = 20, className = '', style }) {

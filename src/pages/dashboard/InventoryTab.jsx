@@ -35,6 +35,15 @@ const scopeOpts = [
 ]
 const SCOPE_FIELD = { l1: 'tradeL1', l2: 'tradeL2', class: 'conditionClass' }
 const metricOpts = [{ value: 'qty', label: 'Quantity', icon: 'box' }, { value: 'value', label: 'Value', icon: 'receipt' }]
+// Icon-only toggle: single ring vs a double ring (quantity inner, value outer).
+const donutModeOpts = [{ value: 'single', label: 'Single ring', icon: 'donutSingle' }, { value: 'double', label: 'Double ring', icon: 'donutDouble' }]
+
+// The distribution list is collapsed by default on a phone and expands when the donut
+// (a slice, or the centre) is pressed; on a wider screen it opens showing all items.
+const defaultDonutSel = () =>
+  (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
+    ? null
+    : { name: 'All Items', all: true })
 
 function rollup(data, n = 8) {
   if (data.length <= n) return data
@@ -207,6 +216,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
   const [period, setPeriod] = useState('month')
   const [donutScope, setDonutScope] = useState('l1')
   const [donutMetric, setDonutMetric] = useState('qty')
+  const [donutMode, setDonutMode] = useState('single')
   const [highStockMetric, setHighStockMetric] = useState('qty')
   const [agingMetric, setAgingMetric] = useState('value')
   const [flowMetric, setFlowMetric] = useState('qty')
@@ -215,7 +225,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
   // state inside InventoryComposition itself — it owns its own expandable list, so it
   // no longer needs to lift that state up here the way it did when the list lived in
   // a side panel InventoryTab rendered.
-  const [donutSel, setDonutSel] = useState({ name: 'All Items', all: true })
+  const [donutSel, setDonutSel] = useState(defaultDonutSel)
 
   const INSIGHT_ROWS = useMemo(buildInsightRows, [items.length])
   const k = useMemo(() => KPIS(pool), [pool])
@@ -284,13 +294,18 @@ export default function InventoryTab({ pool, qtyUnit }) {
           <Card title="Inventory Distribution" icon="reports" className="distribution-card" data-tour="charts"
             foot={
               <div className="chart-controls">
-                {/* Changing the scope resets to the "All Items" default rather than
+                {/* Changing the scope resets to the default selection rather than
                     clearing outright: a Trade name is not an Item Group name, so the
                     panel would otherwise keep a heading that no slice on the new ring
                     corresponds to. */}
                 <Toggle size="sm" options={scopeOpts} value={donutScope}
-                  onChange={(v) => { setDonutScope(v); setDonutSel({ name: 'All Items', all: true }) }} />
-                <Toggle size="sm" options={metricOpts} value={donutMetric} onChange={setDonutMetric} />
+                  onChange={(v) => { setDonutScope(v); setDonutSel(defaultDonutSel()) }} />
+                {/* Quantity/Value has no meaning in double-ring mode (both are shown), so
+                    it is hidden there. */}
+                {donutMode === 'single' && (
+                  <Toggle size="sm" options={metricOpts} value={donutMetric} onChange={setDonutMetric} />
+                )}
+                <Toggle size="sm" options={donutModeOpts} value={donutMode} onChange={setDonutMode} />
               </div>
             }>
             <div className="card-split">
@@ -298,7 +313,9 @@ export default function InventoryTab({ pool, qtyUnit }) {
                 {donutData.length === 0
                   ? <NoData what="No inventory loaded" why="Nothing matches the current filter, or the inventory table is empty." />
                   : <DistributionDonut data={donutData} metric={donutMetric} leaderLines wide
+                      double={donutMode === 'double'}
                       onSliceClick={(d) => setDonutSel((s) => (s?.name === d.name ? null : { name: d.name }))}
+                      onCenterClick={() => setDonutSel({ name: 'All Items', all: true })}
                       selectedName={donutSel?.all ? undefined : donutSel?.name} />}
               </div>
               <CardListPanel

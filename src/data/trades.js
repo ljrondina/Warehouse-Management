@@ -1,8 +1,20 @@
 // Trade taxonomy — replaces the old Category/Subcategory model.
 // L1 = Trade, L2 = Item Group (internal keys stay l1/l2; user-facing text always
 // says "Trade" / "Item Group"). Used by filters, charts and the Add Material form.
+//
+// Trade names were shortened app-wide: "General Requirements" reads "General Hardware",
+// and every "… Works" trade drops the "Works" suffix. `renameTrade()` is the single
+// canonical transform — the raw values arriving from Postgres carry the old long names,
+// so it is applied wherever a trade enters the app as data (rebuildItems,
+// rebuildDeliveryRows, rebuildSafekeeping) and the keys below are already the new names.
+export const renameTrade = (name) => {
+  if (!name) return name
+  if (name === 'General Requirements') return 'General Hardware'
+  return name.replace(/\s+Works$/, '')
+}
+
 export const TRADES = {
-  'General Requirements': [
+  'General Hardware': [
     'Office Equipment and Supplies',
     'House Keeping and Sanitation',
     'Support Equipment',
@@ -16,7 +28,7 @@ export const TRADES = {
     'Equipment Parts',
     'Furniture and Fixtures',
   ],
-  'Architectural Works': [
+  'Architectural': [
     'Masonry',
     'Masonry Consumables',
     'Stones',
@@ -36,12 +48,12 @@ export const TRADES = {
     'Roof',
     'Specialties',
   ],
-  'Electrical and Auxiliary Works': ['Electrical', 'Auxiliary', 'Electrical Consumables'],
-  'Fire Protection Works': ['Fire Protection', 'Fire Protection Consumables'],
-  'Mechanical Works': ['Mechanical', 'Mechanical Consumables'],
-  'Plumbing Works': ['Plumbing', 'Plumbing Consumables'],
-  'Site Works': ['Site Works', 'Earthworks', 'Landscape and Amenities'],
-  'Structural Works': [
+  'Electrical and Auxiliary': ['Electrical', 'Auxiliary', 'Electrical Consumables'],
+  'Fire Protection': ['Fire Protection', 'Fire Protection Consumables'],
+  'Mechanical': ['Mechanical', 'Mechanical Consumables'],
+  'Plumbing': ['Plumbing', 'Plumbing Consumables'],
+  'Site': ['Site Works', 'Earthworks', 'Landscape and Amenities'],
+  'Structural': [
     'Rebar Works',
     'Rebar Consumables',
     'Concrete Works',
@@ -61,13 +73,13 @@ export const ALL_L2 = [...new Set(Object.values(TRADES).flat())].sort()
 
 // Short labels for compact chart/segment controls.
 export const SHORT_L1 = {
-  'General Requirements': 'Gen. Reqs',
-  'Architectural Works': 'Architectural',
-  'Electrical and Auxiliary Works': 'Electrical',
-  'Fire Protection Works': 'Fire Prot.',
-  'Mechanical Works': 'Mechanical',
-  'Plumbing Works': 'Plumbing',
-  'Site Works': 'Site Works',
-  'Structural Works': 'Structural',
+  'General Hardware': 'Gen. Hardware',
+  'Architectural': 'Architectural',
+  'Electrical and Auxiliary': 'Electrical',
+  'Fire Protection': 'Fire Prot.',
+  'Mechanical': 'Mechanical',
+  'Plumbing': 'Plumbing',
+  'Site': 'Site',
+  'Structural': 'Structural',
   'Allied Services': 'Allied Svcs',
 }

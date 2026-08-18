@@ -9,9 +9,11 @@ import { DELIVERY_TRACKER_ROWS } from './deliveryTrackerSheet'
 // Mechanical Works, Electrical and Auxiliary Works and Fire Protection Works are
 // consolidated under it (the source never splits them, and the schedule is managed as one
 // MEPF package), so forcing them apart here would invent a distinction the data lacks.
+// Trade names use the shortened app-wide forms (see renameTrade in trades.js): the
+// "Works" suffix is dropped. MEPF stays as-is — the schedule manages it as one package.
 const TRADE_BY_CATEGORY = {
-  STRUCTURAL: 'Structural Works',
-  ARCHITECTURAL: 'Architectural Works',
+  STRUCTURAL: 'Structural',
+  ARCHITECTURAL: 'Architectural',
   MEPF: 'MEPF',
 }
 

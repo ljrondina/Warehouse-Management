@@ -358,10 +358,11 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; }
 }
 .card-foot .chart-controls { justify-content: flex-end; }
 @media (max-width: 620px) {
-  /* Same reasoning as the old card-head rule: two toggles plus the row's own edges
-     don't fit 375px as one line, so they stack rather than wrap or overflow. */
+  /* Toggles are icon-only at this width (see the .toggle mobile rule), so the scope +
+     metric + double controls are compact enough to sit on ONE aligned row that wraps
+     if needed, rather than stacking into a column. */
   .card-foot { flex-wrap: wrap; }
-  .card-foot .chart-controls { flex-direction: column; align-items: flex-end; gap: 5px; }
+  .card-foot .chart-controls { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
 }
 /* justify-content:center + an auto right margin on the title block: on one line the
    auto margin eats the slack so the title sits left and the controls right; once the
@@ -1204,11 +1205,15 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .toggle-lbl { overflow: hidden; text-overflow: ellipsis; }
 .toggle.toggle-sm { --tg-col: 78px; }
 .toggle.toggle-sm button { padding: 4px 9px; font-size: 10.5px; }
+/* Mobile: toggles are ICONS ONLY — the label text is dropped and each option shows
+   just its glyph, which is why every Toggle option carries an icon. (Segmented, e.g.
+   the period picker, is untouched and keeps its text.) */
 @media (max-width: 700px) {
-  .toggle { --tg-col: 62px; }
-  .toggle.toggle-sm { --tg-col: 58px; }
-  .toggle button svg { display: none; }
-  .toggle.toggle-sm button { padding: 4px 6px; font-size: 10px; }
+  .toggle { --tg-col: 46px; }
+  .toggle.toggle-sm { --tg-col: 42px; }
+  .toggle button svg { display: inline-block; opacity: 1; }
+  .toggle .toggle-lbl { display: none; }
+  .toggle.toggle-sm button { padding: 4px 8px; }
 }
 /* Two toggles in one card head (the distribution card's scope + metric). nowrap and
    flex-shrink:0 — the pair holds the card's top-right corner at every width; below
@@ -1813,6 +1818,14 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .donut-chart .recharts-tooltip-wrapper { z-index: 5; }
 .donut-center-lbl { font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; font-weight: 700; color: var(--text-faint); }
 .donut-center-val { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; line-height: 1.1; color: var(--text); }
+/* Only the hole is clickable — the surrounding .donut-center stays pointer-events:none
+   so ring slices remain clickable. Clicking the hole lists all items. */
+.donut-center-hit {
+  pointer-events: none; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1px; border-radius: 50%; text-align: center;
+}
+.donut-center-hit.clickable { pointer-events: auto; cursor: pointer; }
+.donut-center-hit.clickable:hover { background: color-mix(in srgb, var(--surface-2) 75%, transparent); }
 .donut-legend { width: 100%; max-width: 420px; }
 
 /* ---------- Shared chart legend (movement history + distribution) ---------- */
@@ -1918,7 +1931,7 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 /* padding: 0 2px matches .dash-tabs' own left inset — without it the sub-tab pills'
    icons sat a few pixels left of where the main tabs' icons start, reading as
    misaligned rows stacked directly on top of one another. */
-.sub-tabs { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 2px; }
+.sub-tabs { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; padding: 0 2px; }
 .sub-tab {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 7px 14px; border: 1px solid var(--border); border-radius: 999px;
@@ -1967,7 +1980,11 @@ body.col-resizing { user-select: none; cursor: col-resize; }
       own background — the shared sticky-header rule relies on table.data's, which the
       masterlist page overrides for itself.
    3. The peso column is a plain figure, not a value ramp, so no `.zero` dimming. */
-.comp-table { min-width: 0; }
+/* min-width so the Material Description column always keeps real width: on a phone the
+   five fixed columns (~446px) would otherwise consume the row and collapse the
+   description to nothing. Below that the list scrolls sideways inside `.comp-rows`
+   (which is `.inv-scroll`, overflow:auto), same as the masterlist. */
+.comp-table { min-width: 560px; }
 .comp-table thead th {
   background: var(--surface-2); border-bottom: 1px solid var(--border-strong);
   color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
@@ -2115,10 +2132,16 @@ body.col-resizing { user-select: none; cursor: col-resize; }
      panel is much shorter than a 200-row list, so without this the card grew by ~290px
      the moment you clicked a tile, which is the jump the fixed sizing exists to stop. */
   .card-split { flex-direction: column; height: auto; gap: 14px; }
+  /* The panel sizes to its content here rather than holding a fixed 320px: on a phone
+     the list is collapsed by default (no selection), so an empty panel should take no
+     room — it expands only when the donut, a slice or the centre is pressed. */
   .card-list-panel {
-    flex: 0 0 auto; width: 100%; height: 320px;
+    flex: 0 0 auto; width: 100%; height: auto;
     border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 12px;
   }
+  .card-list-panel.has-sel .clp-body { max-height: 360px; }
+  /* Collapsed: just the invitation line, no tall empty block. */
+  .card-list-panel:not(.has-sel) .clp-idle { padding: 8px; }
   .clp-idle { padding: 10px; }
   .mat-list.dense .wpc-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }

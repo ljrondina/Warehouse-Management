@@ -243,25 +243,25 @@ HV_SHELVING.positions = HV_SHELVING.runs * HV_SHELVING.bays * HV_SHELVING.levels
 export const WH_AREAS = [
   {
     id: 'mepfs', icon: 'settings', name: 'MEPFS Materials', short: 'MEPFS', role: 'mepfs',
-    trades: ['Mechanical Works', 'Electrical and Auxiliary Works', 'Plumbing Works', 'Fire Protection Works'],
+    trades: ['Mechanical', 'Electrical and Auxiliary', 'Plumbing', 'Fire Protection'],
     hull: [pl(46, 28, 164, 490)],
     note: 'Mechanical, electrical, plumbing, fire-protection and auxiliary stock. Racks 1–3.',
   },
   {
     id: 'structural', icon: 'excess', name: 'Structural Materials', short: 'Structural', role: 'structural',
-    trades: ['Structural Works'],
+    trades: ['Structural'],
     hull: [pl(206, 28, 227, 380)],
     note: 'Rebar accessories, formwork, concrete and structural steel. Rack 4.',
   },
   {
     id: 'architectural', icon: 'grade', name: 'Architectural Materials', short: 'Architectural', role: 'architectural',
-    trades: ['Architectural Works'],
+    trades: ['Architectural'],
     hull: [pl(223, 28, 244, 380)],
     note: 'Masonry, ceiling, doors, metals, paint and finishes. Rack 5.',
   },
   {
     id: 'safekeeping', icon: 'vault', name: 'Safekeeping Materials', short: 'Safekeeping', role: 'safekeeping',
-    trades: ['General Requirements', 'Site Works', 'Allied Services'],
+    trades: ['General Hardware', 'Site', 'Allied Services'],
     // Racks 6-11 plus the floor and cantilever beside them: one L-shaped outline
     // rather than two overlapping boxes, which left a seam down the middle.
     hull: [pl(288, 28, 600, 830)],

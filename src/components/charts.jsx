@@ -258,8 +258,13 @@ function spreadColumn(list, top, bottom, pad) {
 
 // Builds the renderer recharts calls per slice. The full layout is computed once for
 // a given cx/cy/radius and cached, so the per-slice callback is a lookup.
-function makeLeaderLabel({ data, key, palette, height, minPct, metric, tier }) {
+//
+// `double`: the label sits on the OUTER (value) ring but prints BOTH figures — the
+// value with its value-share and, beneath it, the quantity with its quantity-share —
+// so the two-ring donut (quantity inner, value outer) can be read from one label set.
+function makeLeaderLabel({ data, key, palette, height, minPct, metric, tier, double = false }) {
   const total = data.reduce((a, b) => a + (b[key] || 0), 0)
+  const totalQty = double ? data.reduce((a, b) => a + (b.qty || 0), 0) : 0
   const maxFrac = total > 0 ? Math.max(...data.map((d) => (d[key] || 0) / total)) : 0
   const cache = new Map()
 
@@ -278,13 +283,20 @@ function makeLeaderLabel({ data, key, palette, height, minPct, metric, tier }) {
       const rad = -mid * RAD // screen y grows downward, so the angle is negated
       const lines = wrapName(d.name, tier.wrapChars, tier.maxLines)
       const size = figureSize(frac, maxFrac, tier)
+      // Double mode carries two figure lines (value then quantity), so the block is
+      // taller and the figures are held a little smaller to keep the two columns from
+      // overrunning the chart height.
+      const valSize = double ? Math.min(size, tier.figMax - 2) : size
+      const qtySize = double ? Math.max(9, valSize - 3) : 0
       return {
-        i, frac, lines, size,
-        // The block is the wrapped name stacked on the figure beneath it. Its height
+        i, frac, lines, size, valSize, qtySize,
+        // The block is the wrapped name stacked on the figure(s) beneath it. Its height
         // is what spreadColumn separates neighbours by. The +5 is the gap between the
         // last name line and the figure: without it their glyph boxes graze by a
         // pixel or two, which at 22px reads as the two lines touching.
-        h: lines.length * nameLH + size + 5,
+        h: double
+          ? lines.length * nameLH + valSize + qtySize + 8
+          : lines.length * nameLH + size + 5,
         cos: Math.cos(rad), sin: Math.sin(rad),
       }
     })
@@ -317,12 +329,41 @@ function makeLeaderLabel({ data, key, palette, height, minPct, metric, tier }) {
     const x2 = cx + dir * (outerRadius + tier.elbow + tier.stub)
     const anchor = p.side === 'r' ? 'start' : 'end'
     const tx = x2 + dir * 5
-    const { lines, size, h } = p
+    const { lines, size, valSize, qtySize, h } = p
     // The block is centred on p.y, so the name lines stack from its top edge and the
     // figure sits beneath them. Keeping the NAME size constant is deliberate —
     // scaling it too would make small categories hard to read for no extra
     // information, since the figure already carries the emphasis.
     const blockTop = p.y - h / 2
+    const nameEls = lines.map((ln, li) => (
+      <text key={li} x={tx} y={blockTop + nameLH * (li + 0.5)} textAnchor={anchor}
+        dominantBaseline="middle" fontSize={tier.name} fontWeight={600} fill="var(--text-muted)">
+        {ln}
+      </text>
+    ))
+    if (double) {
+      const qFrac = totalQty > 0 ? (d.qty || 0) / totalQty : 0
+      const nameH = lines.length * nameLH
+      return (
+        <g key={`lead-${index}`}>
+          <polyline points={`${x0},${y0} ${x1},${p.y} ${x2},${p.y}`} fill="none" stroke={color} strokeWidth={1.2} strokeOpacity={0.75} />
+          <circle cx={x0} cy={y0} r={2.5} fill={color} />
+          {nameEls}
+          {/* Value (outer ring) */}
+          <text x={tx} y={blockTop + nameH + valSize / 2 + 3} textAnchor={anchor} dominantBaseline="middle"
+            fontSize={valSize} fontWeight={800} fill="var(--text)">
+            ₱{compact(d.value)}
+            <tspan fontSize={Math.max(9, valSize - 4)} fontWeight={700} fill={color}>{'  '}{(p.frac * 100).toFixed(0)}%</tspan>
+          </text>
+          {/* Quantity (inner ring) */}
+          <text x={tx} y={blockTop + nameH + valSize + qtySize / 2 + 6} textAnchor={anchor} dominantBaseline="middle"
+            fontSize={qtySize} fontWeight={700} fill="var(--text-muted)">
+            {compact(d.qty || 0)}
+            <tspan fontSize={Math.max(8.5, qtySize - 2)} fontWeight={700} fill={color}>{'  '}{(qFrac * 100).toFixed(0)}%</tspan>
+          </text>
+        </g>
+      )
+    }
     return (
       <g key={`lead-${index}`}>
         <polyline
@@ -330,12 +371,7 @@ function makeLeaderLabel({ data, key, palette, height, minPct, metric, tier }) {
           fill="none" stroke={color} strokeWidth={1.2} strokeOpacity={0.75}
         />
         <circle cx={x0} cy={y0} r={2.5} fill={color} />
-        {lines.map((ln, li) => (
-          <text key={li} x={tx} y={blockTop + nameLH * (li + 0.5)} textAnchor={anchor}
-            dominantBaseline="middle" fontSize={tier.name} fontWeight={600} fill="var(--text-muted)">
-            {ln}
-          </text>
-        ))}
+        {nameEls}
         <text x={tx} y={blockTop + lines.length * nameLH + size / 2 + 4} textAnchor={anchor}
           dominantBaseline="middle" fontSize={size} fontWeight={800} fill="var(--text)">
           {metric === 'value' ? `₱${compact(d.value)}` : compact(d[key] || 0)}
@@ -370,12 +406,16 @@ function makeLeaderLabel({ data, key, palette, height, minPct, metric, tier }) {
 export function DistributionDonut({
   data, metric = 'qty', wide = false, hideLegend = false, showValue = true, unit = 'units',
   height, innerRadius = 62, outerRadius = 94, leaderLines = false, minLabelPct = 2,
-  onSliceClick, selectedName,
+  onSliceClick, selectedName, double = false, onCenterClick,
 }) {
   const { theme } = useTheme()
   const PALETTE = categoricalFor(theme)
   const key = metric === 'value' ? 'value' : 'qty'
+  // The leader labels sit on the outer ring, which is the value ring in double mode.
+  const labelKey = double ? 'value' : key
   const total = data.reduce((a, b) => a + b[key], 0)
+  const totalQty = data.reduce((a, b) => a + (b.qty || 0), 0)
+  const totalValue = data.reduce((a, b) => a + (b.value || 0), 0)
   const boxRef = useRef(null)
   // Measured on the OUTER wrapper, never on .donut-chart: the `leader` class changes
   // .donut-chart's own max-width, so deciding the mode from that element's width
@@ -391,14 +431,26 @@ export function DistributionDonut({
   const h = height ?? (useLeaders ? (chartWidth < 420 ? 344 : wide ? 380 : 340) : wide ? 300 : 250)
   const rOuter = useLeaders ? tier.ring : outerRadius
   const rInner = useLeaders ? Math.max(24, rOuter - Math.min(46, rOuter * 0.36)) : innerRadius
+  // Double-ring split: quantity fills the inner band, value the outer band, with a
+  // hairline gap between them.
+  const band = rOuter - rInner
+  const qtyOuter = double ? rInner + band * 0.48 : rOuter
+  const valInner = double ? qtyOuter + Math.max(3, band * 0.06) : rInner
   // The centre readout is sized from the HOLE, not fixed at 20px. A constant size is
   // what made the total overlap the ring on a phone: the small tier's hole is ~105px
   // across and "₱482.4M" at 20px is wider than that. Scaling it off rInner keeps the
   // same optical fit at every tier.
   const centreVal = Math.round(Math.max(12, Math.min(24, rInner * 0.32)))
   const label = useLeaders
-    ? makeLeaderLabel({ data, key, palette: PALETTE, height: h, minPct: minLabelPct, metric, tier })
+    ? makeLeaderLabel({ data, key: labelKey, palette: PALETTE, height: h, minPct: minLabelPct, metric, tier, double })
     : null
+
+  const sliceClick = onSliceClick ? (_, i) => onSliceClick(data[i], i) : undefined
+  const cells = (suffix) => data.map((d, i) => (
+    <Cell key={`${suffix}-${i}`} fill={`url(#pieGrad-${i % PALETTE.length})`}
+      fillOpacity={selectedName && d.name !== selectedName ? 0.32 : 1} />
+  ))
+
   return (
     <div className={`${wide ? 'donut-wrap wide' : 'donut-wrap'}${useLeaders ? ' leader' : ''}`} ref={boxRef}>
       <div className="donut-chart">
@@ -419,32 +471,55 @@ export function DistributionDonut({
                 zero sweep, and Sector renders nothing when startAngle === endAngle. If
                 the Pie mounts while its flex parent still measures 0px wide, that
                 opening frame is the one that sticks and the donut never appears. */}
-            <Pie
-              data={data} dataKey={key} nameKey="name" innerRadius={rInner} outerRadius={rOuter}
-              /* Fixed angles + no padding angle in leader mode: makeLeaderLabel derives
-                 each slice's mid-angle itself, and a padding angle would shift every
-                 sector out from under its own label. */
-              startAngle={useLeaders ? 90 : 0} endAngle={useLeaders ? -270 : 360}
-              paddingAngle={useLeaders ? 0 : 2}
-              stroke="var(--surface)" strokeWidth={useLeaders ? 2 : 3}
-              cornerRadius={useLeaders ? 0 : 4}
-              label={label || undefined} labelLine={false}
-              /* The filter goes on the Pie, not on each Cell: applied per sector it
-                 would cast a shadow from every slice onto its neighbours and the ring
-                 would look striped. */
-              filter="url(#donutShadow)"
-              isAnimationActive={false}
-              onClick={onSliceClick ? (_, i) => onSliceClick(data[i], i) : undefined}
-              style={onSliceClick ? { cursor: 'pointer' } : undefined}
-            >
-              {/* With a selection, the unselected slices drop to a third opacity so the
-                  chosen wedge reads as the source of the list beside it. No selection
-                  means no dimming at all, rather than everything at a uniform 0.35. */}
-              {data.map((d, i) => (
-                <Cell key={i} fill={`url(#pieGrad-${i % PALETTE.length})`}
-                  fillOpacity={selectedName && d.name !== selectedName ? 0.32 : 1} />
-              ))}
-            </Pie>
+            {double ? (
+              <>
+                {/* Inner ring — QUANTITY. No labels; the outer ring carries them. */}
+                <Pie
+                  data={data} dataKey="qty" nameKey="name" innerRadius={rInner} outerRadius={qtyOuter}
+                  startAngle={useLeaders ? 90 : 0} endAngle={useLeaders ? -270 : 360}
+                  paddingAngle={useLeaders ? 0 : 2} stroke="var(--surface)" strokeWidth={useLeaders ? 1.5 : 2}
+                  cornerRadius={0} labelLine={false} isAnimationActive={false}
+                  onClick={sliceClick} style={sliceClick ? { cursor: 'pointer' } : undefined}
+                >
+                  {cells('q')}
+                </Pie>
+                {/* Outer ring — VALUE. Carries the leader labels (both figures). */}
+                <Pie
+                  data={data} dataKey="value" nameKey="name" innerRadius={valInner} outerRadius={rOuter}
+                  startAngle={useLeaders ? 90 : 0} endAngle={useLeaders ? -270 : 360}
+                  paddingAngle={useLeaders ? 0 : 2} stroke="var(--surface)" strokeWidth={useLeaders ? 2 : 3}
+                  cornerRadius={0} label={label || undefined} labelLine={false}
+                  filter="url(#donutShadow)" isAnimationActive={false}
+                  onClick={sliceClick} style={sliceClick ? { cursor: 'pointer' } : undefined}
+                >
+                  {cells('v')}
+                </Pie>
+              </>
+            ) : (
+              <Pie
+                data={data} dataKey={key} nameKey="name" innerRadius={rInner} outerRadius={rOuter}
+                /* Fixed angles + no padding angle in leader mode: makeLeaderLabel derives
+                   each slice's mid-angle itself, and a padding angle would shift every
+                   sector out from under its own label. */
+                startAngle={useLeaders ? 90 : 0} endAngle={useLeaders ? -270 : 360}
+                paddingAngle={useLeaders ? 0 : 2}
+                stroke="var(--surface)" strokeWidth={useLeaders ? 2 : 3}
+                cornerRadius={useLeaders ? 0 : 4}
+                label={label || undefined} labelLine={false}
+                /* The filter goes on the Pie, not on each Cell: applied per sector it
+                   would cast a shadow from every slice onto its neighbours and the ring
+                   would look striped. */
+                filter="url(#donutShadow)"
+                isAnimationActive={false}
+                onClick={sliceClick}
+                style={sliceClick ? { cursor: 'pointer' } : undefined}
+              >
+                {/* With a selection, the unselected slices drop to a third opacity so the
+                    chosen wedge reads as the source of the list beside it. No selection
+                    means no dimming at all, rather than everything at a uniform 0.35. */}
+                {cells('s')}
+              </Pie>
+            )}
             <Tooltip
               content={({ active, payload }) =>
                 active && payload?.length ? (
@@ -464,12 +539,32 @@ export function DistributionDonut({
             and centres its text by flexbox, so any width cap shrinks the box away from
             `right: 0` and pins it to the LEFT edge of the chart — which drags the total
             clean out of the ring. The readout is kept inside the hole by scaling the
-            font off rInner (below), not by constraining this box. */}
+            font off rInner (below), not by constraining this box.
+            The box itself is pointer-events:none (see CSS); only `.donut-center-hit`
+            re-enables clicks, so pressing the hole selects "all items" WITHOUT the
+            overlay swallowing clicks meant for the ring slices. */}
         <div className="donut-center">
-          <span className="donut-center-lbl" style={{ fontSize: Math.max(8, centreVal * 0.46) }}>Total</span>
-          <span className="donut-center-val tabular" style={{ fontSize: centreVal }}>
-            {metric === 'value' ? `₱${compact(total)}` : compact(total)}
-          </span>
+          <div
+            className={`donut-center-hit${onCenterClick ? ' clickable' : ''}`}
+            style={{ width: rInner * 1.9, height: rInner * 1.9 }}
+            onClick={onCenterClick}
+            role={onCenterClick ? 'button' : undefined}
+            tabIndex={onCenterClick ? 0 : undefined}
+            title={onCenterClick ? 'Show all items' : undefined}
+            onKeyDown={onCenterClick ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onCenterClick()) : undefined}
+          >
+            <span className="donut-center-lbl" style={{ fontSize: Math.max(8, centreVal * 0.46) }}>Total</span>
+            {double ? (
+              <>
+                <span className="donut-center-val tabular" style={{ fontSize: Math.max(11, centreVal * 0.82) }}>₱{compact(totalValue)}</span>
+                <span className="donut-center-lbl tabular" style={{ fontSize: Math.max(8, centreVal * 0.5), letterSpacing: 0 }}>{compact(totalQty)} {unit}</span>
+              </>
+            ) : (
+              <span className="donut-center-val tabular" style={{ fontSize: centreVal }}>
+                {metric === 'value' ? `₱${compact(total)}` : compact(total)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
       {/* In leader mode the labels ARE the legend, so the colour key is dropped. The

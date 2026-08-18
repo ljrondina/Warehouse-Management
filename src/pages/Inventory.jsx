@@ -171,8 +171,24 @@ export default function Inventory() {
     document.body.classList.remove('col-resizing')
   }, [])
 
-  const reset = () => { setSearch(''); setTradeL1(''); setTradeL2(''); setMatType(''); setBrand('') }
+  // Reset restores the WHOLE table to its default state — not just the filters, but the
+  // sort, the Section/Full grouping, any collapsed bands and any dragged column widths —
+  // since "reset the table" means all of it, and leaving sort/grouping/widths behind was
+  // why the button felt like it did nothing.
+  const reset = () => {
+    setSearch(''); setTradeL1(''); setTradeL2(''); setMatType(''); setBrand('')
+    setSort({ key: 'inventoryValue', dir: 'desc' })
+    setGrouping('section')
+    setCollapsed(new Set())
+    setColW({})
+    setPage(0)
+  }
   const filtersOn = search || tradeL1 || tradeL2 || matType || brand
+  // The button is live whenever ANYTHING differs from the default view, not only when a
+  // filter is set.
+  const isDefaultView = !filtersOn
+    && sort.key === 'inventoryValue' && sort.dir === 'desc'
+    && grouping === 'section' && collapsed.size === 0 && Object.keys(colW).length === 0
   const from = flat.length ? safePage * PAGE_SIZE + 1 : 0
   const to = Math.min((safePage + 1) * PAGE_SIZE, flat.length)
   const widthOf = (c) => colW[c.key] ?? (c.flex ? undefined : c.width)
@@ -225,7 +241,7 @@ export default function Inventory() {
             title={grouping !== 'section' ? 'Only applies to Section view' : anyOpen ? 'Collapse all groups' : 'Expand all groups'}>
             <Icon name={anyOpen ? 'minus' : 'plus'} size={12} /> {anyOpen ? 'Collapse' : 'Expand'}
           </button>
-          <button className="btn btn-sm" onClick={reset} disabled={!filtersOn}>Reset</button>
+          <button className="btn btn-sm" onClick={reset} disabled={isDefaultView} title="Reset filters, sort, grouping and column widths">Reset</button>
         </div>
 
         <div className="inv-scroll">

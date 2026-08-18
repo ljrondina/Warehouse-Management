@@ -1669,3 +1669,64 @@ switcher; the Site level renders the area legend with block wordmarks gone and t
 gauge showing percentages and no toggle; the Racking level shows the Available/Occupied
 legend with no spec strip, mm labels or hint notes. No JS console errors (the lone 400 is
 the expected Supabase hydration call under the session-less demo login).
+
+### 2026-08-18 — Session: trade rename, double-donut, dashboard mobile pass
+
+Eleven changes across the dashboard (mobile fixes + general behaviour).
+
+**Trades renamed app-wide.** New `renameTrade()` in `src/data/trades.js` is the single
+canonical transform — "General Requirements" → "General Hardware", and every "… Works"
+trade drops the "Works" suffix (Structural Works → Structural, Electrical and Auxiliary
+Works → Electrical and Auxiliary, etc.; Allied Services unchanged). The `TRADES` keys and
+`SHORT_L1` are already the new names, and `renameTrade` is applied where trade values enter
+the app as data so every consumer shows the new label: `rebuildItems` (insights.js),
+`rebuildDeliveryRows` (deliveryTracker.js — the `TRADE_BY_CATEGORY` values), and
+`rebuildSafekeeping` (safekeeping.js). The floor-plan area matching (`WH_AREAS.trades` in
+warehouseMap.js) was updated to the new names too, since `warehouseAreaFor` compares the
+now-renamed `item.tradeL1` against those literals.
+
+**Inventory Distribution — double-donut mode.** New icon-only toggle
+(`donutSingle`/`donutDouble` glyphs) beside the Quantity/Value toggle. In double mode the
+donut draws two concentric rings — **quantity inner, value outer** — sharing categories and
+colours; the Quantity/Value toggle is hidden there (both are shown). `makeLeaderLabel` gained
+a `double` path: the leader labels sit on the outer (value) ring and each prints the category
+name, the value (with its value-share) and, beneath it, the quantity (with its quantity-share).
+The centre readout shows both totals. `DistributionDonut` renders two `<Pie>`s in this mode.
+
+**Clicking the donut centre lists all items.** New `onCenterClick` on `DistributionDonut`,
+wired to a `.donut-center-hit` element sized to the hole — the surrounding `.donut-center`
+stays `pointer-events:none` so ring slices remain clickable; only the hole re-enables clicks.
+
+**Composition "Available" tile → "Stock on Hand".**
+
+**Inventory Masterlist Reset button** now resets the WHOLE table to default — filters, sort,
+Section/Full grouping, collapsed bands and dragged column widths — and is enabled whenever any
+of those differ from the default view (was: filters only, and disabled unless a filter was set).
+
+**Mobile.**
+- **Composition list Material Description column** no longer collapses: `.comp-table` gets a
+  560px `min-width`, so on a phone the list scrolls sideways (inside `.comp-rows`) instead of
+  squeezing the description to nothing.
+- **Toggles are icons-only** — the `.toggle-lbl` text is hidden and the glyph shown (the old
+  rule did the reverse). Every Toggle option carries an icon; Segmented (period picker) keeps
+  its text.
+- **Distribution scope/metric/double toggles** align on one wrapping row in the card footer
+  rather than stacking into a column.
+- **Distribution list collapsed by default on a phone** (`defaultDonutSel()` returns null under
+  900px), expanding when the donut, a slice or the centre is pressed; the mobile panel sizes to
+  content instead of holding a fixed 320px.
+
+**Sub-tabs (Overview/Insights/Activity, Overview/Masterlist) are centred horizontally.**
+
+**Search bar vs New Transaction button:** verified the button already stretches to match the
+expanding filter bar (`.dash-toolbar-row` is `align-items:stretch`, `.txn-trigger` is
+`height:100%`) — measured 40px→117px in step with the search bar when a filter token is added,
+so the two stay equal-height. No change needed; if a compact top-pinned button is preferred
+instead, that is a one-line flip.
+
+**Verified** with `npm run build` (passes) and in the browser against a temporary fixture
+(deleted afterwards; `dist/` confirmed clean): trade leader labels read the new names; double
+mode renders 2 rings with name+value+quantity labels, zero clipped and zero overlaps; centre
+click lists all 32 items; at 375px the toggles are icon-only, sub-tabs centred, the distribution
+list collapsed (113px) with no page h-scroll, and the composition Material Description column
+present (114px) with the table scrolling sideways.

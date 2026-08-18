@@ -1,6 +1,6 @@
 import { inventory } from './inventory'
 import { LEDGER, LEDGER_SPAN } from './ledger'
-import { TRADE_L1 } from './trades'
+import { TRADE_L1, renameTrade } from './trades'
 import { dateFromOffset, TODAY } from '../lib/format'
 
 export { TRADE_L1 }
@@ -26,6 +26,10 @@ export function rebuildItems() {
     const isHighValue = it.inventoryValue >= hvThreshold
     return {
       ...it,
+      // Trade names are shortened app-wide (see renameTrade). Applied here so every
+      // consumer of `items` — filters, donut, insight lists, floor plan — shows the
+      // new name without each having to transform it.
+      tradeL1: renameTrade(it.tradeL1),
       isHighValue,
       zone: isHighValue ? 'HV' : it.zone,
       rack: isHighValue ? 'CAGE' : it.rack,

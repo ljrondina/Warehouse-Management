@@ -5,6 +5,7 @@
 // Unlike src/data/inventory.js (warehouse-owned stock), every row here belongs to a
 // project; the warehouse is only the storage facility.
 import { SOH_ROWS, INCOMING_ROWS, OUTGOING_ROWS } from './safekeepingSheets'
+import { renameTrade } from './trades'
 
 // Every export below is filled IN PLACE by rebuildSafekeeping() — never reassigned —
 // so `import { soh }` elsewhere still points at the live array after
@@ -34,7 +35,9 @@ const fill = (target, values) => {
 const withDate = (r) => ({ ...r, date: r.date ? new Date(`${r.date}T00:00:00`) : null })
 
 export function rebuildSafekeeping() {
-  fill(soh, SOH_ROWS)
+  // Trade names shortened app-wide (see renameTrade) so the Safekeeping donut and
+  // masterlist read the same trade labels as the Warehouse tab.
+  fill(soh, SOH_ROWS.map((r) => ({ ...r, trade: renameTrade(r.trade) })))
   fill(incoming, INCOMING_ROWS.map(withDate))
   fill(outgoing, OUTGOING_ROWS.map(withDate))
 

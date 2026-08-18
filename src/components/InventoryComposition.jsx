@@ -24,7 +24,7 @@ export const COMPOSITION_STATS = [
     tip: 'Available plus Reserved plus Incoming — every unit already on the shelf or already committed to arrive. Outgoing and Damaged are not counted here.',
   },
   {
-    key: 'available', valueKey: 'availableValue', field: 'availableQty', role: 'available', icon: 'box', label: 'Available',
+    key: 'available', valueKey: 'availableValue', field: 'availableQty', role: 'available', icon: 'box', label: 'Stock on Hand',
     tip: 'Stock that is free to issue right now — total on hand less the quantities reserved against project requests.',
   },
   {
