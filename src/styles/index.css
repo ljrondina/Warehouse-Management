@@ -1319,10 +1319,12 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 /* Search bar + New Transaction share this row, ABOVE the tab strip now — "where do
    I look" and "where do I act" both answered before the tabs say which module you're
    in. The search bar takes the remaining width; the button holds the right end. */
-.dash-toolbar-row { display: flex; align-items: stretch; gap: 12px; }
+/* Top-pinned: the button keeps its natural (compact) height at the TOP of the row, so
+   when the search bar grows taller with filter tokens the button stays put beside the
+   search input rather than stretching into a full-height pill. */
+.dash-toolbar-row { display: flex; align-items: flex-start; gap: 12px; }
 .dash-toolbar-row > .filter-search { flex: 1 1 auto; min-width: 0; }
 .dash-toolbar-row > .txn-wrap { flex-shrink: 0; }
-.dash-toolbar-row > .txn-wrap .txn-trigger { height: 100%; }
 @media (max-width: 760px) {
   .dash-toolbar-row { flex-wrap: nowrap; }
 }
