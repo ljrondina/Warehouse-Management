@@ -7,7 +7,7 @@ import {
 } from '../../data/insights'
 import { Card, Segmented, Toggle, NoData } from '../../components/ui'
 import InventoryComposition from '../../components/InventoryComposition'
-import { CardListPanel } from '../../components/MaterialList'
+import { CardListPanel, DescCell } from '../../components/MaterialList'
 import { AgingBars, DistributionDonut, MovementComposed, NetChangeChart } from '../../components/charts'
 import { num, peso, fmtDate } from '../../lib/format'
 import { seriesFor } from '../../lib/colors'
@@ -37,6 +37,17 @@ const SCOPE_FIELD = { l1: 'tradeL1', l2: 'tradeL2', class: 'conditionClass' }
 const metricOpts = [{ value: 'qty', label: 'Quantity', icon: 'box' }, { value: 'value', label: 'Value', icon: 'receipt' }]
 // Icon-only toggle: single ring vs a double ring (quantity inner, value outer).
 const donutModeOpts = [{ value: 'single', label: 'Single ring', icon: 'donutSingle' }, { value: 'double', label: 'Double ring', icon: 'donutDouble' }]
+
+// The distribution list panel, in the masterlist's Full format but compressed to four
+// columns — item code, the stacked Material Description (detailed description + trade
+// path as muted secondary lines), quantity and purchase price.
+const DIST_COLUMNS = [
+  { key: 'itemCode', label: 'Item Code', mono: true, width: 84, render: (r) => r.itemCode },
+  { key: 'description', label: 'Material Description',
+    render: (r) => <DescCell title={r.description} subs={[r.detailedDescription, `${r.tradeL1} · ${r.tradeL2}`]} /> },
+  { key: 'totalQty', label: 'Qty', num: true, width: 62, render: (r) => num(r.totalQty) },
+  { key: 'unitPrice', label: 'Price', num: true, width: 90, render: (r) => peso(r.unitPrice, { decimals: 2 }) },
+]
 
 // The distribution list is collapsed by default on a phone and expands when the donut
 // (a slice, or the centre) is pressed; on a wider screen it opens showing all items.
@@ -202,6 +213,7 @@ const buildInsightRows = () => ({
 // `pool` and `qtyUnit` come from the dashboard shell, which owns the filter bar that
 // is shared across all three dashboard tabs.
 export default function InventoryTab({ pool, qtyUnit }) {
+  const nav = useNavigate()
   const { theme } = useTheme()
   // Resolved per theme so every accent on this page — the composition tiles, card
   // icons and insight bars — stays legible on whichever card background is in play.
@@ -283,16 +295,19 @@ export default function InventoryTab({ pool, qtyUnit }) {
         // Safekeeping's Overview reuses .overview-stack/.distribution-card for the
         // same visual language but keeps the narrower default width.
         <div className="mt overview-stack wh-overview">
-          {/* The six quantity tiles live INSIDE this card — see InventoryComposition.
-              Each tile hovers for a description and, clicked, expands the full
-              material list beneath the whole row (closed by default). */}
-          <Card title="Inventory Composition" icon="box" className="composition-card" data-tour="kpis"
-            foot={<Toggle size="sm" options={metricOpts} value={compMetric} onChange={setCompMetric} />}>
+          {/* Composition has NO card wrapper any more — just the KPI tiles standing on
+              their own, like the Safekeeping tab. The one control they need
+              (Quantity/Value) sits in a bare header row, top-right beside the label. */}
+          <div className="comp-section" data-tour="kpis">
+            <div className="section-bar">
+              <h3 className="section-h">Inventory Composition</h3>
+              <Toggle size="sm" options={metricOpts} value={compMetric} onChange={setCompMetric} />
+            </div>
             <InventoryComposition k={k} unit={qtyUnit} metric={compMetric} series={S} pool={pool} />
-          </Card>
+          </div>
 
           <Card title="Inventory Distribution" icon="reports" className="distribution-card" data-tour="charts"
-            foot={
+            right={
               <div className="chart-controls">
                 {/* Changing the scope resets to the default selection rather than
                     clearing outright: a Trade name is not an Item Group name, so the
@@ -305,7 +320,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
                 {donutMode === 'single' && (
                   <Toggle size="sm" options={metricOpts} value={donutMetric} onChange={setDonutMetric} />
                 )}
-                <Toggle size="sm" options={donutModeOpts} value={donutMode} onChange={setDonutMode} />
+                <Toggle size="sm" className="toggle-icons" options={donutModeOpts} value={donutMode} onChange={setDonutMode} />
               </div>
             }>
             <div className="card-split">
@@ -319,9 +334,10 @@ export default function InventoryTab({ pool, qtyUnit }) {
                       selectedName={donutSel?.all ? undefined : donutSel?.name} />}
               </div>
               <CardListPanel
-                selection={donutSel ? { label: donutSel.name, field: 'totalQty' } : null}
-                rows={donutRows} onClear={() => setDonutSel(null)}
-                hint="Click a slice of the ring to list the materials in that category." />
+                selection={donutSel ? { label: donutSel.name } : null}
+                rows={donutRows} columns={DIST_COLUMNS} onRowClick={(r) => nav(`/inventory/${r.id}`)}
+                onClear={() => setDonutSel(null)}
+                hint="Click a slice of the ring — or the centre — to list the materials." />
             </div>
           </Card>
         </div>
@@ -335,7 +351,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
         <div className="mt" data-tour="insights">
           <div className="grid grid-2 insight-grid">
             <Card title="High Stock Items" icon="box" iconColor={S.total}
-              foot={<Toggle size="sm" options={metricOpts} value={highStockMetric} onChange={setHighStockMetric} />}>
+              right={<Toggle size="sm" options={metricOpts} value={highStockMetric} onChange={setHighStockMetric} />}>
               {/* The toggle swaps ONLY the headline figure. The ranking stays by quantity
                   (INSIGHT_ROWS.high is topQuantity) and `barValue` pins the bars to
                   quantity too — otherwise the bars would stop agreeing with the rank
@@ -372,8 +388,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
                 beside it reads the whole warehouse. The chip says so, since silently
                 mixing the two behaviours is what made the old layout confusing. */}
             <Card title="Aging Analysis" icon="clock" iconColor={S.damaged}
-              right={<span className="chip">current filter</span>}
-              foot={<Toggle size="sm" options={metricOpts} value={agingMetric} onChange={setAgingMetric} />}>
+              right={<><span className="chip">current filter</span><Toggle size="sm" options={metricOpts} value={agingMetric} onChange={setAgingMetric} /></>}>
               {!aging
                 ? <NoData what="No movement dates" why="No line in the current selection carries a last-movement date, so age cannot be computed." />
                 : (
@@ -432,7 +447,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
               </div>
 
               <Card title="Movement History" icon="trend" className="movement-card mt"
-                foot={<Segmented size="sm" options={periodOpts} value={period} onChange={setPeriod} />}>
+                right={<Segmented size="sm" options={periodOpts} value={period} onChange={setPeriod} />}>
                 {/* Always `wide`: the card spans the page, so the legend belongs in a
                     column beside the chart rather than in a strip underneath it. */}
                 <MovementComposed data={movementData} wide />
@@ -445,7 +460,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
               </Card>
 
               <Card title="Net Inventory Change" icon="analytics" className="mt"
-                foot={<Toggle size="sm" options={metricOpts} value={flowMetric} onChange={setFlowMetric} />}>
+                right={<Toggle size="sm" options={metricOpts} value={flowMetric} onChange={setFlowMetric} />}>
                 {activity.coveredBuckets === 0
                   ? <NoData what="No coverage in this period" why={`The ledger's newest movement is ${num(activity.ledgerLagDays)} days old, so none of the ${period} buckets shown fall inside it. Try a wider granularity.`} />
                   : <NetChangeChart data={activity.series} metric={flowMetric} />}
@@ -453,7 +468,7 @@ export default function InventoryTab({ pool, qtyUnit }) {
 
               <div className="grid grid-2 insight-grid mt">
                 <Card title="Top Incoming Items" icon="incoming" iconColor={S.incoming}
-                  foot={<Toggle size="sm" options={metricOpts} value={flowMetric} onChange={setFlowMetric} />}>
+                  right={<Toggle size="sm" options={metricOpts} value={flowMetric} onChange={setFlowMetric} />}>
                   <FlowList rows={activity.topIncoming} tone={S.incoming} metric={flowMetric} />
                 </Card>
                 <Card title="Top Outgoing Items" icon="outgoing" iconColor={S.outgoing}>

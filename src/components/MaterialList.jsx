@@ -52,11 +52,53 @@ export default function MaterialList({ rows, field, label, emptyHint, dense = fa
   )
 }
 
+// A compressed version of the Inventory Master List's "Full" table, for the
+// distribution list panels. Reuses the masterlist classes (`.data.inv-table` /
+// `.inv-item.full` / `.inv-desc*`) so a row here reads like a row there, just tighter.
+// `columns`: { key, label, num, mono, width, render(row) }. The header is fixed order
+// (no sort/drag). Rows are clickable when `onRowClick` is given.
+export function CompactTable({ rows, columns, onRowClick, rowKey = (r, i) => r.id ?? i }) {
+  if (!rows.length) return <div className="empty">Nothing in this selection.</div>
+  return (
+    <table className="data inv-table comp-table mini-table">
+      <colgroup>{columns.map((c) => <col key={c.key} style={c.width ? { width: c.width } : undefined} />)}</colgroup>
+      <thead>
+        <tr>{columns.map((c) => (
+          <th key={c.key} className={`no-sort ${c.num ? 'num' : ''}`}><span className="th-label">{c.label}</span></th>
+        ))}</tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={rowKey(r, i)} className={`inv-item full ${onRowClick ? '' : 'static'}`}
+            onClick={onRowClick ? () => onRowClick(r) : undefined}>
+            {columns.map((c) => (
+              <td key={c.key} className={`${c.num ? 'num tabular' : ''} ${c.mono ? 'mono' : ''}`}>{c.render(r)}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+// A stacked Material Description cell (main name + up to two muted secondary lines),
+// the exact shape the masterlist and the composition table use.
+export function DescCell({ title, subs = [] }) {
+  return (
+    <>
+      <span className="inv-desc" title={title}>{title}</span>
+      {subs.filter(Boolean).map((s, i) => (
+        <span key={i} className={i === 0 ? 'inv-desc-sub' : 'inv-desc-path'} title={s}>{s}</span>
+      ))}
+    </>
+  )
+}
+
 // The right-hand panel on the Overview cards. Collapsed it is a standing invitation
 // ("click a figure"); with a selection it is a titled, scrolling list. It is NOT
 // conditionally rendered away when empty — the card's width would change as you
 // clicked, which is exactly the reflow the fixed card sizing exists to prevent.
-export function CardListPanel({ selection, rows, onClear, hint, renderRow, noun = 'material' }) {
+export function CardListPanel({ selection, rows, onClear, hint, renderRow, columns, onRowClick, noun = 'material' }) {
   return (
     <aside className={`card-list-panel ${selection ? 'has-sel' : ''}`}>
       {selection ? (
@@ -70,9 +112,11 @@ export function CardListPanel({ selection, rows, onClear, hint, renderRow, noun 
               <Icon name="close" size={16} />
             </button>
           </div>
-          <div className="clp-body">
-            <MaterialList rows={rows} field={selection.field} label={selection.label} dense renderRow={renderRow}
-              emptyHint={`No ${noun}s in this selection.`} />
+          <div className="clp-body clp-body-scroll">
+            {columns
+              ? <CompactTable rows={rows} columns={columns} onRowClick={onRowClick} />
+              : <MaterialList rows={rows} field={selection.field} label={selection.label} dense renderRow={renderRow}
+                  emptyHint={`No ${noun}s in this selection.`} />}
           </div>
         </>
       ) : (

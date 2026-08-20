@@ -145,6 +145,9 @@
 }
 
 * { box-sizing: border-box; }
+/* Kill the translucent blue/grey box mobile browsers flash on tap-and-hold of any
+   clickable element — buttons, tabs, KPI tiles, table rows. */
+* { -webkit-tap-highlight-color: transparent; }
 html, body, #root { height: 100%; }
 body {
   margin: 0;
@@ -971,6 +974,11 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 }
 .dtk-note-tag.ok { background: var(--ok-weak); color: var(--ok); }
 .dtk-note-tag.warn { background: var(--warn-weak); color: var(--warn); }
+/* Remarks are supporting context — rendered subtly (muted, normal weight) so they do
+   not compete with the material and status columns. */
+.dtk-remarks { display: block; min-width: 0; color: var(--text-muted); font-weight: 400; font-size: 12px; line-height: 1.35; }
+.dtk-remarks > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dtk-remarks-prc { color: var(--text-faint); font-size: 11px; }
 
 /* ---------- Consolidated request card (status tally + latest requests) ---------- */
 .sk-req-card { display: flex; flex-direction: column; min-width: 0; }
@@ -1205,6 +1213,13 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .toggle-lbl { overflow: hidden; text-overflow: ellipsis; }
 .toggle.toggle-sm { --tg-col: 78px; }
 .toggle.toggle-sm button { padding: 4px 9px; font-size: 10.5px; }
+/* Always icon-only, at every width — used by the single/double-ring switch, whose
+   glyphs are self-explanatory and have no short label worth showing. */
+.toggle.toggle-icons { --tg-col: 40px; }
+.toggle.toggle-icons.toggle-sm { --tg-col: 38px; }
+.toggle.toggle-icons .toggle-lbl { display: none; }
+.toggle.toggle-icons button svg { display: inline-block; opacity: 0.8; }
+.toggle.toggle-icons button.active svg { opacity: 1; }
 /* Mobile: toggles are ICONS ONLY — the label text is dropped and each option shows
    just its glyph, which is why every Toggle option carries an icon. (Segmented, e.g.
    the period picker, is untouched and keeps its text.) */
@@ -1964,6 +1979,11 @@ body.col-resizing { user-select: none; cursor: col-resize; }
 .comp-wrap-v2 { display: flex; flex-direction: column; gap: 14px; width: 100%; }
 .kpi.active { border-color: var(--kpi-color); box-shadow: inset 0 0 0 1px var(--kpi-color), var(--shadow); }
 .kpi.active .kpi-expand { opacity: 1; color: var(--kpi-color); font-weight: 700; }
+/* Once a tile is active (its list is open below), the hover tooltip is redundant and
+   was overlapping the expanded state — the two feedbacks stacked on one tile. Suppress
+   the tip while active, and don't let the active tile lift on hover on top of it. */
+.kpi.active .kpi-tip { display: none; }
+.kpi.active.clickable:hover { transform: none; }
 
 /* The expanded list sits below the whole tile row, full card width — there is no
    chart beside it to share the row with any more. */
@@ -1987,6 +2007,19 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    description to nothing. Below that the list scrolls sideways inside `.comp-rows`
    (which is `.inv-scroll`, overflow:auto), same as the masterlist. */
 .comp-table { min-width: 560px; }
+/* The compressed masterlist table used in the distribution list panels — tighter than
+   the full comp-table and free to shrink to the panel width. */
+.comp-table.mini-table { min-width: 0; font-size: 12px; }
+.mini-table td, .mini-table th { padding: 6px 8px; }
+.mini-table .inv-desc { font-size: 12px; }
+.mini-table .inv-desc-sub, .mini-table .inv-desc-path { font-size: 10.5px; }
+/* The distribution list panel scrolls its compact table on both axes if needed. */
+.clp-body-scroll { overflow: auto; }
+/* Composition with no card wrapper — a bare header row (label left, toggle right)
+   above the KPI tiles, like the Safekeeping tab's own KPI row. */
+.comp-section { display: flex; flex-direction: column; gap: 10px; }
+.section-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: nowrap; }
+.section-h { font-family: var(--font-head); font-size: 15px; font-weight: 700; color: var(--text); margin: 0; min-width: 0; }
 .comp-table thead th {
   background: var(--surface-2); border-bottom: 1px solid var(--border-strong);
   color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
@@ -2125,8 +2158,8 @@ body.col-resizing { user-select: none; cursor: col-resize; }
    above — scoped to `.wh-overview` rather than raising the shared default, so
    Safekeeping's Distribution card (same .card-split/.card-list-panel markup) keeps
    the narrower width its shorter rows need. */
-@media (min-width: 1101px) { .wh-overview .card-split { --clp-w: 460px; } }
-@media (min-width: 1500px) { .wh-overview .card-split { --clp-w: 540px; } }
+@media (min-width: 1101px) { .wh-overview .card-split { --clp-w: 560px; } }
+@media (min-width: 1500px) { .wh-overview .card-split { --clp-w: 660px; } }
 @media (max-width: 1100px) {
   /* Below this the panel and a readable chart cannot share the row: the donut would
      drop under its leader-label minimum. The list moves beneath the chart instead.

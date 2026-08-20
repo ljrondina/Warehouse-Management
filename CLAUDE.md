@@ -1724,6 +1724,54 @@ expanding filter bar (`.dash-toolbar-row` is `align-items:stretch`, `.txn-trigge
 so the two stay equal-height. No change needed; if a compact top-pinned button is preferred
 instead, that is a one-line flip.
 
+### 2026-08-18 — Session: tap highlight, head toggles, composition/distribution revamp
+
+Nine changes across the dashboard.
+
+**Mobile tap highlight killed.** `* { -webkit-tap-highlight-color: transparent }` — the blue
+box mobile browsers flash on press/hold of any clickable element is gone.
+
+**Toggles back in the card head (desktop).** Every chart toggle that had moved to a `card-foot`
+row is now passed as `right` on the `Card`, so it sits top-right beside the title and — because
+`.card-head` is `flex-wrap:nowrap` — never wraps to a new line on resize. Applied to the
+Inventory Distribution, High Stock, Aging, Movement History, Net Change and Top Incoming cards,
+and the Safekeeping Distribution + Masterlist cards.
+
+**Single/double-ring toggle is icon-only everywhere.** New `.toggle.toggle-icons` class (labels
+hidden, glyph shown at every width); the distribution mode switch uses it on both mobile and
+desktop.
+
+**Composition card unwrapped.** The `<Card title="Inventory Composition">` wrapper is gone — the
+six KPI tiles now stand on their own like the Safekeeping tab's KPI row, under a bare header
+row (`.section-bar`: label left, Quantity/Value toggle right). The KPI hover tooltip is
+suppressed while a tile is `active` (`.kpi.active .kpi-tip { display:none }`) and the active
+tile no longer lifts on hover — that stacked feedback was the "weird overlapping".
+
+**Distribution lists → compressed masterlist table.** New shared `CompactTable` + `DescCell` in
+`MaterialList.jsx`; `CardListPanel` renders it when given `columns`. The Inventory Distribution
+list is now Item Code · Material Description (detailed description + trade path as muted secondary
+lines) · Qty · Price; Safekeeping's is Item Code · Material Description (trade · item group) ·
+SOH · Class. The list panel is wider (`--clp-w` 560 / 660 on `.wh-overview`).
+
+**Safekeeping distribution defaults to the full list**, and pressing the donut centre re-selects
+it — matching the Warehouse tab (`defaultSkSel()`, `all` selection, `onCenterClick`).
+
+**Delivery Tracker list.** Added an **Item Code** first column, resolved from the item master at
+runtime by keyword (no codes committed to the repo — see `codeByKey`/`useItemMaster`). The item
+strings are split by a curated `MATERIAL_MAP` into a proper **material name** with **brand** and
+optional **detail** riding the Material Description cell's secondary lines (masterlist style),
+with trade · batch beneath. Remarks are rendered subtly (`.dtk-remarks`, muted/lighter). Item
+name/brand mapping confirmed with the user (Lonon → London, Splice Sleeve as the brand, etc.).
+
+**Verified** with `npm run build` (passes) and in the browser against a temporary fixture
+(deleted afterwards; `dist/` clean): composition has no card wrapper (6 tiles + bare header),
+distribution toggles sit in the head with `flex-wrap:nowrap` and the single/double toggle is
+icon-only, the distribution list is the compact table (Item Code · Material Description · Qty ·
+Price, 32 rows, "All Items" default), the active tile's tooltip is hidden, the panel is 560px,
+tap-highlight computes to transparent, Safekeeping defaults to "All lines", and the Delivery
+Tracker header leads with Item Code. Delivery item codes resolve only against a live item master
+(session-less demo shows "—").
+
 **Verified** with `npm run build` (passes) and in the browser against a temporary fixture
 (deleted afterwards; `dist/` confirmed clean): trade leader labels read the new names; double
 mode renders 2 rings with name+value+quantity labels, zero clipped and zero overlaps; centre

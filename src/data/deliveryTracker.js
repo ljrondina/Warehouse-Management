@@ -29,6 +29,21 @@ const PROJECT_NAME_BY_CODE = {
   Southscape: 'Southscapes Trece Martires',
 }
 
+// The schedule's item strings are informal and bundle a brand in parentheses. This
+// splits each into a proper material NAME + BRAND (+ optional detail), confirmed with
+// the procurement team, and carries a `match` keyword the tracker uses to resolve a
+// representative item code from the item master at runtime (the sheet has no code of
+// its own, and codes are not shipped in this public repo — see ItemLookup.jsx).
+const MATERIAL_MAP = {
+  'Rebar Coupler & Accessories (Splice Sleeve)': { name: 'Rebar Coupler & Accessories', brand: 'Splice Sleeve', detail: '', match: 'coupler' },
+  'AGW Sicher Aluminum': { name: 'Aluminum', brand: 'Sicher', detail: '', match: 'aluminum panel' },
+  'KITCHEN CABINET': { name: 'Kitchen Cabinet', brand: '', detail: '', match: 'kitchen cabinet' },
+  'KITO SEALANT (Interior)': { name: 'Sealant', brand: 'Kito', detail: 'Interior', match: 'sealant' },
+  'Plumbing Fixtures (Laviya)': { name: 'Plumbing Fixtures', brand: 'Laviya', detail: '', match: 'lavatory' },
+  'WIRING DEVICES (Lonon)': { name: 'Wiring Devices', brand: 'London', detail: '', match: 'convenience outlet' },
+  'Wooden Door (Seyken)': { name: 'Wooden Door', brand: 'Seyken', detail: '', match: 'wooden door' },
+}
+
 // Filled in place by rebuildDeliveryRows() so consumers keep a live reference
 // after src/lib/hydrate.js swaps in the rows from Postgres.
 export const deliveryRows = []
@@ -36,11 +51,18 @@ export const deliveryRows = []
 export function rebuildDeliveryRows() {
   deliveryRows.length = 0
   deliveryRows.push(
-    ...DELIVERY_TRACKER_ROWS.map((r) => ({
-      ...r,
-      trade: TRADE_BY_CATEGORY[r.category] || r.category,
-      project: PROJECT_NAME_BY_CODE[r.project] || r.project,
-    }))
+    ...DELIVERY_TRACKER_ROWS.map((r) => {
+      const m = MATERIAL_MAP[r.item] || {}
+      return {
+        ...r,
+        trade: TRADE_BY_CATEGORY[r.category] || r.category,
+        project: PROJECT_NAME_BY_CODE[r.project] || r.project,
+        materialName: m.name || r.item,
+        brand: m.brand || '',
+        matDetail: m.detail || '',
+        matchKey: m.match || '',
+      }
+    })
   )
 }
 

@@ -6,6 +6,7 @@ import DataSheet from './DataSheet'
 import { num, fmtDate, fmtTargetText, fmtTower } from '../lib/format'
 import { seriesFor } from '../lib/colors'
 import { useTheme } from '../context/ThemeContext'
+import { useItemMaster } from './ItemLookup'
 import Icon from '../lib/icons'
 
 // KPI accents borrow the shared series roles rather than inventing new hexes, so an
@@ -25,6 +26,7 @@ const targetLabel = (r) => (r.targetDate ? fmtDate(new Date(`${r.targetDate}T00:
 export default function DeliveryTracker() {
   const { theme } = useTheme()
   const S = seriesFor(theme)
+  const master = useItemMaster()
   const [status, setStatus] = useState('')
   const [project, setProject] = useState('')
   const [trade, setTrade] = useState('')
@@ -32,13 +34,29 @@ export default function DeliveryTracker() {
 
   const counts = useMemo(() => deliveryStatusCounts(), [])
 
+  // Resolve a representative item-master code for each material's `matchKey` (first
+  // master description that contains the keyword). Done here, from the runtime item
+  // master, so no codes are hard-coded in the repo. Empty until the master loads.
+  const codeByKey = useMemo(() => {
+    const map = {}
+    if (!master) return map
+    for (const r of deliveryRows) {
+      const key = r.matchKey
+      if (!key || map[key]) continue
+      const hit = master.find((m) => m.d.toLowerCase().includes(key))
+      if (hit) map[key] = hit.c
+    }
+    return map
+  }, [master])
+  const codeOf = (r) => codeByKey[r.matchKey] || ''
+
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
     return deliveryRows.filter((r) => {
       if (status && r.status !== status) return false
       if (project && r.project !== project) return false
       if (trade && r.trade !== trade) return false
-      if (q && !`${r.item} ${r.trade} ${r.project} ${r.batch} ${r.location} ${r.opsRemarks} ${r.prcRemarks}`.toLowerCase().includes(q)) return false
+      if (q && !`${r.materialName} ${r.brand} ${r.trade} ${r.project} ${r.batch} ${r.location} ${r.opsRemarks} ${r.prcRemarks}`.toLowerCase().includes(q)) return false
       return true
     })
   }, [status, project, trade, search])
@@ -46,31 +64,38 @@ export default function DeliveryTracker() {
   const filtersOn = Boolean(status || project || trade || search)
   const reset = () => { setStatus(''); setProject(''); setTrade(''); setSearch('') }
 
-  // Laid out like the Inventory Master List's Full view: a wide Material Description
-  // cell whose secondary line folds the qualifiers (trade · batch) out of their own
-  // columns, then the fields that stand on their own. Widths are PIXELS, not
-  // percentages, so the table has a real intrinsic width that can exceed the card — on
-  // a desktop every column up to DP is visible and Remarks sits just past the right
-  // edge, reachable by scrolling the table sideways. (A percentage set would instead
-  // squeeze everything to fit and never scroll.)
+  // Laid out like the Inventory Master List's Full view: an Item Code column, then a
+  // wide Material Description cell whose secondary lines fold the qualifiers — brand and
+  // detailed description, then trade · batch — out of their own columns. Widths are
+  // PIXELS so the table has a real intrinsic width that can exceed the card: on a
+  // desktop every column up to DP is visible and Remarks sits just past the right edge,
+  // reachable by scrolling the table sideways.
   //
-  // The source's own columns limit what can be shown: the Warehouse Schedule sheet
-  // carries no item code, no detailed (2nd) description and no item group, so those
-  // three requested sub-fields have no data behind them — trade and batch are the
-  // qualifiers that actually exist, and they ride the description's second line.
+  // The item code is resolved from the item master at runtime (codeOf); the material
+  // name/brand/detail come from the curated MATERIAL_MAP in deliveryTracker.js. Brand
+  // and detail only appear when the material actually has them.
   const columns = useMemo(() => [
     {
-      key: 'item', label: 'Material Description', width: 320,
-      render: (r) => (
-        <>
-          <span className="inv-desc" title={r.item}>{r.item}</span>
-          <span className="inv-desc-sub" title={`${r.trade}${r.batch ? ` · ${r.batch}` : ''}`}>
-            <span className="dtk-trade">{r.trade}</span>{r.batch && ` · ${r.batch}`}
-          </span>
-        </>
-      ),
+      key: 'itemCode', label: 'Item Code', width: 108, mono: true,
+      tooltip: (r) => codeOf(r) || 'Not matched in the item master',
+      render: (r) => codeOf(r) || <span className="faint">—</span>,
     },
-    { key: 'project', label: 'Project', width: 210, blank: true },
+    {
+      key: 'materialName', label: 'Material Description', width: 300,
+      render: (r) => {
+        const brandDetail = [r.brand, r.matDetail].filter(Boolean).join(' · ')
+        return (
+          <>
+            <span className="inv-desc" title={r.materialName}>{r.materialName}</span>
+            {brandDetail && <span className="inv-desc-sub" title={brandDetail}>{brandDetail}</span>}
+            <span className="inv-desc-path" title={`${r.trade}${r.batch ? ` · ${r.batch}` : ''}`}>
+              <span className="dtk-trade">{r.trade}</span>{r.batch && ` · ${r.batch}`}
+            </span>
+          </>
+        )
+      },
+    },
+    { key: 'project', label: 'Project', width: 200, blank: true },
     {
       key: 'targetDate', label: 'Target Delivery', width: 132,
       // Every custom-`render` column carries a `tooltip` too: once a column is narrower
@@ -111,14 +136,15 @@ export default function DeliveryTracker() {
       key: 'opsRemarks', label: 'Remarks', width: 300,
       // Ops and PRC keep separate notes in the source; both are shown rather than one
       // being dropped, with PRC's on the second line and labelled so they stay distinct.
+      // Rendered subtly (muted, lighter) — remarks are supporting context, not a headline.
       render: (r) => (
-        <>
-          <span className="inv-desc" title={r.opsRemarks}>{r.opsRemarks || ''}</span>
-          {r.prcRemarks && <span className="inv-desc-sub" title={r.prcRemarks}>PRC: {r.prcRemarks}</span>}
-        </>
+        <span className="dtk-remarks">
+          <span title={r.opsRemarks}>{r.opsRemarks || ''}</span>
+          {r.prcRemarks && <span className="dtk-remarks-prc" title={r.prcRemarks}>PRC: {r.prcRemarks}</span>}
+        </span>
       ),
     },
-  ], [])
+  ], [codeByKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Card
