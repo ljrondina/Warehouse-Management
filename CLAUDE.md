@@ -1778,3 +1778,16 @@ mode renders 2 rings with name+value+quantity labels, zero clipped and zero over
 click lists all 32 items; at 375px the toggles are icon-only, sub-tabs centred, the distribution
 list collapsed (113px) with no page h-scroll, and the composition Material Description column
 present (114px) with the table scrolling sideways.
+
+### 2026-08-17 — Session: remove icons from the level-1 site plan
+
+The clickable area blocks on the site plan (Central Warehouse, Deformed Rebar Area,
+Tiles Area, Material Recovery Facility) no longer draw an icon into the shape. The
+`FpLegend` a concurrent session added beneath the plan already decodes colour + icon +
+name, so the on-plan icon was saying the same thing twice; each block now reads by its
+colour and position alone, with the legend as the key. `iconFor`/`centreOf` and the
+`Icon` import are gone from `SitePlan.jsx` — nothing else in that file depended on them.
+The Open Stock Yard's own text label is untouched.
+
+Verified: 0 icons drawn inside `.fp-svg` at level 1, the four-item legend still lists
+every area by name, zero label overlaps, zero page scroll. `npm run build` passes.

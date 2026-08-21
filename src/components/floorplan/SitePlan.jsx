@@ -1,7 +1,6 @@
 import { SITE_VB, SITE_BOUNDARY, SITE_AREAS, SITE_YARD } from '../../data/warehouseMap'
 import PlanDefs from './planDefs'
 import PlanText from './planText'
-import Icon from '../../lib/icons'
 
 // Level 1 — the stockyard: the property, the shed, and the outdoor material areas
 // around it (reference slide 4, site development plan).
@@ -11,13 +10,6 @@ import Icon from '../../lib/icons'
 // arrows; all of that is vehicle logistics and it crowded out the four areas this
 // level exists to show.
 
-const centreOf = (r) => ({ cx: r.x + r.w / 2, cy: r.y + r.h / 2 })
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
-
-// Icon and label scale with the block they sit in — the shorter side governs, since
-// that is what has to contain them. The icon carries the identification, so it takes
-// the larger share and the wordmark stays quiet beneath it.
-const iconFor = (across) => clamp(across * 0.24, 0, 42)
 const pts = (p) => p.map((q) => q.join(',')).join(' ')
 
 // Slide inches -> viewBox units, for the one area the plan draws at an angle (MRF).
@@ -75,31 +67,16 @@ export default function SitePlan({ selected, onSelect, onDrill, hovered, onHover
               const c = toVB(rot.cx, rot.cy)
               const rw = rot.w * K
               const rh = rot.h * K
-              // Icon only, no wordmark — the legend beneath the plan names the area.
-              const ic = iconFor(rh)
+              // Neither icon nor wordmark — the legend beneath the plan names the
+              // area, and the block itself is identified by its colour and its
+              // position on the drawing.
               return (
                 <g transform={`translate(${c.x} ${c.y}) rotate(${rot.rot})`}>
                   <rect x={-rw / 2} y={-rh / 2} width={rw} height={rh} rx="5" />
                   <rect x={-rw / 2} y={-rh / 2} width={rw} height={rh} rx="5" className="fp-tex" fill={`url(#fpt-${a.role})`} />
-                  <g className="fp-t-mrf" transform={`translate(${-ic / 2} ${-ic / 2})`} pointerEvents="none">
-                    <Icon name={a.icon} size={ic} />
-                  </g>
                 </g>
               )
             })()}
-          </g>
-        )
-      })}
-
-      {/* icons last, so no fill ever lands on top of one. Labels were removed — the
-          legend beneath the plan carries the names now. */}
-      {SITE_AREAS.filter((a) => !a.rotRect).map((a) => {
-        const c = centreOf(a.label)
-        const across = Math.min(a.label.w, a.label.h)
-        const ic = iconFor(across)
-        return (
-          <g key={a.id} className={`fp-t-${a.role}`} transform={`translate(${c.cx - ic / 2} ${c.cy - ic / 2})`} pointerEvents="none">
-            <Icon name={a.icon} size={ic} />
           </g>
         )
       })}
